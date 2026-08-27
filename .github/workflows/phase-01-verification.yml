@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: phase-01-${{ github.ref }}
@@ -37,16 +37,46 @@ jobs:
       - name: Confirm pnpm
         run: pnpm --version
 
-      - name: Install dependencies and generate lockfile
-        run: pnpm install --no-frozen-lockfile
+      - name: Install dependencies
+        id: dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+            echo "bootstrapped=false" >> "$GITHUB_OUTPUT"
+          else
+            pnpm install --no-frozen-lockfile
+            echo "bootstrapped=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit generated dependency baseline
+        if: steps.dependencies.outputs.bootstrapped == 'true' && github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml pnpm-workspace.yaml
+          git commit -m "chore: lock Phase 01 dependencies"
+          git push origin HEAD:phase-01-foundation
+
+      - name: Require committed lockfile on pull requests
+        if: steps.dependencies.outputs.bootstrapped == 'true' && github.event_name != 'push'
+        run: |
+          echo "pnpm-lock.yaml must be committed before Phase 01 can be verified."
+          exit 1
 
       - name: Install Playwright Chromium
+        if: steps.dependencies.outputs.bootstrapped != 'true'
         run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
 
       - name: Run Phase 01 verification gate
+        if: steps.dependencies.outputs.bootstrapped != 'true'
         run: pnpm verify:phase01
 
       - name: Smoke-test vinext Worker
+        if: steps.dependencies.outputs.bootstrapped != 'true'
         working-directory: apps/web
         shell: bash
         run: |
@@ -71,12 +101,3 @@ jobs:
 
           curl --fail --silent --show-error http://127.0.0.1:8787/id > /dev/null
           curl --fail --silent --show-error http://127.0.0.1:8787/en > /dev/null
-
-      - name: Upload generated lockfile
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase-01-lockfile
-          path: pnpm-lock.yaml
-          if-no-files-found: warn
-          retention-days: 7
