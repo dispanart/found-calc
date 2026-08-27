@@ -12,7 +12,7 @@
     "start:vinext": "wrangler dev --config dist/server/wrangler.json",
     "vinext:check": "vinext check",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests/cloudflare/tsconfig.json",
     "test:foundation": "node --experimental-strip-types --test tests/foundation/*.test.m*",
     "test:unit": "vitest run --config vitest.config.ts",
     "test:cloudflare": "vitest run --config vitest.cloudflare.config.ts",
