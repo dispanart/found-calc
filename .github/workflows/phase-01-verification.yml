@@ -12,46 +12,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: phase-01-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  bootstrap:
-    name: Import Phase 01 baseline
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      imported: ${{ steps.detect.outputs.imported }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Detect bootstrap archive
-        id: detect
-        shell: bash
-        run: |
-          if [ -f .bootstrap/found-calc-phase-01-foundation-unverified.zip ]; then
-            echo "imported=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "imported=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Import baseline into branch
-        if: steps.detect.outputs.imported == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          unzip -q .bootstrap/found-calc-phase-01-foundation-unverified.zip -d .
-          rm -f .bootstrap/found-calc-phase-01-foundation-unverified.zip
-          rmdir .bootstrap 2>/dev/null || true
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "chore: import Phase 01 foundation baseline"
-          git push origin HEAD:phase-01-foundation
-
   verify:
     name: Verify Phase 01 foundation
-    needs: bootstrap
-    if: needs.bootstrap.outputs.imported != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -70,11 +37,11 @@ jobs:
       - name: Confirm pnpm
         run: pnpm --version
 
-      - name: Install dependencies and generate lockfile
-        run: pnpm install --no-frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
 
       - name: Run Phase 01 verification gate
         run: pnpm verify:phase01
@@ -104,12 +71,3 @@ jobs:
 
           curl --fail --silent --show-error http://127.0.0.1:8787/id > /dev/null
           curl --fail --silent --show-error http://127.0.0.1:8787/en > /dev/null
-
-      - name: Upload generated lockfile
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase-01-lockfile
-          path: pnpm-lock.yaml
-          if-no-files-found: warn
-          retention-days: 7
