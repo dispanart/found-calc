@@ -41,7 +41,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
 
       - name: Run Phase 01 verification gate
         run: pnpm verify:phase01
