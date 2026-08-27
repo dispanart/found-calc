@@ -1,0 +1,24 @@
+{
+  "name": "found-calc",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.24.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter @found-calc/web dev",
+    "dev:vinext": "pnpm --filter @found-calc/web dev:vinext",
+    "build": "pnpm --filter @found-calc/web build",
+    "build:vinext": "pnpm --filter @found-calc/web build:vinext",
+    "lint": "pnpm --filter @found-calc/web lint",
+    "typecheck": "pnpm --filter @found-calc/web typecheck",
+    "test": "pnpm --filter @found-calc/web test",
+    "verify:phase01": "node scripts/verify-phase-01.mjs",
+    "test:foundation": "node --experimental-strip-types --test apps/web/tests/foundation/*.test.m* tests/foundation/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
