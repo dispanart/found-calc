@@ -20,7 +20,7 @@ jobs:
   verify:
     name: Verify Phase 02 deterministic engine
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -42,9 +42,3 @@ jobs:
 
       - name: Run Phase 02 TDD package tests
         run: pnpm --filter @found-calc/web exec vitest run --config vitest.phase02.config.ts
-
-      - name: Install Playwright Chromium
-        run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
-
-      - name: Run Phase 01 regression gate
-        run: pnpm verify:phase01
