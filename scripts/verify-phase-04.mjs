@@ -1,8 +1,13 @@
 import { spawnSync } from "node:child_process";
+import { rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+const cleanInheritedBuildArtifacts = () => {
+  rmSync(path.join(root, "apps/web/.next"), { recursive: true, force: true });
+};
 
 const steps = [
   { label: "dependency-free Phase 04 contract tests", command: "pnpm", args: ["test:foundation"] },
@@ -14,11 +19,17 @@ const steps = [
   { label: "Next.js production build", command: "pnpm", args: ["--filter", "@found-calc/web", "build"] },
   { label: "vinext compatibility check", command: "pnpm", args: ["--filter", "@found-calc/web", "vinext:check"] },
   { label: "vinext production build", command: "pnpm", args: ["--filter", "@found-calc/web", "build:vinext"] },
-  { label: "complete Phase 03 regression gate", command: "pnpm", args: ["verify:phase03"] },
+  {
+    label: "complete Phase 03 regression gate",
+    command: "pnpm",
+    args: ["verify:phase03"],
+    before: cleanInheritedBuildArtifacts,
+  },
 ];
 
 for (const step of steps) {
   process.stdout.write(`\n==> ${step.label}\n`);
+  step.before?.();
   const result = spawnSync(step.command, step.args, {
     cwd: root,
     stdio: "inherit",
