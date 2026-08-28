@@ -3,8 +3,8 @@ import type { InputHTMLAttributes } from "react";
 interface CalculatorFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id"> {
   id: string;
   label: string;
-  helper?: string;
-  error?: string;
+  helper?: string | undefined;
+  error?: string | undefined;
 }
 
 export function CalculatorField({ id, label, helper, error, className, ...inputProps }: CalculatorFieldProps) {
