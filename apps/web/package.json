@@ -22,6 +22,9 @@
     "cf:typegen": "wrangler types src/worker-configuration.d.ts"
   },
   "dependencies": {
+    "@found-calc/catalog": "workspace:*",
+    "@found-calc/engine": "workspace:*",
+    "@found-calc/rules": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-slot": "^1.2.3",
     "class-variance-authority": "^0.7.1",
@@ -35,6 +38,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.54.1",
     "@cloudflare/vitest-plugin": "1.1.0",
+    "@cloudflare/workers-types": "5.20260827.1",
     "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^22.0.0",
@@ -50,7 +54,6 @@
     "vinext": "1.0.0-beta.8",
     "vite": "8.2.2",
     "vitest": "^4.1.10",
-    "wrangler": "4.127.0",
-    "@cloudflare/workers-types": "5.20260827.1"
+    "wrangler": "4.127.0"
   }
 }

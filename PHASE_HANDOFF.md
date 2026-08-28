@@ -1,103 +1,128 @@
 # Found Calc — Phase Handoff
 
 **Project:** Found Calc  
-**Last canonical completed phase:** Phase 02 — Deterministic Engine + Reference Vertical Slices  
+**Last canonical completed phase:** Phase 03 — Product UI Runtime & Discovery  
 **Current status:** COMPLETE  
-**Next phase:** Phase 03 — next approved implementation phase
+**Next phase:** Phase 04 — Persistence, Auth & Guest Preservation
 
 ## Rule: one phase = one new chat
 
-Start each implementation phase in a **new chat inside the same Found Calc project**. For Phase 03, attach:
+Start Phase 04 in a **new chat inside the same Found Calc project** and attach:
 
-`found-calc-phase-02-engine-reference-slices.zip`
+`found-calc-phase-03-product-ui-runtime-discovery.zip`
 
-The ZIP is the portable recovery/handoff baseline. GitHub `main` is the collaborative canonical repository; the two must represent the same completed Phase 02 source tree.
+The ZIP is the portable recovery/handoff baseline. GitHub `main` is the collaborative canonical repository. The post-merge baseline-artifact workflow produces the ZIP from the verified merged Phase 03 tree and verifies its SHA256/extraction before it is used as the Phase 04 input.
 
-## Required reading order for Phase 03
+## Required reading order for Phase 04
 
 1. `BASELINE.md`
 2. `PHASE_HANDOFF.md`
-3. `docs/verification/phase-02-verification.md`
-4. `docs/superpowers/specs/2026-08-28-found-calc-phase-02-deterministic-engine-reference-slices-design.md`
-5. `docs/superpowers/plans/2026-08-28-found-calc-phase-02-deterministic-engine-reference-slices.md`
-6. Master Product & Architecture Design Spec
+3. `docs/verification/phase-03-verification.md`
+4. `docs/superpowers/specs/2026-08-28-found-calc-phase-03-product-ui-runtime-discovery-design.md`
+5. `docs/superpowers/plans/2026-08-28-found-calc-phase-03-product-ui-runtime-discovery.md`
+6. approved Master Product & Architecture Design Spec
 7. Tech Stack ADR
 8. Design System Decision / requirements / component inventory
 9. Accessibility & Responsive Contract
-10. Phase Workflow — use it to resolve the exact Phase 03 scope before creating the Phase 03 plan
+10. Phase Workflow — use the canonical Phase 04 section to resolve exact implementation scope before writing the Phase 04 plan
 
-## Starter prompt for the new Phase 03 chat
+## Starter prompt for the new Phase 04 chat
 
 ```text
-@Superpowers
+@Superpowers @GitHub @Context7
 
-Start Found Calc Phase 03 from the attached canonical `found-calc-phase-02-engine-reference-slices.zip`.
+Start Found Calc Phase 04 — Persistence, Auth & Guest Preservation from the attached canonical `found-calc-phase-03-product-ui-runtime-discovery.zip`.
 
 Before implementation:
 1. Read BASELINE.md and PHASE_HANDOFF.md.
-2. Read docs/verification/phase-02-verification.md and the approved Phase 02 spec/plan.
+2. Read docs/verification/phase-03-verification.md and the approved Phase 03 spec/plan.
 3. Read the approved Master Product & Architecture Design Spec, Tech Stack ADR, design-system/accessibility contracts, and Phase Workflow.
-4. Resolve the exact approved Phase 03 scope from the Phase Workflow before creating the new phase plan; do not guess the phase name or pull Phase 04+ scope forward.
-5. Treat Phase 02 engine/rules contracts, numeric truth, dependency direction, historical rule behavior, and Phase 01 platform foundation as approved baseline. Reopen them only for a verified implementation blocker under change control.
+4. Resolve the exact approved Phase 04 scope from the Phase Workflow before implementation; do not pull Phase 05+ scope forward.
+5. Treat Phase 01 platform foundation, Phase 02 deterministic engine/rules truth, and Phase 03 catalog/product-runtime boundaries as approved baseline. Reopen them only for a verified implementation blocker under change control.
 6. Use Context7 for current framework/library documentation and the Cloudflare skill/current Cloudflare docs for Workers-specific work.
 7. Use Superpowers brainstorming/writing-plans/TDD/systematic-debugging/verification-before-completion as required.
-8. Preserve ID/EN, accessibility, privacy/trust constraints, and the Rp0 fixed-infrastructure target excluding domain/payment transaction fees.
+8. Preserve ID/EN, accessibility, privacy/trust constraints, deterministic truth, and the Rp0 fixed-infrastructure target excluding domain/payment transaction fees.
 
-Create the Phase 03 implementation plan first. At Phase 03 completion, produce the next complete ZIP baseline and updated handoff.
+Create the Phase 04 implementation design/plan first. At Phase 04 completion, produce the next complete ZIP baseline and updated handoff.
 ```
 
-## Phase 02 completion evidence
+## Phase 03 completion evidence
 
-Phase 02 establishes:
+The verified implementation snapshot is SHA `73413b5f6f55f957532af595cdc811c2990b440f`, GitHub Actions run `33175892187`, job `98864278561`, with a successful Phase 03 gate and built Worker smoke.
 
-- `@found-calc/engine` deterministic contracts and scaled-`bigint` decimal arithmetic;
-- deterministic discount and contextual business-margin reference slices;
-- rule-dependent synthetic calculator consuming pre-resolved provenance;
-- `@found-calc/rules` immutable effective-date/version selection;
-- synthetic historical versions with pinning/reproducibility tests;
-- strict package-local tests/typechecks;
-- `verify:phase02` as a fail-fast superset of the complete Phase 01 regression gate;
-- frozen-lock GitHub Actions verification, Chromium, and built Worker `/id` + `/en` smoke tests.
+Phase 03 establishes:
 
-See `docs/verification/phase-02-verification.md` for exact counts, SHA, workflow evidence, known warnings, and exclusions.
+- exactly three localized reference catalog entries in `@found-calc/catalog`;
+- ID/EN locale presentation parsing/formatting separated from engine truth;
+- local runtime adapters that delegate formulas to `@found-calc/engine` and rule resolution to `@found-calc/rules`;
+- localized home/discovery/calculator routes with locale-preserving navigation;
+- accessible calculator primitives, validation summaries, trust messaging, and polite result regions;
+- stacked-discount public interaction;
+- progressive business-margin/contribution/scenario interaction with demo-only recommendation framing;
+- synthetic rule effective-date selection and resolved provenance presentation;
+- Phase 03 CI as a superset of all Phase 02 and Phase 01 regression gates;
+- Next.js production build, vinext compatibility/build, and built Worker smoke for public reference routes.
 
-## Stable Phase 02 boundaries
+See `docs/verification/phase-03-verification.md` for exact counts, TDD/debug evidence, known warnings, and exclusions.
+
+## Stable Phase 03 boundaries
 
 ### Engine
 
-`@found-calc/engine` owns deterministic calculation truth only. It must remain independent of React/Next.js, Cloudflare runtime bindings, persistence, network I/O, locale presentation, auth/billing, catalog metadata, and rule resolution.
+`@found-calc/engine` owns deterministic calculation truth only. Do not move locale parsing, React/Next code, auth, persistence, rule resolution, catalog metadata, Worker bindings, or network I/O into the engine.
 
 ### Rules
 
-`@found-calc/rules` resolves immutable effective-date/version dependencies and may depend on engine contract types. The engine must not depend on the rules package.
+`@found-calc/rules` owns immutable effective-date/version selection outside the engine. Rule-based product flows must supply explicit resolved dependencies; historical results remain reproducible.
+
+### Catalog
+
+`@found-calc/catalog` owns reference calculator identity, canonical slugs, localized discovery/trust copy, category metadata, and related-calculator relationships. It does not own formulas, persistence, auth, billing, or production rule datasets.
+
+### Product runtime
+
+`apps/web` owns ID/EN input normalization/output formatting, calculator-specific public forms/results, accessible interaction, discovery/navigation, and trust/provenance presentation. Reference calculations remain local/deterministic and do not use a calculation API.
 
 ### Numeric truth
 
-Canonical calculation inputs are locale-independent decimal strings. Calculation arithmetic uses scaled `bigint` with declared scales and round-half-up boundaries. Locale parsing/formatting is a presentation-layer responsibility.
+Canonical calculation inputs remain locale-independent decimal strings. Calculation arithmetic remains scaled `bigint` with explicit scales/rounding in `@found-calc/engine`. Presentation parsing must never become formula truth.
 
-### Rule truth
+## Phase 03 interaction contracts to preserve
 
-Rule-dependent formulas consume a supplied resolved dependency. Historical versions and provenance must remain reproducible; adding a future rule version must not rewrite an older result.
+- discount steps are ordered and calculated sequentially by the engine;
+- business-margin gross result does not require contextual variable cost;
+- adding variable cost produces contribution metrics without deleting valid gross metrics;
+- scenario impact comes from `calculateBusinessMarginScenario`, not duplicate React arithmetic;
+- synthetic rule UI requires an explicit effective date and has no current-date fallback;
+- synthetic fixture warnings/provenance remain visible and are never promoted as authoritative production data;
+- locale switching preserves calculator route context;
+- field errors remain associated to controls and result updates remain accessible.
 
-## Explicitly deferred beyond Phase 02
+## Explicitly deferred beyond Phase 03
 
-- calculator UI and discovery/navigation;
-- production catalog behavior;
-- Better Auth and account flows;
-- persistence schemas/product data storage;
-- Xendit/billing/payment flows;
+- Better Auth/account/session implementation;
+- durable guest preservation and product persistence schemas;
+- production D1 creation/migration and remote Cloudflare deployment;
+- Xendit/payment/billing flows;
 - production tax/legal/marketplace/health/payroll/fiqh/regulatory rule packs;
-- Admin tooling, Goals/Projects, analytics, and other later-phase surfaces.
+- production-scale SEO/catalog publishing;
+- Admin publishing tooling, Goals/Projects, analytics, and AI explanations.
 
-## Synthetic-data warning
+These items are not permission to implement them all in Phase 04. Phase 04 must follow the canonical workflow and its exact approved scope.
 
-The synthetic 2025/2026 rates and 10% recommendation threshold are contract fixtures only and are not production guidance or authoritative data.
+## Known platform notes
+
+- `vinext check` is 88% compatible with 0 issues; partial notes are `next/font/google` and `reactStrictMode`.
+- the all-zero D1 ID remains local-only and must not be mistaken for a deployable remote database.
+- Cloudflare Vitest may emit the inherited pre-build vinext entry static-analysis warning; runtime and built Worker verification pass.
+- no credentials/secrets are part of the baseline artifact.
 
 ## Change control
 
-If Phase 03 exposes a conflict with the approved architecture or Phase 02 contracts:
+If Phase 04 exposes a conflict with the approved Phase 01–03 architecture/contracts:
 
 1. stop the affected work;
-2. capture the failing evidence;
-3. propose the smallest compatible amendment;
-4. obtain approval before changing the architecture or deterministic-truth contract.
+2. capture reproducible failing evidence;
+3. identify whether the blocker is product scope, framework/runtime behavior, or a true architecture conflict;
+4. propose the smallest compatible amendment;
+5. obtain approval before changing an approved boundary or deterministic-truth contract.

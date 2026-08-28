@@ -1,7 +1,5 @@
 # @found-calc/catalog
 
-Owns calculator catalog metadata and discovery-facing definitions without calculation formulas, jurisdiction logic, or persistence concerns.
+Source-owned product metadata for Found Calc calculators.
 
-**First implementation phase:** a later approved catalog/discovery phase; Phase 01 establishes only the ownership boundary.
-
-Phase 01 intentionally contains no runtime catalog code.
+Phase 03 activates this package only for the three reference calculators proven in Phase 02. It owns stable IDs/slugs, localized ID/EN presentation metadata, trust classification, and related-calculator relationships. It does not own formulas, rule resolution, persistence, publishing, billing, or the frozen production catalog.

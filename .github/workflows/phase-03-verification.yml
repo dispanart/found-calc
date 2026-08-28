@@ -1,21 +1,21 @@
-name: Phase 02 Verification
+name: Phase 03 Verification
 
 on:
   push:
     branches:
-      - phase-02-engine-reference-slices
+      - phase-03-product-ui-runtime-discovery
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: phase-02-${{ github.ref }}
+  group: phase-03-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
-    name: Verify Phase 02 deterministic engine
+    name: Verify Phase 03 product UI runtime
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -40,8 +40,8 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
 
-      - name: Run Phase 02 verification gate
-        run: pnpm verify:phase02
+      - name: Run Phase 03 verification gate
+        run: pnpm verify:phase03
 
       - name: Smoke-test built vinext Worker
         working-directory: apps/web
@@ -66,5 +66,13 @@ jobs:
             exit 1
           fi
 
-          curl --fail --silent --show-error http://127.0.0.1:8787/id > /dev/null
-          curl --fail --silent --show-error http://127.0.0.1:8787/en > /dev/null
+          for route in \
+            /id \
+            /en \
+            /id/calculators \
+            /en/calculators \
+            /id/calculators/discount \
+            /id/calculators/business-margin \
+            /id/calculators/synthetic-rule-reference; do
+            curl --fail --silent --show-error "http://127.0.0.1:8787${route}" > /dev/null
+          done
