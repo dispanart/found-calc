@@ -1,7 +1,7 @@
 # @found-calc/rules
 
-Owns jurisdiction- and effective-date-aware rule definitions and rule resolution. Regulatory rules must remain separate from language and display-currency concerns.
+Immutable rule-version and effective-date resolution for Found Calc.
 
-**First implementation phase:** Phase 02 — Deterministic Engine & Reference Slices.
+This package selects exactly one pre-declared rule dependency for a validated ISO date-only effective date, or returns an explicit unavailable/ambiguous failure. It may depend on `@found-calc/engine` contract types; the engine never depends on this package.
 
-Phase 01 intentionally contains no runtime rules code.
+The bundled Phase 02 synthetic rate fixtures are test/reference data only. They are not tax, legal, marketplace, health, payroll, fiqh, or other production guidance.

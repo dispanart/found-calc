@@ -14,8 +14,13 @@
     "build:vinext": "pnpm --filter @found-calc/web build:vinext",
     "lint": "pnpm --filter @found-calc/web lint",
     "typecheck": "pnpm --filter @found-calc/web typecheck",
+    "typecheck:engine": "pnpm --filter @found-calc/engine typecheck",
+    "typecheck:rules": "pnpm --filter @found-calc/rules typecheck",
     "test": "pnpm --filter @found-calc/web test",
+    "test:engine": "pnpm --filter @found-calc/engine test",
+    "test:rules": "pnpm --filter @found-calc/rules test",
     "verify:phase01": "node scripts/verify-phase-01.mjs",
+    "verify:phase02": "node scripts/verify-phase-02.mjs",
     "test:foundation": "node --experimental-strip-types --test apps/web/tests/foundation/*.test.m* tests/foundation/*.test.mjs"
   },
   "engines": {

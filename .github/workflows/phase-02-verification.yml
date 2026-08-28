@@ -1,23 +1,26 @@
-name: Phase 01 Verification
+name: Phase 02 Verification
 
 on:
   push:
     branches:
-      - phase-01-foundation
+      - phase-02-engine-reference-slices
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: phase-01-${{ github.ref }}
+  group: phase-02-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
-    name: Verify Phase 01 foundation
+    name: Verify Phase 02 deterministic engine
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -40,10 +43,10 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
 
-      - name: Run Phase 01 verification gate
-        run: pnpm verify:phase01
+      - name: Run Phase 02 verification gate
+        run: pnpm verify:phase02
 
-      - name: Smoke-test vinext Worker
+      - name: Smoke-test built vinext Worker
         working-directory: apps/web
         shell: bash
         run: |
