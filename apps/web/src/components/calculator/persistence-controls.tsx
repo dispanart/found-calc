@@ -135,7 +135,7 @@ export function PersistenceControls({ locale, calculatorId, state, onLoad }: Per
       </div>
       {state === null ? <p className="mt-3 text-xs leading-5 text-muted-foreground">{text.calculateFirst}</p> : null}
       <p className="mt-3 text-xs leading-5 text-muted-foreground">{text.privacy}</p>
-      <p className="mt-3 text-sm" role="status" aria-live="polite" data-testid="persistence-status">{status}</p>
+      <p className="mt-3 text-sm" aria-live="polite" aria-atomic="true" data-testid="persistence-status">{status}</p>
     </div>
   );
 }
