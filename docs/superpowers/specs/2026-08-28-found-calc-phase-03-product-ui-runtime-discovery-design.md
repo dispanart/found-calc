@@ -83,7 +83,7 @@ Changes in this package are not expected. If UI integration exposes a genuine co
 
 ### 4.2 `@found-calc/rules`
 
-The synthetic reference page may invoke the existing resolver before calling the engine. Effective date is an explicit UI input/context value. The resolver returns an immutable `RuleDependency`, which the page/runtime supplies to `calculateSyntheticRuleAmount`.
+The synthetic reference page invokes the existing resolver before calling the engine. Effective date is an explicit UI input/context value. The resolver returns an immutable `RuleDependency`, which the page/runtime supplies to `calculateSyntheticRuleAmount`.
 
 The synthetic fixtures remain contract/demo data and must be visibly labeled as non-production. Phase 03 does not add real rule sources or persistence.
 
@@ -103,15 +103,19 @@ Each entry owns presentation/discovery metadata such as:
 
 The catalog must not contain formula logic, engine outputs, rule-resolution logic, persistence state, billing state, or production publishing workflow.
 
-The stable slug is shared across locale prefixes, e.g. `/{locale}/calculators/{slug}`. Localized copy changes by locale; calculation identity and slug do not.
+The canonical Phase 03 slug mapping is:
+
+- `reference.discount` → `discount`;
+- `reference.business-margin` → `business-margin`;
+- `reference.synthetic-rule` → `synthetic-rule-reference`.
+
+Slugs are identical under `id` and `en`; localized copy changes by locale while calculation identity does not.
 
 ### 4.4 `@found-calc/ui`
 
-This package may receive source-owned design-system primitives that are genuinely reusable across product surfaces, such as field framing, result cards, trust/provenance blocks, section headings, empty/validation states, and responsive shell primitives.
+Only design-system primitives needed by at least two Phase 03 product surfaces are extracted into `@found-calc/ui`, such as field framing, result cards, trust/provenance blocks, section headings, validation states, or responsive shell primitives. Calculator-specific interaction/state stays in `apps/web`.
 
-It must not become a calculator-schema runtime. Calculator-specific interaction/state belongs in `apps/web` features because the three reference calculators have intentionally different UX.
-
-Source-owned shadcn/ui components remain composable implementation primitives. Phase 03 does not introduce a second component system.
+`@found-calc/ui` must not become a calculator-schema runtime. Source-owned shadcn/ui components remain composable implementation primitives; Phase 03 does not introduce a second component system.
 
 ### 4.5 `apps/web`
 
@@ -125,11 +129,11 @@ Phase 03 keeps the existing locale prefixes and introduces a small reference dis
 
 - `/id` and `/en` — localized public home/discovery entry containing the three reference calculators;
 - `/{locale}/calculators` — calculator discovery/list surface;
-- `/{locale}/calculators/{slug}` — canonical calculator page.
+- `/{locale}/calculators/discount`;
+- `/{locale}/calculators/business-margin`;
+- `/{locale}/calculators/synthetic-rule-reference`.
 
-The exact three canonical slugs are source-owned catalog data and remain identical under `id` and `en`.
-
-Unknown locale/slug combinations must fail predictably through the existing App Router not-found behavior. Locale switching on a calculator page should preserve calculator identity by navigating to the same slug under the alternate locale.
+Unknown locale/slug combinations fail through App Router not-found behavior. Locale switching on a calculator page preserves calculator identity by navigating to the same slug under the alternate locale. Phase 03 does not promise preservation of unsaved form state across locale navigation; guest-context preservation is a Phase 04 concern.
 
 Discovery in Phase 03 is intentionally small: category grouping/cards and related-calculator links are sufficient. Full-text search, production taxonomy scale, personalization, ranking analytics, and frozen V1 catalog breadth are later work.
 
@@ -139,15 +143,26 @@ Engine inputs/results stay canonical and locale-independent. Phase 03 adds prese
 
 ### 6.1 Input normalization
 
-Numeric controls use text-compatible numeric input behavior with appropriate `inputMode` so the UI can distinguish display input from canonical engine values.
+Numeric controls use text-compatible input with an appropriate `inputMode` so display strings are distinct from canonical engine values.
 
-The presentation parser may accept the locale decimal separator and ordinary grouping where unambiguous, but it must reject ambiguous/mixed forms rather than guessing. It normalizes a valid value into the canonical decimal-string shape expected by the engine.
+Phase 03 parsing is deliberately strict and does not implement general localized-number parsing:
 
-Parsing rules must be explicitly tested for both locales. Formatting/parsing code must never change engine arithmetic or rounding.
+- ASCII digits are accepted;
+- one optional leading minus sign is syntactically accepted and left to engine range validation;
+- `.` is accepted as a decimal separator in both locales because it is the engine canonical separator;
+- `,` is additionally accepted as a decimal separator for `id`;
+- grouping/thousands separators are not accepted;
+- mixed `.` and `,` forms are rejected;
+- more fractional digits than the engine input definition allows are rejected, not rounded by the UI;
+- empty required fields map to required-field validation rather than numeric zero.
+
+A valid presentation value normalizes to the canonical decimal string expected by the engine. Parsing rules are tested for both locales. Formatting/parsing code never changes engine arithmetic or rounding.
 
 ### 6.2 Output formatting
 
-Money/percentage output values are formatted from engine canonical strings using locale-aware presentation only after calculation. The engine-provided scale remains authoritative for the underlying numeric value.
+Money/percentage output values are formatted from engine canonical strings only after calculation. The formatter operates on canonical string/integer parts rather than converting monetary truth through JavaScript `number`, preventing binary-float precision loss.
+
+The engine-provided scale remains authoritative. ID/EN grouping/decimal separators are presentation only.
 
 Localized labels, explanations, validation copy, trust copy, and navigation live outside engine/rules packages.
 
@@ -163,7 +178,7 @@ The discount calculator provides:
 - explicit calculate/recalculate action;
 - result presentation for final amount, savings, effective combined discount, and ordered breakdown when emitted by the engine.
 
-The UI must make clear that stacked discounts are sequential, not summed.
+The UI makes clear that stacked discounts are sequential, not summed. Removing a step preserves the relative order of all remaining steps.
 
 ### 7.2 Business margin/profit
 
@@ -173,23 +188,25 @@ The business-margin calculator exposes the Phase 02 progressive contract:
 - required product cost;
 - contextual variable selling cost per order.
 
-Submitting only required fields renders valid gross metrics immediately. Adding the contextual field refines the result with contribution metrics without presenting the earlier gross result as invalid.
+Submitting only required fields renders valid gross metrics immediately. Adding the contextual field and recalculating refines the result with contribution metrics without presenting earlier gross metrics as invalid.
 
-Scenario/recommendation UI is a presentation of engine-emitted deterministic truth. It must not invent personalized advice. The Phase 02 10% synthetic recommendation threshold must be labeled as a reference/demo contract rather than authoritative business guidance.
+Scenario/recommendation UI is a presentation of engine-emitted deterministic truth. It must not invent personalized advice. The Phase 02 10% synthetic recommendation threshold is labeled as a reference/demo contract rather than authoritative business guidance.
 
-When a scenario is shown, baseline and scenario must remain visually distinguishable and the quantified impact must come from `calculateBusinessMarginScenario` rather than client-side duplicate arithmetic.
+When a scenario is shown, baseline and scenario are visually distinguishable and the quantified impact comes from `calculateBusinessMarginScenario` rather than duplicate client arithmetic.
 
 ### 7.3 Synthetic rule-dependent reference calculator
 
 The page requires:
 
 - base amount;
-- explicit effective date;
+- explicit effective date with no hidden `Date.now()`/today fallback;
 - resolution of `reference.synthetic-rate` through `@found-calc/rules`;
 - engine execution only after successful rule resolution;
 - result amount plus visible rule version/effective-period/source provenance.
 
-The page must prominently state that the bundled synthetic 2025/2026 rates are test/reference fixtures, not tax, financial, marketplace, payroll, legal, health, religious, or regulatory guidance.
+The effective-date field starts without an implied calculation date; the submitted date is the date used for rule resolution and calculation context.
+
+The page prominently states that the bundled synthetic 2025/2026 rates are test/reference fixtures, not tax, financial, marketplace, payroll, legal, health, religious, or regulatory guidance.
 
 Rule-unavailable, invalid-date, and ambiguous-resolution failures are rendered as accessible product errors without exposing stack traces.
 
@@ -197,7 +214,7 @@ Rule-unavailable, invalid-date, and ambiguous-resolution failures are rendered a
 
 Phase 03 translates semantic IDs from engine results into localized presentation rather than embedding display text in engine output.
 
-A calculator result surface should support:
+A calculator result surface supports:
 
 - one visually clear primary result;
 - ordered secondary result sections;
@@ -205,11 +222,11 @@ A calculator result surface should support:
 - scenario/recommendation content when present;
 - calculation classification (`exact/deterministic` or `rule-based`) in human-readable trust language;
 - resolved rule provenance for rule-based results;
-- related-calculator navigation after the result or page content.
+- related-calculator navigation after result content.
 
-Validation failures map engine paths/codes to localized field/global messages. Each field error is programmatically associated with its control. A summary may be used when multiple fields fail, but it does not replace field associations.
+Validation failures map engine paths/codes to localized field/global messages. Each field error is programmatically associated with its control. When multiple fields fail, a summary can supplement but not replace field associations.
 
-Unexpected invariant failures use a generic localized failure state and are not converted into fabricated calculation results.
+Successful recalculation updates a polite result-status live region without stealing focus. Unexpected invariant failures use a generic localized failure state and are not converted into fabricated calculation results.
 
 ## 9. Accessibility and responsive contract
 
@@ -247,7 +264,7 @@ Use the approved Found Calc stack and design direction:
 - existing design-system requirements/component inventory where available;
 - `design-taste-frontend` only within the approved Found Calc scope.
 
-The visual system should feel like one calculator product, but component reuse must follow real interaction sameness. Do not force the discount step editor, progressive margin form, and rule-date workflow into one universal component schema.
+The visual system should feel like one calculator product, but component reuse follows real interaction sameness. The discount step editor, progressive margin form, and rule-date workflow are not forced into one universal component schema.
 
 ## 12. Error handling
 
@@ -265,18 +282,20 @@ Internal invariant/programming failures remain distinguishable from user validat
 
 Every implementation task follows red → green → refactor. Phase 03 adds `verify:phase03` as a fail-fast superset of `verify:phase02`.
 
-The Phase 03 verification contract should include:
+The Phase 03 verification contract includes:
 
 1. reference-catalog contract tests for unique IDs/slugs, complete ID/EN copy, valid related IDs, and trust metadata;
-2. presentation parser/formatter tests for ID/EN numeric behavior and rejection of ambiguous inputs;
-3. focused web unit/component tests for form validation/result mapping where practical with the chosen current toolchain;
-4. Playwright flows for all three calculators in ID and EN;
+2. presentation parser/formatter tests for ID/EN numeric behavior and rejection of grouping, mixed separators, over-scale, and ambiguous inputs;
+3. Vitest tests for pure web runtime adapters and semantic result/validation-to-view mapping;
+4. Playwright rendered flows for all three calculators in ID and EN;
 5. Playwright keyboard/accessibility interaction checks for critical controls and result announcement behavior;
 6. responsive/mobile smoke coverage for discovery and calculator pages;
 7. explicit synthetic-fixture warning/provenance assertions;
 8. engine/rules package regression tests and typechecks unchanged;
 9. lint, strict TypeScript, canonical Next build, `vinext check`, `vinext build`, Cloudflare Vitest/local D1 regression, and built Worker smoke;
-10. dependency-free Phase 03 verification-contract tests guarding scope and CI wiring where useful.
+10. dependency-free Phase 03 verification-contract tests guarding scope and CI wiring.
+
+Phase 03 does not require a new React component-test framework if rendered behavior is already covered by Playwright; adding one requires a concrete gap demonstrated during the implementation plan.
 
 TestSprite is not introduced as a Phase 03 completion dependency because the approved workflow reserves full Regression, TestSprite & Launch Readiness for Phase 10.
 
