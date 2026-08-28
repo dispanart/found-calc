@@ -41,7 +41,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run Phase 02 TDD package tests
-        run: pnpm --filter @found-calc/web exec vitest run --root ../.. packages/engine/src/**/*.test.ts packages/rules/src/**/*.test.ts --environment node
+        run: pnpm --filter @found-calc/web exec vitest run --config vitest.phase02.config.ts
 
       - name: Run Phase 01 regression gate
         run: pnpm verify:phase01
