@@ -125,12 +125,12 @@ export interface CalculationFailure {
 
 export type CalculationOutcome = CalculationSuccess | CalculationFailure;
 
-export const calculationSuccess = (result: CalculationResult): CalculationOutcome => ({
+export const calculationSuccess = (result: CalculationResult): CalculationSuccess => ({
   ok: true,
   result,
 });
 
-export const validationFailure = (issues: readonly ValidationIssue[]): CalculationOutcome => ({
+export const validationFailure = (issues: readonly ValidationIssue[]): CalculationFailure => ({
   ok: false,
   issues,
 });
