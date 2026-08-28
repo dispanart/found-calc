@@ -27,8 +27,7 @@ test("guest saved state is claimed on account creation, visible in workspace, lo
   });
   await page.getByTestId("save-draft").click();
   const saveResponse = await saveResponsePromise;
-  const saveBody = await saveResponse.text();
-  expect(saveResponse.status(), `Guest save failed with body: ${saveBody}`).toBe(200);
+  expect(saveResponse.status(), "Guest save API must return HTTP 200").toBe(200);
   await expect(page.getByTestId("persistence-status")).toContainText("Draft saved");
 
   await page.goto("/en/auth");
