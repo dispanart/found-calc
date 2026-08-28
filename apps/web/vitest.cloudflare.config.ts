@@ -9,6 +9,11 @@ export default defineConfig({
       },
     }),
   ],
+  resolve: {
+    alias: {
+      "@": new URL("./src", import.meta.url).pathname,
+    },
+  },
   test: {
     include: ["tests/cloudflare/**/*.test.ts"],
   },
