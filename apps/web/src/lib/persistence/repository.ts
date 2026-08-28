@@ -40,6 +40,20 @@ const classifyRepositoryError = (value: unknown): "missing-table" | "sqlite-busy
   return "unknown";
 };
 
+const describeRepositoryError = (value: unknown): string => {
+  const parts: string[] = [];
+  let current: unknown = value;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
+    const name = "name" in current && typeof current.name === "string" ? current.name : "unknown";
+    const code = "code" in current && typeof current.code === "string" ? current.code : "";
+    const message = "message" in current && typeof current.message === "string" ? current.message : "";
+    const safeMessage = message.replace(/\s+/g, " ").slice(0, 240);
+    parts.push(`${name}${code ? `(${code})` : ""}:${safeMessage || "no-message"}`);
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return parts.join(" <- ") || typeof value;
+};
+
 const decodeRow = (row: typeof calculatorStates.$inferSelect): StoredCalculatorState => {
   let decoded: unknown;
   try {
@@ -104,7 +118,11 @@ export const createCalculatorStateRepository = (binding: D1Database) => {
       await binding.prepare("SELECT 1 FROM calculator_state LIMIT 1").first();
       console.error("[found-calc][repository-upsert] preflight:ok");
     } catch (cause) {
-      console.error(`[found-calc][repository-upsert] preflight:${classifyRepositoryError(cause)}`);
+      const classification = classifyRepositoryError(cause);
+      console.error(`[found-calc][repository-upsert] preflight:${classification}`);
+      if (classification === "unknown") {
+        console.error(`[found-calc][repository-upsert] preflight-detail:${describeRepositoryError(cause)}`);
+      }
       throw cause;
     }
 
