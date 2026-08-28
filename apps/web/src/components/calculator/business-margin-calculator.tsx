@@ -172,6 +172,7 @@ export function BusinessMarginCalculator({ locale, entry }: BusinessMarginCalcul
           <CalculatorField
             id="margin-variable-cost"
             label={copy.fields.variableSellingCostPerOrder ?? ""}
+            helper={copy.ui.contextualHint}
             value={variableCost}
             onChange={(event) => setVariableCost(event.target.value)}
             inputMode="decimal"
@@ -184,7 +185,7 @@ export function BusinessMarginCalculator({ locale, entry }: BusinessMarginCalcul
 
         {outcome?.ok ? (
           <div className="mt-8 border-t border-border pt-7">
-            <h2 className="text-lg font-bold tracking-[-0.025em]">{copy.ui.advancedTitle}</h2>
+            <h2 className="text-lg font-bold tracking-[-0.025em]">{copy.ui.recommendationTitle}</h2>
             <div className="mt-4 space-y-4">
               <CalculatorField
                 id="margin-scenario-variable-cost"
@@ -242,7 +243,7 @@ export function BusinessMarginCalculator({ locale, entry }: BusinessMarginCalcul
 
         {outcome?.ok && outcome.result.recommendations !== undefined ? (
           <TrustPanel title={locale === "id" ? "Simulasi, bukan rekomendasi bisnis" : "Simulation, not business advice"} tone="warning">
-            <p>{copy.ui.recommendationDemoNote}</p>
+            <p>{copy.ui.demoNote}</p>
           </TrustPanel>
         ) : null}
       </div>
