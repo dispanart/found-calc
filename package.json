@@ -21,7 +21,7 @@
     "test:rules": "pnpm --filter @found-calc/rules test",
     "verify:phase01": "node scripts/verify-phase-01.mjs",
     "verify:phase02": "node scripts/verify-phase-02.mjs",
-    "test:foundation": "node --experimental-strip-types --test apps/web/tests/foundation/*.test.m* tests/foundation/*.test.mjs",
+    "test:foundation": "node --experimental-strip-types --test apps/web/tests/foundation/*.test.m* tests/foundation/*.test.m*",
     "typecheck:catalog": "pnpm --filter @found-calc/catalog typecheck",
     "test:catalog": "pnpm --filter @found-calc/catalog test",
     "verify:phase03": "node scripts/verify-phase-03.mjs"
