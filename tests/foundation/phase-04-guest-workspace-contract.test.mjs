@@ -29,11 +29,12 @@ test("workspace is an auth-aware three-calculator persistence summary, not proje
   assert.match(page, /PersistenceSummary/);
 });
 
-test("Phase 04 browser verification uses vinext with the Cloudflare Vite runtime for real D1/auth behavior", () => {
+test("Phase 04 browser verification uses vinext with the Cloudflare Vite runtime and exposes CI auth env", () => {
   const playwright = read("apps/web/playwright.config.ts");
   assert.match(playwright, /vite dev/);
   assert.match(playwright, /--host 127\.0\.0\.1/);
   assert.match(playwright, /--port 3000/);
+  assert.match(playwright, /CLOUDFLARE_INCLUDE_PROCESS_ENV/);
 
   const vite = read("apps/web/vite.config.ts");
   assert.match(vite, /vinext\(\)/);
