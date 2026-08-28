@@ -6,10 +6,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const steps = [
   { label: "dependency-free foundation tests", command: "pnpm", args: ["test:foundation"] },
-  { label: "@found-calc/engine tests", command: "pnpm", args: ["--filter", "@found-calc/engine", "test"] },
   { label: "@found-calc/engine typecheck", command: "pnpm", args: ["--filter", "@found-calc/engine", "typecheck"] },
-  { label: "@found-calc/rules tests", command: "pnpm", args: ["--filter", "@found-calc/rules", "test"] },
   { label: "@found-calc/rules typecheck", command: "pnpm", args: ["--filter", "@found-calc/rules", "typecheck"] },
+  { label: "@found-calc/engine tests", command: "pnpm", args: ["--filter", "@found-calc/engine", "test"] },
+  { label: "@found-calc/rules tests", command: "pnpm", args: ["--filter", "@found-calc/rules", "test"] },
   { label: "complete Phase 01 regression gate", command: "pnpm", args: ["verify:phase01"] },
 ];
 

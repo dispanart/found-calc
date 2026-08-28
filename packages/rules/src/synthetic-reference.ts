@@ -1,5 +1,6 @@
 import type { RuleVersion } from "./rule-version";
 
+// Phase 02 synthetic reference data only. These rates are contract fixtures, not production guidance or authoritative rule data.
 export const syntheticRateRuleVersions: readonly RuleVersion<{ ratePercent: string }>[] = [
   {
     ruleId: "reference.synthetic-rate",
