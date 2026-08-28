@@ -1,0 +1,81 @@
+name: Phase 03 Verification
+
+on:
+  push:
+    branches:
+      - phase-03-product-ui-runtime-discovery
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-03-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify Phase 03 product UI runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Confirm pnpm
+        run: pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
+
+      - name: Run Phase 03 verification gate
+        run: pnpm verify:phase03
+
+      - name: Smoke-test built vinext Worker
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec wrangler dev --config dist/server/wrangler.json --port 8787 > "$RUNNER_TEMP/found-calc-wrangler.log" 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
+
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:8787/id > /dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            cat "$RUNNER_TEMP/found-calc-wrangler.log"
+            exit 1
+          fi
+
+          for route in \
+            /id \
+            /en \
+            /id/calculators \
+            /en/calculators \
+            /id/calculators/discount \
+            /id/calculators/business-margin \
+            /id/calculators/synthetic-rule-reference; do
+            curl --fail --silent --show-error "http://127.0.0.1:8787${route}" > /dev/null
+          done
