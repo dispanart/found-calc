@@ -1,18 +1,28 @@
 import { notFound } from "next/navigation";
 
-import { getMessages } from "@/i18n/messages";
+import { PersistenceSummary } from "@/components/workspace/persistence-summary";
 import { isLocale } from "@/i18n/locales";
 
-export default async function WorkspaceShellPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function WorkspacePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const messages = getMessages(locale);
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-16 sm:px-8 sm:py-24">
-      <p className="text-sm font-semibold text-primary">{messages.phaseLabel}</p>
-      <h1 className="mt-4 text-4xl font-bold tracking-[-0.045em] sm:text-5xl">{messages.workspaceTitle}</h1>
-      <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground">{messages.workspaceBody}</p>
+    <main className="mx-auto w-full max-w-5xl px-5 py-12 sm:px-8 sm:py-18">
+      <header className="max-w-2xl">
+        <p className="text-xs font-semibold tracking-[0.12em] text-primary uppercase">Phase 04</p>
+        <h1 className="mt-4 text-4xl font-bold tracking-[-0.05em] sm:text-5xl">
+          {locale === "id" ? "Workspace Found Calc" : "Found Calc workspace"}
+        </h1>
+        <p className="mt-5 text-base leading-7 text-muted-foreground">
+          {locale === "id"
+            ? "Lihat apakah tiga kalkulator referensi memiliki draft tersimpan pada akun ini. Kalkulasi tetap dilakukan di perangkat Anda."
+            : "See whether the three reference calculators have a draft saved to this account. Calculation still happens on your device."}
+        </p>
+      </header>
+      <div className="mt-10">
+        <PersistenceSummary locale={locale} />
+      </div>
     </main>
   );
 }

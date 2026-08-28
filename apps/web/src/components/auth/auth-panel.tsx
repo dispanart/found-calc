@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/locales";
@@ -20,6 +20,9 @@ const copy = {
     signedOut: "Belum masuk.",
     working: "Memproses…",
     genericError: "Autentikasi belum berhasil. Periksa data Anda dan coba lagi.",
+    claimSuccess: "Draft tersimpan dipertahankan pada akun Anda.",
+    claimFailure: "Akun berhasil masuk, tetapi draft tamu belum dapat dipertahankan. Coba lagi.",
+    retryClaim: "Coba pertahankan draft lagi",
   },
   en: {
     signIn: "Sign in",
@@ -33,6 +36,9 @@ const copy = {
     signedOut: "You are not signed in.",
     working: "Working…",
     genericError: "Authentication did not complete. Check your details and try again.",
+    claimSuccess: "Saved drafts preserved with your account.",
+    claimFailure: "Authentication succeeded, but guest drafts could not be preserved. Try again.",
+    retryClaim: "Retry preserving drafts",
   },
 } as const;
 
@@ -46,35 +52,65 @@ export function AuthPanel({ locale }: { locale: Locale }) {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [claimNeedsRetry, setClaimNeedsRetry] = useState(false);
+
+  const claimGuestDrafts = async (): Promise<boolean> => {
+    try {
+      const response = await fetch("/api/guest/claim", { method: "POST" });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  const finishAuthenticatedTransition = async () => {
+    const claimed = await claimGuestDrafts();
+    setClaimNeedsRetry(!claimed);
+    setStatus(claimed ? text.claimSuccess : text.claimFailure);
+    await refetch();
+    router.refresh();
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBusy(true);
     setStatus("");
+    setClaimNeedsRetry(false);
     const result = mode === "sign-up"
       ? await authClient.signUp.email({ name: name.trim(), email: email.trim(), password })
       : await authClient.signIn.email({ email: email.trim(), password });
-    setBusy(false);
     if (result.error) {
+      setBusy(false);
       setStatus(text.genericError);
       return;
     }
     setPassword("");
-    await refetch();
-    router.refresh();
+    await finishAuthenticatedTransition();
+    setBusy(false);
+  };
+
+  const retryClaim = async () => {
+    setBusy(true);
+    const claimed = await claimGuestDrafts();
+    setClaimNeedsRetry(!claimed);
+    setStatus(claimed ? text.claimSuccess : text.claimFailure);
+    if (claimed) router.refresh();
+    setBusy(false);
   };
 
   const signOut = async () => {
     setBusy(true);
     setStatus("");
+    setClaimNeedsRetry(false);
     const result = await authClient.signOut();
-    setBusy(false);
     if (result.error) {
+      setBusy(false);
       setStatus(text.genericError);
       return;
     }
     await refetch();
     router.refresh();
+    setBusy(false);
   };
 
   if (isPending) {
@@ -86,19 +122,27 @@ export function AuthPanel({ locale }: { locale: Locale }) {
       <section className="rounded-[var(--radius-card)] border border-border bg-card p-6 sm:p-8">
         <p className="text-sm text-muted-foreground">{text.signedIn}</p>
         <p className="mt-2 break-words text-lg font-bold">{session.user.email}</p>
-        <div className="mt-6">
+        <div className="mt-6 flex flex-wrap gap-3">
           <Button type="button" variant="outline" onClick={signOut} disabled={busy}>
             {busy ? text.working : text.signOut}
           </Button>
+          {claimNeedsRetry ? (
+            <Button type="button" variant="ghost" onClick={retryClaim} disabled={busy}>
+              {text.retryClaim}
+            </Button>
+          ) : null}
         </div>
-        <p className="mt-4 text-sm text-destructive" aria-live="polite">{status}</p>
+        <p className={claimNeedsRetry ? "mt-4 text-sm text-destructive" : "mt-4 text-sm text-muted-foreground"} role="status" aria-live="polite">
+          {status}
+        </p>
       </section>
     );
   }
 
   return (
     <section className="rounded-[var(--radius-card)] border border-border bg-card p-6 sm:p-8">
-      <div className="flex flex-wrap gap-2" aria-label={locale === "id" ? "Pilihan autentikasi" : "Authentication options"}>
+      <p className="text-sm text-muted-foreground">{text.signedOut}</p>
+      <div className="mt-5 flex flex-wrap gap-2" aria-label={locale === "id" ? "Pilihan autentikasi" : "Authentication options"}>
         <Button type="button" variant={mode === "sign-in" ? "default" : "outline"} onClick={() => setMode("sign-in")}>
           {text.signIn}
         </Button>

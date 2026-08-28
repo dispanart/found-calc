@@ -9,7 +9,7 @@ test("an unsaved localized draft survives ID to EN navigation without network pe
 
   await page.getByRole("link", { name: "Ganti bahasa: EN" }).click();
   await expect(page).toHaveURL(/\/en\/calculators\/discount$/);
-  await expect(page.getByLabel("Starting price")).toHaveValue("1234.50");
+  await expect(page.getByLabel("Starting price")).toHaveValue("1,234.50");
   await expect(page.getByLabel("Discount 1")).toHaveValue("10.5000");
 });
 
@@ -56,7 +56,10 @@ test("guest saved state is claimed on account creation, visible in workspace, lo
 test("signed-out workspace provides an auth path and remains usable at 390px", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/id/workspace");
-  await expect(page.getByRole("link", { name: /masuk/i })).toBeVisible();
+  const authLink = page.getByRole("link", { name: /masuk/i });
+  await expect(authLink).toBeVisible();
+  await authLink.focus();
+  await expect(authLink).toBeFocused();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(overflow).toBe(false);
 });
