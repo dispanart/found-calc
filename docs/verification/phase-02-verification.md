@@ -19,8 +19,8 @@ The Phase 02 superset gate completed successfully for the verified implementatio
 
 ### Dependency-free verification contract
 
-- 7 foundation/verification-contract tests passed.
-- The Phase 02 verification-contract test proves the root script and CI remain a superset of engine, rules, and Phase 01 gates.
+- 8 foundation/verification-contract tests are expected on the final completion head after the boundary-guard review fix.
+- The Phase 02 verification contract proves the root script and CI remain a superset of engine, rules, and Phase 01 gates and textually rejects rules/UI/runtime/I/O/hidden-nondeterminism dependencies from `packages/engine/src`.
 
 ### `@found-calc/engine`
 
@@ -72,6 +72,8 @@ Phase 02 behavior was implemented through observed RED → GREEN cycles on GitHu
 
 A final strict-typecheck failure exposed two issues that behavior tests did not catch: regex capture narrowing under `noUncheckedIndexedAccess`, and overly broad outcome-constructor return types. Both were fixed without changing runtime formulas, then the complete gate was rerun successfully.
 
+Final PR diff review found an additional plan-compliance gap: the dependency-free engine-boundary scan required by Task 7 had not yet been wired into the verification contract. The scan was added before merge and the final completion head is required to pass the full Phase 02 workflow with that guard active.
+
 ## Architecture and scope checks
 
 Verified boundaries:
@@ -99,4 +101,4 @@ The Phase 02 synthetic rate versions and the 10% business-margin recommendation 
 
 ## Completion protocol
 
-This record captures the successful implementation gate at `986ec912…`. Continuity-documentation changes made after that evidence must receive a fresh Phase 02 workflow run before PR #2 is merged. After merge, canonical `main` must be verified and `found-calc-phase-02-engine-reference-slices.zip` must be created from the merged source tree and extraction-checked before Phase 02 is treated as the portable canonical baseline.
+This record captures the successful implementation gate at `986ec912…`. Continuity-documentation and review-guard changes made after that evidence must receive a fresh Phase 02 workflow run before PR #2 is merged. After merge, canonical `main` must be verified and `found-calc-phase-02-engine-reference-slices.zip` must be created from the merged source tree and extraction-checked before Phase 02 is treated as the portable canonical baseline.
