@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { CalculatorPageShell } from "@/components/calculator/calculator-page-shell";
+import { DiscountCalculator } from "@/components/calculator/discount-calculator";
 import { isLocale, locales } from "@/i18n/locales";
 
 export function generateStaticParams() {
@@ -47,9 +48,13 @@ export default async function CalculatorPage({
 
   return (
     <CalculatorPageShell locale={locale} entry={entry}>
-      <section className="rounded-[var(--radius-card)] border border-dashed border-border bg-card/60 p-6 text-sm text-muted-foreground">
-        {placeholder}
-      </section>
+      {entry.id === "reference.discount" ? (
+        <DiscountCalculator locale={locale} entry={entry} />
+      ) : (
+        <section className="rounded-[var(--radius-card)] border border-dashed border-border bg-card/60 p-6 text-sm text-muted-foreground">
+          {placeholder}
+        </section>
+      )}
     </CalculatorPageShell>
   );
 }
