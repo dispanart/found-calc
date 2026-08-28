@@ -31,7 +31,8 @@ describe("calculator state HTTP boundary", () => {
 
     const get = await handleCalculatorStateRequest("GET", new Request("http://localhost:3000/api/calculator-state/reference.discount", { headers: { cookie: guestCookie } }), "reference.discount", { DB: env.DB, auth });
     expect(get.status).toBe(200);
-    expect((await get.json()).state).toEqual(state);
+    const getPayload = await get.json() as { state: unknown };
+    expect(getPayload.state).toEqual(state);
 
     const del = await handleCalculatorStateRequest("DELETE", new Request("http://localhost:3000/api/calculator-state/reference.discount", { method: "DELETE", headers: { cookie: guestCookie } }), "reference.discount", { DB: env.DB, auth });
     expect(del.status).toBe(204);
