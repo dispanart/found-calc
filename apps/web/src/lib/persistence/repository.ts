@@ -101,6 +101,14 @@ export const createCalculatorStateRepository = (binding: D1Database) => {
     } as const;
 
     try {
+      await binding.prepare("SELECT 1 FROM calculator_state LIMIT 1").first();
+      console.error("[found-calc][repository-upsert] preflight:ok");
+    } catch (cause) {
+      console.error(`[found-calc][repository-upsert] preflight:${classifyRepositoryError(cause)}`);
+      throw cause;
+    }
+
+    try {
       await db
         .insert(calculatorStates)
         .values(values)
@@ -182,7 +190,7 @@ export const createCalculatorStateRepository = (binding: D1Database) => {
       await deleteState("guest", guestId, guest.calculatorId);
     }
 
-    return { claimed, keptUser };
+    return { claimed, keptUser } as const;
   };
 
   return { getState, upsertState, deleteState, listUserStates, claimGuestStates } as const;
