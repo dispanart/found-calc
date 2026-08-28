@@ -27,6 +27,7 @@ Phase 02 adds deterministic calculation truth without pulling Phase 03+ product 
 - immutable effective-date/version resolver with strict date-only validation, explicit unavailable/ambiguous failures, and version pinning;
 - canonical synthetic 2025/2026 rate fixtures and historical reproducibility integration tests;
 - `verify:phase02` as a fail-fast superset of package tests/typechecks plus the complete Phase 01 regression gate;
+- dependency-free textual engine-boundary guard against rules/UI/runtime/I/O/hidden-nondeterminism dependencies;
 - GitHub Actions frozen-lock verification with Chromium and built Worker `/id` + `/en` smoke tests.
 
 No calculator UI/discovery, production catalog, Better Auth integration, persistence schema, Xendit/billing, production regulatory/rule datasets, Admin, Goals/Projects, or analytics is included.
@@ -35,9 +36,9 @@ No calculator UI/discovery, production catalog, Better Auth integration, persist
 
 Detailed evidence is recorded in `docs/verification/phase-02-verification.md`.
 
-The verified implementation gate covers:
+The final completion gate is expected to cover:
 
-1. 7 dependency-free foundation/verification-contract tests;
+1. 8 dependency-free foundation/verification-contract tests, including the engine-boundary scan;
 2. 29 `@found-calc/engine` tests;
 3. strict engine TypeScript typecheck;
 4. 9 `@found-calc/rules` tests including historical integration;
@@ -45,7 +46,7 @@ The verified implementation gate covers:
 6. the complete Phase 01 regression gate — lint, web typecheck, unit, D1 runtime, 4 Playwright smoke tests, Next build, vinext check, and vinext build;
 7. built vinext Worker HTTP smoke for `/id` and `/en`.
 
-The successful implementation workflow evidence is GitHub Actions run `33140898549`, job `98751347126`, for SHA `986ec91224b90124e00d5c59a7fea7f363367f21`. Final continuity-documentation changes are required to pass the same Phase 02 workflow before merge.
+The successful pre-review implementation workflow evidence is GitHub Actions run `33140898549`, job `98751347126`, for SHA `986ec91224b90124e00d5c59a7fea7f363367f21`. The final documentation/review-guard head must pass the same Phase 02 workflow before merge.
 
 ## Deterministic-truth contract
 
