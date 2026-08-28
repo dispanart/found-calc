@@ -64,7 +64,7 @@ That run verified the complete Phase 04 gate and built Worker smoke on the closu
 - a post-merge artifact trigger limited to Phase 04-specific closure files so later phase handoffs cannot accidentally rerun the Phase 04 artifact workflow;
 - the full inherited product/runtime regression chain.
 
-This verification-record update is documentation-only. The resulting PR head receives one additional fresh full Phase 04 CI run before merge; that final-head run is merge evidence in PR #7 and does not require another documentation mutation, avoiding an evidence-update loop.
+This verification-record update is documentation-only. The resulting PR head receives one additional fresh full Phase 04 CI run before merge; that final-head run is merge evidence in the closure pull request and does not require another documentation mutation, avoiding an evidence-update loop.
 
 ## TDD and debugging evidence
 
