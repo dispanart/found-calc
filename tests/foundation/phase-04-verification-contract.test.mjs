@@ -71,3 +71,14 @@ test("Phase 04 closure records a portable canonical handoff", () => {
   assert.match(artifactWorkflow, /SHA256SUMS/);
   assert.match(artifactWorkflow, /ARTIFACT_VERIFICATION\.txt/);
 });
+
+test("Phase 04 canonical artifact trigger cannot interfere with later phase handoffs", () => {
+  const artifactWorkflow = read(".github/workflows/phase-04-baseline-artifact.yml");
+  const triggerSection = artifactWorkflow.split("permissions:")[0];
+
+  assert.match(triggerSection, /docs\/verification\/phase-04-verification\.md/);
+  assert.match(triggerSection, /\.github\/workflows\/phase-04-baseline-artifact\.yml/);
+  assert.doesNotMatch(triggerSection, /- BASELINE\.md/);
+  assert.doesNotMatch(triggerSection, /- PHASE_HANDOFF\.md/);
+  assert.doesNotMatch(triggerSection, /- PHASE_CHAT_TEMPLATE\.md/);
+});
