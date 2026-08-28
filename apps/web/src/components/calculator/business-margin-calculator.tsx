@@ -2,7 +2,7 @@
 
 import type { ReferenceCatalogEntry } from "@found-calc/catalog";
 import { businessMarginCalculatorDefinition, type BusinessMarginInput, type CalculationResult } from "@found-calc/engine";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/locales";
@@ -33,29 +33,26 @@ const localize = (value: string, from: Locale, to: Locale, scale: number) => {
   return parsed.ok ? formatCanonicalDecimal(parsed.value, to) : value;
 };
 
-const SERVER_DRAFT_SNAPSHOT = "server";
-const subscribeLocalDraft = () => () => {};
-const getServerDraftSnapshot = () => SERVER_DRAFT_SNAPSHOT;
+const subscribeClientReady = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
-function useLocalDraftSeed(calculatorId: "reference.business-margin") {
-  const getSnapshot = useCallback(() => {
-    const draft = readLocalDraft(calculatorId);
-    return draft === null ? "client:null" : `client:${JSON.stringify(draft)}`;
-  }, [calculatorId]);
-  const snapshot = useSyncExternalStore(subscribeLocalDraft, getSnapshot, getServerDraftSnapshot);
-  if (snapshot === SERVER_DRAFT_SNAPSHOT) return { ready: false, draft: null as BusinessMarginDraft | null };
-  if (snapshot === "client:null") return { ready: true, draft: null as BusinessMarginDraft | null };
-  const parsed = JSON.parse(snapshot.slice("client:".length)) as LocalCalculatorDraft;
-  return { ready: true, draft: parsed.calculatorId === calculatorId ? parsed as BusinessMarginDraft : null };
+function useClientReady() {
+  return useSyncExternalStore(subscribeClientReady, getClientSnapshot, getServerSnapshot);
 }
 
 export function BusinessMarginCalculator({ locale, entry }: BusinessMarginCalculatorProps) {
-  const seed = useLocalDraftSeed("reference.business-margin");
-  return <BusinessMarginCalculatorStateful key={`${entry.id}:${locale}:${seed.ready ? "client" : "server"}`} locale={locale} entry={entry} initialDraft={seed.draft} localDraftReady={seed.ready} />;
+  const clientReady = useClientReady();
+  if (!clientReady) return null;
+  return <BusinessMarginCalculatorStateful key={`${entry.id}:${locale}`} locale={locale} entry={entry} />;
 }
 
-function BusinessMarginCalculatorStateful({ locale, entry, initialDraft, localDraftReady }: BusinessMarginCalculatorProps & { initialDraft: BusinessMarginDraft | null; localDraftReady: boolean }) {
+function BusinessMarginCalculatorStateful({ locale, entry }: BusinessMarginCalculatorProps) {
   const copy = entry.copy[locale]; const text = textByLocale[locale];
+  const [initialDraft] = useState<BusinessMarginDraft | null>(() => {
+    const draft = readLocalDraft("reference.business-margin");
+    return draft?.calculatorId === "reference.business-margin" ? draft : null;
+  });
   const [sellingPrice, setSellingPrice] = useState(() => initialDraft === null ? "" : localize(initialDraft.fields.sellingPrice, initialDraft.locale, locale, 2));
   const [productCost, setProductCost] = useState(() => initialDraft === null ? "" : localize(initialDraft.fields.productCost, initialDraft.locale, locale, 2));
   const [variableCost, setVariableCost] = useState(() => initialDraft === null ? "" : localize(initialDraft.fields.variableCost, initialDraft.locale, locale, 2));
@@ -66,9 +63,8 @@ function BusinessMarginCalculatorStateful({ locale, entry, initialDraft, localDr
   const [persistableState, setPersistableState] = useState<PersistedCalculatorState | null>(null);
 
   useEffect(() => {
-    if (!localDraftReady) return;
     writeLocalDraft({ calculatorId: "reference.business-margin", locale, fields: { sellingPrice, productCost, variableCost, scenarioVariableCost } });
-  }, [localDraftReady, locale, productCost, scenarioVariableCost, sellingPrice, variableCost]);
+  }, [locale, productCost, scenarioVariableCost, sellingPrice, variableCost]);
 
   const dirty = () => setPersistableState(null);
   const buildBaselineInput = (): { input: BusinessMarginInput; errors: Record<string, string> } | { errors: Record<string, string> } => {
