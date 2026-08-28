@@ -30,3 +30,14 @@ test("Phase 03 verification is a superset of catalog, web, and Phase 02 gates", 
     assert.match(phase03Workflow, new RegExp(route.replaceAll("/", "\\/")));
   }
 });
+
+test("Phase 03 supersedes generic PR regression workflows without duplicate CI runs", async () => {
+  const [phase02Workflow, phase03Workflow] = await Promise.all([
+    readText(".github/workflows/phase-02-verification.yml"),
+    readText(".github/workflows/phase-03-verification.yml"),
+  ]);
+
+  assert.doesNotMatch(phase02Workflow, /\bpull_request:/);
+  assert.doesNotMatch(phase03Workflow, /\bpull_request:/);
+  assert.match(phase03Workflow, /phase-03-product-ui-runtime-discovery/);
+});

@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - phase-03-product-ui-runtime-discovery
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
