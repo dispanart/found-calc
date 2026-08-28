@@ -1,4 +1,4 @@
-import { isLocale, type Locale } from "@/i18n/locales";
+import { isLocale, type Locale } from "../../i18n/locales";
 
 export const LOCAL_DRAFT_SCHEMA_VERSION = 1 as const;
 export const LOCAL_DRAFT_KEY_PREFIX = "found-calc:draft:v1:";
