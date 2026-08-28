@@ -55,7 +55,7 @@ export function parseLocaleDecimal(
   let fractionPart = "";
 
   if (decimalCount === 1) {
-    const [integerWithGrouping, fraction = ""] = unsigned.split(decimalSeparator);
+    const [integerWithGrouping = "", fraction = ""] = unsigned.split(decimalSeparator);
     if (integerWithGrouping.length === 0 || fraction.length === 0 || !DIGITS.test(fraction)) {
       return { ok: false, code: "malformed" };
     }
@@ -113,7 +113,9 @@ export function formatCanonicalDecimal(
     return value;
   }
 
-  const [, sign, integer, fraction] = match;
+  const sign = match[1] ?? "";
+  const integer = match[2] ?? "";
+  const fraction = match[3];
   const groupingSeparator = locale === "id" ? "." : ",";
   const decimalSeparator = locale === "id" ? "," : ".";
   const groupedInteger = integer.replace(/\B(?=(\d{3})+(?!\d))/g, groupingSeparator);
