@@ -45,6 +45,13 @@ export function SiteHeader({ locale, messages }: SiteHeaderProps) {
           </nav>
 
           <Link
+            className="rounded-sm text-sm font-semibold text-muted-foreground hover:text-foreground"
+            href={`/${locale}/auth`}
+          >
+            {messages.navAccount}
+          </Link>
+
+          <Link
             href={localeHref}
             aria-label={`${messages.localeSwitchLabel}: ${otherLocale.toUpperCase()}`}
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] border border-border bg-card px-3 text-sm font-semibold uppercase hover:bg-muted"
