@@ -28,32 +28,6 @@ export interface UpsertCalculatorStateInput {
   readonly updatedAt?: number;
 }
 
-const classifyRepositoryError = (value: unknown): "missing-table" | "sqlite-busy" | "constraint" | "unknown" => {
-  let current: unknown = value;
-  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
-    const message = "message" in current && typeof current.message === "string" ? current.message : "";
-    if (/no such table/i.test(message)) return "missing-table";
-    if (/SQLITE_BUSY|database is locked/i.test(message)) return "sqlite-busy";
-    if (/constraint failed|unique constraint/i.test(message)) return "constraint";
-    current = "cause" in current ? current.cause : undefined;
-  }
-  return "unknown";
-};
-
-const describeRepositoryError = (value: unknown): string => {
-  const parts: string[] = [];
-  let current: unknown = value;
-  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
-    const name = "name" in current && typeof current.name === "string" ? current.name : "unknown";
-    const code = "code" in current && typeof current.code === "string" ? current.code : "";
-    const message = "message" in current && typeof current.message === "string" ? current.message : "";
-    const safeMessage = message.replace(/\s+/g, " ").slice(0, 240);
-    parts.push(`${name}${code ? `(${code})` : ""}:${safeMessage || "no-message"}`);
-    current = "cause" in current ? current.cause : undefined;
-  }
-  return parts.join(" <- ") || typeof value;
-};
-
 const decodeRow = (row: typeof calculatorStates.$inferSelect): StoredCalculatorState => {
   let decoded: unknown;
   try {
@@ -114,42 +88,19 @@ export const createCalculatorStateRepository = (binding: D1Database) => {
       updatedAt,
     } as const;
 
-    try {
-      await binding.prepare("SELECT 1 FROM calculator_state LIMIT 1").first();
-      console.error("[found-calc][repository-upsert] preflight:ok");
-    } catch (cause) {
-      const classification = classifyRepositoryError(cause);
-      console.error(`[found-calc][repository-upsert] preflight:${classification}`);
-      if (classification === "unknown") {
-        console.error(`[found-calc][repository-upsert] preflight-detail:${describeRepositoryError(cause)}`);
-      }
-      throw cause;
-    }
+    await db
+      .insert(calculatorStates)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [calculatorStates.ownerType, calculatorStates.ownerId, calculatorStates.calculatorId],
+        set: {
+          calculatorVersion: values.calculatorVersion,
+          stateJson: values.stateJson,
+          updatedAt: values.updatedAt,
+        },
+      });
 
-    try {
-      await db
-        .insert(calculatorStates)
-        .values(values)
-        .onConflictDoUpdate({
-          target: [calculatorStates.ownerType, calculatorStates.ownerId, calculatorStates.calculatorId],
-          set: {
-            calculatorVersion: values.calculatorVersion,
-            stateJson: values.stateJson,
-            updatedAt: values.updatedAt,
-          },
-        });
-    } catch (cause) {
-      console.error(`[found-calc][repository-upsert] insert:${classifyRepositoryError(cause)}`);
-      throw cause;
-    }
-
-    let stored: StoredCalculatorState | null;
-    try {
-      stored = await getState(input.ownerType, input.ownerId, parsed.value.calculatorId);
-    } catch (cause) {
-      console.error(`[found-calc][repository-upsert] readback:${classifyRepositoryError(cause)}`);
-      throw cause;
-    }
+    const stored = await getState(input.ownerType, input.ownerId, parsed.value.calculatorId);
     if (!stored) throw new Error("calculator state upsert invariant failed");
     return stored;
   };
