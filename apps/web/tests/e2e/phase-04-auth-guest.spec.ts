@@ -21,7 +21,14 @@ test("guest saved state is claimed on account creation, visible in workspace, lo
   await page.getByLabel("Starting price").fill("100.00");
   await page.getByLabel("Discount 1").fill("10");
   await page.getByRole("button", { name: "Calculate discount" }).click();
+  const saveResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return response.request().method() === "PUT" && url.pathname === "/api/calculator-state/reference.discount";
+  });
   await page.getByTestId("save-draft").click();
+  const saveResponse = await saveResponsePromise;
+  const saveBody = await saveResponse.text();
+  expect(saveResponse.status(), `Guest save failed with body: ${saveBody}`).toBe(200);
   await expect(page.getByTestId("persistence-status")).toContainText("Draft saved");
 
   await page.goto("/en/auth");
