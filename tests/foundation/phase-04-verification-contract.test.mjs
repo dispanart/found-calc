@@ -33,3 +33,14 @@ test("Phase 04 verification surface is wired", () => {
     assert.equal(exists(path), true, `missing Phase 04 artifact: ${path}`);
   }
 });
+
+test("Phase 04 clears canonical Next build artifacts before inherited regression gates", () => {
+  const verification = read("scripts/verify-phase-04.mjs");
+  assert.match(verification, /rmSync/);
+  assert.match(verification, /apps\/web\/\.next/);
+
+  const cleanupIndex = verification.indexOf('apps/web/.next');
+  const inheritedGateIndex = verification.indexOf('complete Phase 03 regression gate');
+  assert.ok(cleanupIndex >= 0, "Phase 04 must define cleanup for apps/web/.next");
+  assert.ok(inheritedGateIndex > cleanupIndex, "Next build artifacts must be cleared before the inherited Phase 03 gate");
+});
