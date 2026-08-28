@@ -40,6 +40,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright Chromium
+        run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
+
       - name: Run Phase 02 TDD package tests
         run: pnpm --filter @found-calc/web exec vitest run --config vitest.phase02.config.ts
 
