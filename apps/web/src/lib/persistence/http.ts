@@ -6,7 +6,6 @@ import {
   isSupportedCalculatorId,
   MAX_PERSISTED_STATE_BYTES,
   parsePersistedCalculatorState,
-  type SupportedCalculatorId,
 } from "./state";
 
 export const GUEST_COOKIE_NAME = "found_calc_guest";
