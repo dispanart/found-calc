@@ -2,12 +2,12 @@
 
 import type { ReferenceCatalogEntry } from "@found-calc/catalog";
 import { syntheticRuleCalculatorDefinition } from "@found-calc/engine";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/locales";
 import { runSyntheticRule } from "@/lib/calculators/runtime";
-import { readLocalDraft, writeLocalDraft } from "@/lib/persistence/local-draft";
+import { readLocalDraft, writeLocalDraft, type LocalCalculatorDraft } from "@/lib/persistence/local-draft";
 import type { PersistedCalculatorState } from "@/lib/persistence/state";
 import { formatCanonicalDecimal, parseLocaleDecimal } from "@/lib/presentation/decimal";
 import { CalculatorField } from "./field";
@@ -17,6 +17,7 @@ import { TrustPanel } from "./trust-panel";
 import { ValidationSummary } from "./validation-summary";
 
 interface SyntheticRuleCalculatorProps { locale: Locale; entry: ReferenceCatalogEntry; }
+type SyntheticDraft = Extract<LocalCalculatorDraft, { calculatorId: "reference.synthetic-rule" }>;
 const textByLocale = {
   id: { summary: "Periksa input berikut.", required: "Kolom ini wajib diisi.", invalidNumber: "Masukkan angka yang valid.", range: "Nilai berada di luar rentang yang diizinkan.", invalidDate: "Masukkan tanggal efektif yang valid.", unavailable: "Tidak ada fixture sintetis untuk tanggal efektif ini.", ambiguous: "Tanggal efektif ini cocok dengan lebih dari satu fixture sintetis.", result: "Hasil referensi aturan", ongoing: "dan setelahnya" },
   en: { summary: "Check the following inputs.", required: "This field is required.", invalidNumber: "Enter a valid number.", range: "The value is outside the allowed range.", invalidDate: "Enter a valid effective date.", unavailable: "No synthetic fixture is available for this effective date.", ambiguous: "This effective date matches more than one synthetic fixture.", result: "Rule reference result", ongoing: "and later" },
@@ -27,18 +28,35 @@ const localize = (value: string, from: Locale, to: Locale) => {
   return parsed.ok ? formatCanonicalDecimal(parsed.value, to) : value;
 };
 
-export function SyntheticRuleCalculator({ locale, entry }: SyntheticRuleCalculatorProps) {
-  const copy = entry.copy[locale]; const text = textByLocale[locale];
-  const [baseAmount, setBaseAmount] = useState(""); const [effectiveDate, setEffectiveDate] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({}); const [outcome, setOutcome] = useState<ReturnType<typeof runSyntheticRule> | null>(null);
-  const [persistableState, setPersistableState] = useState<PersistedCalculatorState | null>(null); const [localReady, setLocalReady] = useState(false);
+const SERVER_DRAFT_SNAPSHOT = "server";
+const subscribeLocalDraft = () => () => {};
+const getServerDraftSnapshot = () => SERVER_DRAFT_SNAPSHOT;
 
-  useEffect(() => {
-    const draft = readLocalDraft(entry.id);
-    if (draft?.calculatorId === "reference.synthetic-rule") { setBaseAmount(localize(draft.fields.baseAmount, draft.locale, locale)); setEffectiveDate(draft.fields.effectiveDate); }
-    setLocalReady(true);
-  }, [entry.id, locale]);
-  useEffect(() => { if (localReady) writeLocalDraft({ calculatorId: "reference.synthetic-rule", locale, fields: { baseAmount, effectiveDate } }); }, [baseAmount, effectiveDate, localReady, locale]);
+function useLocalDraftSeed(calculatorId: "reference.synthetic-rule") {
+  const getSnapshot = useCallback(() => {
+    const draft = readLocalDraft(calculatorId);
+    return draft === null ? "client:null" : `client:${JSON.stringify(draft)}`;
+  }, [calculatorId]);
+  const snapshot = useSyncExternalStore(subscribeLocalDraft, getSnapshot, getServerDraftSnapshot);
+  if (snapshot === SERVER_DRAFT_SNAPSHOT) return { ready: false, draft: null as SyntheticDraft | null };
+  if (snapshot === "client:null") return { ready: true, draft: null as SyntheticDraft | null };
+  const parsed = JSON.parse(snapshot.slice("client:".length)) as LocalCalculatorDraft;
+  return { ready: true, draft: parsed.calculatorId === calculatorId ? parsed as SyntheticDraft : null };
+}
+
+export function SyntheticRuleCalculator({ locale, entry }: SyntheticRuleCalculatorProps) {
+  const seed = useLocalDraftSeed("reference.synthetic-rule");
+  return <SyntheticRuleCalculatorStateful key={`${entry.id}:${locale}:${seed.ready ? "client" : "server"}`} locale={locale} entry={entry} initialDraft={seed.draft} localDraftReady={seed.ready} />;
+}
+
+function SyntheticRuleCalculatorStateful({ locale, entry, initialDraft, localDraftReady }: SyntheticRuleCalculatorProps & { initialDraft: SyntheticDraft | null; localDraftReady: boolean }) {
+  const copy = entry.copy[locale]; const text = textByLocale[locale];
+  const [baseAmount, setBaseAmount] = useState(() => initialDraft === null ? "" : localize(initialDraft.fields.baseAmount, initialDraft.locale, locale));
+  const [effectiveDate, setEffectiveDate] = useState(() => initialDraft?.fields.effectiveDate ?? "");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({}); const [outcome, setOutcome] = useState<ReturnType<typeof runSyntheticRule> | null>(null);
+  const [persistableState, setPersistableState] = useState<PersistedCalculatorState | null>(null);
+
+  useEffect(() => { if (localDraftReady) writeLocalDraft({ calculatorId: "reference.synthetic-rule", locale, fields: { baseAmount, effectiveDate } }); }, [baseAmount, effectiveDate, localDraftReady, locale]);
   const dirty = () => setPersistableState(null);
   const calculate = () => {
     const errors: Record<string, string> = {}; const parsedBase = parseLocaleDecimal(baseAmount, locale, 2);
