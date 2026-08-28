@@ -1,12 +1,3 @@
-export interface RuleVersionProvenance {
-  readonly sourceId: string;
-}
+import type { RuleDependency } from "@found-calc/engine";
 
-export interface RuleVersion<TPayload> {
-  readonly ruleId: string;
-  readonly versionId: string;
-  readonly effectiveFrom: string;
-  readonly effectiveUntil?: string;
-  readonly payload: Readonly<TPayload>;
-  readonly provenance: RuleVersionProvenance;
-}
+export interface RuleVersion<TPayload> extends RuleDependency<TPayload> {}

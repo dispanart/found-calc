@@ -1,7 +1,7 @@
 # @found-calc/engine
 
-Owns the deterministic calculation engine: typed inputs, typed outputs, formulas, validation boundaries, and calculation traces that are independent of UI, country rules, persistence, billing, and transport.
+Pure, deterministic calculation truth for Found Calc.
 
-**First implementation phase:** Phase 02 — Deterministic Engine & Reference Slices.
+The engine owns canonical decimal arithmetic, typed calculation contracts, validation, scenarios, and reference formulas. It is runtime-agnostic and locale-independent: no React/Next.js, Cloudflare bindings, persistence, network lookups, catalog metadata, auth/billing, locale parsing/formatting, or rule-resolution dependency is allowed in the calculation path.
 
-Phase 01 intentionally contains no runtime engine code.
+Phase 02 reference calculators are package-level proof slices, not end-user UI or production regulatory guidance.

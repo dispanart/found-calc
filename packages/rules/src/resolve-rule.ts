@@ -1,3 +1,4 @@
+import type { RuleDependency } from "@found-calc/engine";
 import type { RuleVersion } from "./rule-version";
 
 export type RuleResolutionFailureCode =
@@ -12,7 +13,7 @@ export interface ResolveRuleVersionRequest {
 }
 
 export type RuleResolutionResult<TPayload> =
-  | { readonly ok: true; readonly dependency: RuleVersion<TPayload> }
+  | { readonly ok: true; readonly dependency: RuleDependency<TPayload> }
   | { readonly ok: false; readonly code: RuleResolutionFailureCode };
 
 const ISO_DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;

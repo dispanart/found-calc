@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateSyntheticRuleAmount } from "../../engine/src/reference/synthetic-rule";
+import { calculateSyntheticRuleAmount } from "@found-calc/engine";
 import { resolveRuleVersion } from "./resolve-rule";
 import { syntheticRateRuleVersions } from "./synthetic-reference";
 import type { RuleVersion } from "./rule-version";
@@ -34,10 +34,7 @@ const calculateFor = (
     throw new Error(`expected calculation success: ${JSON.stringify(calculation.issues)}`);
   }
 
-  return {
-    dependency: resolution.dependency,
-    result: calculation.result,
-  };
+  return { dependency: resolution.dependency, result: calculation.result };
 };
 
 describe("synthetic historical rule reproducibility", () => {
@@ -61,7 +58,6 @@ describe("synthetic historical rule reproducibility", () => {
   it("does not rewrite historical fixtures or results when a future version is appended", () => {
     const historicalVersionSnapshot = structuredClone(syntheticRateRuleVersions[0]);
     const historicalBefore = calculateFor(syntheticRateRuleVersions, "2025-06-01", "2025-a");
-
     const withFuture: readonly RuleVersion<{ ratePercent: string }>[] = [
       ...syntheticRateRuleVersions,
       {
@@ -72,7 +68,6 @@ describe("synthetic historical rule reproducibility", () => {
         provenance: { sourceId: "synthetic-reference-fixture" },
       },
     ];
-
     const historicalAfter = calculateFor(withFuture, "2025-06-01", "2025-a");
     expect(syntheticRateRuleVersions[0]).toEqual(historicalVersionSnapshot);
     expect(historicalAfter).toEqual(historicalBefore);
