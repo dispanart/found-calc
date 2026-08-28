@@ -1,98 +1,118 @@
-# Found Calc Phase 03 — Product UI Runtime & Discovery
+# Found Calc Phase 04 — Persistence, Auth & Guest Preservation
 
 **Project:** Found Calc  
 **Phase state:** COMPLETE  
-**Last canonical completed phase:** Phase 03 — Product UI Runtime & Discovery  
-**Next phase:** Phase 04 — Persistence, Auth & Guest Preservation  
-**Completion date:** 2026-08-28
+**Last canonical completed phase:** Phase 04 — Persistence, Auth & Guest Preservation  
+**Next phase:** Phase 05 — exact approved title/scope must be resolved from the canonical Phase Workflow before implementation  
+**Completion date:** 2026-08-29
 
 ## Canonical artifact
 
-`found-calc-phase-03-product-ui-runtime-discovery.zip`
+`found-calc-phase-04-persistence-auth-guest-preservation.zip`
 
-The canonical portable ZIP is produced from the verified merged Phase 03 source tree by the post-merge baseline-artifact workflow, together with `SHA256SUMS` and extraction verification. GitHub `main` remains the collaborative canonical repository; the ZIP is the portable recovery/handoff copy for the next phase chat.
+GitHub `main` is the collaborative canonical repository. The Phase 04 post-merge baseline workflow packages the exact merged closure tree with `git archive`, writes `SHA256SUMS`, verifies extraction and required files, and records the exact source commit/tree in `ARTIFACT_VERIFICATION.txt`. The ZIP is the portable recovery/handoff copy for the next phase chat.
 
 ## Completed deliverables
 
-Phase 03 activates the public product UI runtime without changing Phase 02 deterministic truth boundaries:
+Phase 04 adds durable draft persistence and authentication without moving calculation truth out of the local deterministic runtime:
 
-- `@found-calc/catalog` is now a formal workspace package containing exactly three Phase 03 reference calculator entries with stable IDs/slugs, ID/EN copy, category/discovery metadata, trust copy, and related-calculator relationships;
-- locale-aware presentation parsing and formatting converts ID/EN user input to canonical decimal strings while leaving calculation truth in `@found-calc/engine`;
-- a client-side runtime adapter delegates discount and business-margin calculations to `@found-calc/engine` and resolves the synthetic reference rule through `@found-calc/rules` before invoking the engine;
-- localized calculator discovery is available at `/{locale}/calculators`, with public-home discovery and canonical calculator routes at `/{locale}/calculators/{slug}`;
-- locale switching preserves the current calculator slug and remains compatible with Next.js typed routes;
-- source-owned accessible calculator primitives provide stable labels/IDs, helper/error associations, validation summaries, trust messaging, and polite result status regions;
-- stacked discount UI supports ordered discount steps, add/remove controls, localized values, sequential deterministic results, savings, and effective combined discount;
-- business-margin UI progresses from gross result to contextual contribution metrics and an engine-backed baseline/scenario/impact comparison, with synthetic recommendation content explicitly framed as demo/reference only;
-- synthetic rule reference UI requires an explicit effective date, shows a prominent synthetic-fixture warning, maps rule/date failures accessibly, and exposes resolved version/effective-period/source provenance;
-- keyboard interaction, field error association, ID/EN discovery, calculator flows, narrow-viewport overflow, Next production build, vinext compatibility/build, and built Worker routes are all covered by the Phase 03 verification gate;
-- `verify:phase03` is a fail-fast superset of Phase 03 contracts plus the complete Phase 02 and Phase 01 regression gates.
+- the existing Cloudflare D1 `DB` binding now has a checked-in migration for Better Auth core tables (`user`, `session`, `account`, `verification`) and a deliberately narrow `calculator_state` table;
+- `calculator_state` persists at most one latest validated canonical input draft per owner/calculator and stores no localized number strings, rendered results, passwords, tokens, telemetry, billing data, or formula output;
+- Drizzle ORM provides typed read/upsert/delete/list/guest-claim repository operations while `@found-calc/engine` remains formula truth and `@found-calc/rules` remains rule-resolution truth;
+- unauthenticated persisted state uses a random opaque `found_calc_guest` HttpOnly, SameSite=Lax, Path=/ cookie created only on a guest persistence mutation;
+- Better Auth 1.6.29 provides D1-backed email/password sign-up, sign-in, sign-out, and session retrieval; OAuth, email delivery, organizations, roles, passkeys/2FA, billing plugins, and production secret provisioning remain out of scope;
+- first-party state routes provide GET/PUT/DELETE for the three reference calculator drafts plus POST guest claim, with strict calculator/version/state validation, a 16 KiB boundary, stable generic error codes, and no server-side calculation;
+- browser `localStorage` preserves unsaved in-progress UI strings across reload and ID/EN locale navigation using namespaced/schema-versioned keys, with no auth/session token stored there and no automatic network persistence on keystroke;
+- all three reference calculators expose explicit Save draft, Load saved, and Delete saved controls only around validated canonical state while calculation execution remains local;
+- persisted canonical numeric values are mapped back to locale display strings on load without becoming engine truth;
+- successful account creation/sign-in claims guest drafts idempotently; claim failure does not roll back a valid authenticated session and remains retryable;
+- `/{locale}/auth` provides accessible ID/EN email/password account UI and the header exposes account navigation without blocking public calculators;
+- `/{locale}/workspace` is an auth-aware summary of the three reference draft states, not a Projects/history system;
+- Phase 04 browser verification runs through vinext + Cloudflare Vite/workerd with the real `cloudflare:workers` binding while canonical Next/Turbopack retains a non-executing Node build stub only for `next build`;
+- `verify:phase04` is a fail-fast superset of Phase 04 contracts/tests plus complete Phase 03, Phase 02, and Phase 01 regression gates.
 
 ## Verification status
 
-Detailed evidence is recorded in `docs/verification/phase-03-verification.md`.
+Detailed evidence is recorded in `docs/verification/phase-04-verification.md`.
 
-The verified pre-handoff implementation snapshot is:
+The verified final implementation snapshot before closure is:
 
-- source SHA: `73413b5f6f55f957532af595cdc811c2990b440f`;
-- GitHub Actions run: `33175892187`;
-- job: `98864278561`;
+- source SHA: `5073c3c97667775adc13708ca5507eb809895ebf`;
+- implementation merge commit: `4cc9fe3c84ea56a0caf587754547da0a59a772e5`;
+- GitHub Actions run: `33199332188`;
+- job: `98944559520`;
 - result: **SUCCESS**.
 
-That run includes 17/17 dependency-free Phase 03 contracts, 2/2 catalog tests, 8/8 web unit tests, 29/29 engine tests, 9/9 rules tests, 1/1 Cloudflare D1 runtime test, 14/14 Playwright tests, Next.js 16.2.9 production build, `vinext check`, `vinext build`, and built Worker HTTP smoke for locale/discovery/reference-calculator routes. Continuity documentation must receive a fresh green Phase 03 run before merge.
+That run completed the Phase 04 gate, all inherited Phase 03/02/01 gates, Next.js production build, vinext compatibility/build, local D1 migration, guest save→claim→load/delete browser flow, and built Worker HTTP smoke. The closure PR receives a separate fresh full Phase 04 run before merge; the canonical ZIP workflow then records the exact merged closure SHA/tree dynamically.
 
 ## Stable architecture boundaries
 
 ### Engine truth
 
-`@found-calc/engine` remains the only owner of deterministic formula truth. UI code must not reproduce formula arithmetic, use binary floating-point as calculation truth, resolve rules, persist inputs, or perform network I/O for calculations.
+`@found-calc/engine` remains the only owner of deterministic formula truth. Persistence/auth code may validate canonical syntax/version/shape but must not calculate totals, discounts, margins, scenarios, rates, recommendations, or rule outcomes.
 
 ### Rule truth
 
-`@found-calc/rules` remains outside the engine and resolves immutable effective-date/version dependencies. The synthetic Phase 03 UI passes an explicit effective date to the runtime adapter; no current-date fallback is allowed.
+`@found-calc/rules` remains the immutable effective-date/version resolver. Persisted synthetic-rule state contains only canonical input/date context; provenance is resolved again through the rules boundary when calculating.
 
 ### Catalog ownership
 
-`@found-calc/catalog` owns reference discovery metadata, stable slugs/IDs, localized product copy, trust copy, and related-calculator relationships. It does not own calculation formulas, persistence, auth, billing, or production regulatory data.
+`@found-calc/catalog` continues to own stable calculator identity, slugs, localized discovery/trust copy, category metadata, and relationships. It does not own auth, persistence, billing, or formulas.
 
-### Presentation/runtime ownership
+### Product runtime
 
-`apps/web` owns localized input normalization, localized output formatting, calculator-specific forms/results, accessible interaction, discovery/navigation, and trust/provenance presentation. Calculation execution remains local and deterministic for these reference slices.
+`apps/web` owns locale presentation parsing/formatting, accessible calculator interaction, first-party auth/session integration, local unsaved draft preservation, and explicit persistence controls. Reference calculations remain local and deterministic and still have no server calculation API.
 
-### Shared UI boundary
+### Persistence/auth boundary
 
-Calculator primitives remain source-owned in `apps/web` until reuse across multiple product surfaces is proven. Phase 03 does not promote these primitives into `@found-calc/ui` merely for abstraction.
+D1 contains Better Auth records plus validated canonical calculator draft inputs only. Guest ownership is first-party and opaque. Better Auth owns credentials/session behavior; no auth/session token is placed in localStorage.
 
-## Phase 03 reference catalog
+### Next/vinext runtime boundary
 
-The public reference catalog intentionally contains exactly three entries:
+Canonical `next build` aliases `cloudflare:workers` to a non-executing build stub because Node build-time evaluation has no Worker bindings. vinext explicitly overrides that Next config and uses native Cloudflare Vite/workerd bindings so D1/auth routes execute against the real Worker environment.
 
-1. `reference.discount` → `/calculators/discount`
-2. `reference.business-margin` → `/calculators/business-margin`
-3. `reference.synthetic-rule` → `/calculators/synthetic-rule-reference`
+## Phase 04 persistence contracts
 
-The synthetic calculator and synthetic business-margin recommendation threshold remain contract/demo fixtures, not authoritative advice or production rule data.
+Supported persisted calculator identities remain exactly:
+
+1. `reference.discount`
+2. `reference.business-margin`
+3. `reference.synthetic-rule`
+
+The API rejects unsupported IDs/versions, unknown properties, invalid canonical decimals/dates, excessive discount arrays, and payloads over 16 KiB. Guest-to-user claim is idempotent; newer state wins and retry cannot replace a newer user draft with stale guest state.
 
 ## Accessibility, trust, and privacy contract
 
 - launch locales remain Indonesian (`id`) and English (`en`);
-- field errors are associated with their controls using `aria-invalid`/`aria-describedby`;
-- result updates use a polite status region rather than noisy per-keystroke calculation;
-- explicit calculate/scenario actions are keyboard operable;
-- narrow 390px Phase 03 reference surfaces are verified without horizontal overflow;
-- synthetic rule provenance and non-production warning remain visible;
-- Phase 03 introduces no account persistence, browser persistence, calculation API, telemetry, or raw-input network transmission;
-- source review found no new `fetch` or `localStorage` path in the Phase 03 diff.
+- Phase 03 field-error/result accessibility behavior remains regression-covered;
+- persistence announcements are polite without taking over the calculation result status region;
+- local drafts survive locale navigation without silently transmitting raw input;
+- save/load/delete are explicit first-party actions and the UI states that calculation remains local;
+- the guest cookie is HttpOnly and unavailable to client JavaScript;
+- malformed local/persisted state never overwrites valid in-progress input;
+- no device fingerprinting, third-party identifier, telemetry, or raw-input logging was introduced;
+- source review found no server formula duplication, browser auth-token storage, committed production secret, or Phase 05+ feature implementation.
 
-## Known limitations
+## Known platform notes
 
-- `apps/web/wrangler.jsonc` still uses the inherited all-zero local-only D1 UUID; no remote database/deployment/DNS/credential mutation was performed.
-- `vinext check` remains **88% compatible with 0 issues**. Partial-support notes are unchanged: `next/font/google` is CDN-loaded by vinext rather than self-hosted at build time, and `reactStrictMode` has the documented App Router compatibility caveat.
-- Cloudflare Vitest can warn before a vinext build that it cannot statically analyze the generated vinext Worker entry; the D1 runtime test passes and the final built Worker smoke passes.
-- GitHub-hosted CI may report a slow filesystem during `next dev`; this did not fail the browser suite.
-- the Phase 03 calculator catalog is a reference proof, not a production-scale discovery/SEO catalog.
-- no Better Auth, account/session behavior, durable guest state, Drizzle product persistence, Xendit/payment integration, production regulatory packs, Admin publishing, Goals/Projects, analytics, AI explanations, or remote Cloudflare deployment is included.
+- `apps/web/wrangler.jsonc` retains the inherited all-zero local-only D1 UUID. It is for local/test identity only and is not a deployable production database.
+- `vinext check` reports **90% compatible with 0 issues**. Partial notes remain `next/font/google` CDN loading and the documented App Router `reactStrictMode` caveat.
+- Cloudflare Vitest can emit a pre-build static-analysis warning for the generated vinext entry while the runtime suites and built Worker smoke still pass.
+- GitHub Actions may emit Node 20 deprecation warnings for current `actions/checkout@v4` / `actions/setup-node@v4` internals even though the project job explicitly uses Node 22.
+- one signed-out 390px workspace Playwright scenario hit a transient vinext `Network connection lost` on the final implementation run and passed on retry; the persistence/claim scenario passed normally and the overall verification job was green.
+- Phase 04 deliberately clears generated `.next` artifacts before inherited regression gates so canonical Next and vinext type/build outputs do not contaminate one another.
+
+## Explicitly deferred beyond Phase 04
+
+Phase 04 does not authorize or implement:
+
+- remote D1 creation/migration, production Cloudflare deployment, DNS, or secret mutation;
+- Xendit/payment/subscription/entitlement/invoice/webhook flows;
+- production tax/legal/marketplace/health/payroll/fiqh/regulatory rule packs;
+- production-scale catalog/SEO publishing or Admin publishing tools;
+- Goals, Projects, named calculation history, sharing, collaboration, exports, or server-side calculation replay;
+- analytics, telemetry, AI explanations, OAuth providers, email verification/reset delivery, 2FA, or passkeys.
 
 ## Continuity rule
 
-Start **Phase 04 — Persistence, Auth & Guest Preservation** in a **new chat inside the same Found Calc project** and attach `found-calc-phase-03-product-ui-runtime-discovery.zip`. Read `PHASE_HANDOFF.md` and `docs/verification/phase-03-verification.md` before implementation. Treat Phase 01–03 architecture and deterministic/product-runtime boundaries as approved baseline; reopen them only for a verified implementation blocker under change control.
+Start **Phase 05** in a **new chat inside the same Found Calc project** and attach `found-calc-phase-04-persistence-auth-guest-preservation.zip`. Also provide the canonical Phase Workflow if it is not already available in the new chat/project file context. Before planning or implementation, resolve the exact approved Phase 05 title and scope from that canonical workflow; do not infer Phase 05 work from deferred items or pull later-phase scope forward.

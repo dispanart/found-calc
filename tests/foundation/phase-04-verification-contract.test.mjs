@@ -50,6 +50,7 @@ test("Phase 04 clears canonical Next build artifacts before inherited regression
 test("Phase 04 closure records a portable canonical handoff", () => {
   const baseline = read("BASELINE.md");
   const handoff = read("PHASE_HANDOFF.md");
+  const chatTemplate = read("PHASE_CHAT_TEMPLATE.md");
   const artifactWorkflow = read(".github/workflows/phase-04-baseline-artifact.yml");
 
   assert.match(baseline, /Found Calc Phase 04 — Persistence, Auth & Guest Preservation/);
@@ -57,6 +58,9 @@ test("Phase 04 closure records a portable canonical handoff", () => {
   assert.match(handoff, /Last canonical completed phase:\*\* Phase 04 — Persistence, Auth & Guest Preservation/);
   assert.match(handoff, /Phase 05/);
   assert.match(handoff, /canonical Phase Workflow/i);
+  assert.match(chatTemplate, /latest completed portable baseline is currently Phase 04/i);
+  assert.match(chatTemplate, /Phase 05/);
+  assert.match(chatTemplate, /canonical Phase Workflow/i);
 
   assert.equal(exists(".github/workflows/phase-04-lockfile.yml"), false, "temporary Phase 04 lockfile workflow must be removed at closure");
 
