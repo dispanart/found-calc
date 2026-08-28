@@ -37,6 +37,6 @@ test("Phase 04 browser verification uses vinext with the Cloudflare Vite runtime
   assert.match(playwright, /CLOUDFLARE_INCLUDE_PROCESS_ENV/);
 
   const vite = read("apps/web/vite.config.ts");
-  assert.match(vite, /vinext\(\)/);
+  assert.match(vite, /vinext\(/);
   assert.match(vite, /cloudflare\(/);
 });
