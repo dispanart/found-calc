@@ -128,7 +128,7 @@ export function DiscountCalculator({ locale, entry }: DiscountCalculatorProps) {
                       type="button"
                       variant="ghost"
                       onClick={() => removeDiscount(index)}
-                      aria-label={`${copy.ui.removeDiscount ?? "Remove discount"} ${index + 1}`}
+                      aria-label={`${copy.ui.removeDiscount ?? "Remove discount"}, ${index + 1}`}
                     >
                       {copy.ui.removeDiscount}
                     </Button>
