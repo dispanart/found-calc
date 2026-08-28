@@ -55,16 +55,19 @@ const initialStatuses = (): Record<SupportedCalculatorId, StateStatus> => ({
   "reference.synthetic-rule": "checking",
 });
 
-export function PersistenceSummary({ locale }: { locale: Locale }) {
+interface SignedInPersistenceSummaryProps {
+  locale: Locale;
+  userId: string;
+  email: string;
+}
+
+function SignedInPersistenceSummary({ locale, userId, email }: SignedInPersistenceSummaryProps) {
   const text = labels[locale];
-  const { data: session, isPending } = authClient.useSession();
   const [statuses, setStatuses] = useState<Record<SupportedCalculatorId, StateStatus>>(initialStatuses);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    if (!session?.user.id) return;
     let active = true;
-    setStatuses(initialStatuses());
 
     const load = async () => {
       const entries = await Promise.all(calculatorIds.map(async (calculatorId) => {
@@ -83,7 +86,39 @@ export function PersistenceSummary({ locale }: { locale: Locale }) {
 
     void load();
     return () => { active = false; };
-  }, [refreshKey, session?.user.id]);
+  }, [refreshKey, userId]);
+
+  const refresh = () => {
+    setStatuses(initialStatuses());
+    setRefreshKey((value) => value + 1);
+  };
+
+  return (
+    <section className="rounded-[var(--radius-card)] border border-border bg-card p-5 sm:p-7">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold tracking-[-0.025em]">{text.heading}</h2>
+          <p className="mt-2 break-words text-sm text-muted-foreground">{email}</p>
+        </div>
+        <Button type="button" variant="outline" onClick={refresh}>{text.retry}</Button>
+      </div>
+      <dl className="mt-6 grid gap-3">
+        {calculatorIds.map((calculatorId) => (
+          <div key={calculatorId} className="grid min-w-0 gap-1 rounded-[var(--radius-control)] border border-border/70 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+            <dt className="min-w-0 break-words text-sm font-semibold">{text.names[calculatorId]}</dt>
+            <dd className="text-sm text-muted-foreground" data-testid={`workspace-state-${calculatorId}`} role="status">
+              {text[statuses[calculatorId]]}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+export function PersistenceSummary({ locale }: { locale: Locale }) {
+  const text = labels[locale];
+  const { data: session, isPending } = authClient.useSession();
 
   if (isPending) {
     return <p className="text-sm text-muted-foreground" role="status">{text.checking}</p>;
@@ -102,24 +137,11 @@ export function PersistenceSummary({ locale }: { locale: Locale }) {
   }
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-border bg-card p-5 sm:p-7">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="text-xl font-bold tracking-[-0.025em]">{text.heading}</h2>
-          <p className="mt-2 break-words text-sm text-muted-foreground">{session.user.email}</p>
-        </div>
-        <Button type="button" variant="outline" onClick={() => setRefreshKey((value) => value + 1)}>{text.retry}</Button>
-      </div>
-      <dl className="mt-6 grid gap-3">
-        {calculatorIds.map((calculatorId) => (
-          <div key={calculatorId} className="grid min-w-0 gap-1 rounded-[var(--radius-control)] border border-border/70 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
-            <dt className="min-w-0 break-words text-sm font-semibold">{text.names[calculatorId]}</dt>
-            <dd className="text-sm text-muted-foreground" data-testid={`workspace-state-${calculatorId}`} role="status">
-              {text[statuses[calculatorId]]}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </section>
+    <SignedInPersistenceSummary
+      key={session.user.id}
+      locale={locale}
+      userId={session.user.id}
+      email={session.user.email}
+    />
   );
 }
