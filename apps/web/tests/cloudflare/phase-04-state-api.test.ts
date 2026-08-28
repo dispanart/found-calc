@@ -6,6 +6,7 @@ import migrationSql from "../../migrations/0001_phase04_auth_and_calculator_stat
 import { createFoundCalcAuth } from "../../src/lib/auth/server";
 import { createCalculatorStateRepository } from "../../src/lib/persistence/repository";
 import { handleCalculatorStateRequest, handleGuestClaimRequest } from "../../src/lib/persistence/http";
+import { resetPhase04Database } from "./test-database";
 
 declare module "cloudflare:workers" { interface ProvidedEnv { DB: D1Database; } }
 
@@ -13,8 +14,7 @@ const state = { calculatorId: "reference.discount" as const, calculatorVersion: 
 const secret = "phase-04-state-api-test-secret-long-enough-12345";
 
 beforeEach(async () => {
-  await env.DB.exec("DROP TABLE IF EXISTS calculator_state; DROP TABLE IF EXISTS verification; DROP TABLE IF EXISTS account; DROP TABLE IF EXISTS session; DROP TABLE IF EXISTS user;");
-  await env.DB.exec(migrationSql);
+  await resetPhase04Database(env.DB, migrationSql);
 });
 
 describe("calculator state HTTP boundary", () => {

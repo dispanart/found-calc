@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import migrationSql from "../../migrations/0001_phase04_auth_and_calculator_state.sql?raw";
 
 import { createCalculatorStateRepository } from "../../src/lib/persistence/repository";
+import { resetPhase04Database } from "./test-database";
 
 declare module "cloudflare:workers" {
   interface ProvidedEnv {
@@ -18,8 +19,7 @@ const discount = (baseAmount: string) => ({
 });
 
 beforeEach(async () => {
-  await env.DB.exec("DROP TABLE IF EXISTS calculator_state; DROP TABLE IF EXISTS verification; DROP TABLE IF EXISTS account; DROP TABLE IF EXISTS session; DROP TABLE IF EXISTS user;");
-  await env.DB.exec(migrationSql);
+  await resetPhase04Database(env.DB, migrationSql);
 });
 
 describe("calculator state repository", () => {
