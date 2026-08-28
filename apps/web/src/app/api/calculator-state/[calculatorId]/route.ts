@@ -15,6 +15,7 @@ const handle = async (method: "GET" | "PUT" | "DELETE", request: Request, contex
       auth: getFoundCalcAuth(),
     });
   } catch {
+    console.error("[found-calc][calculator-state] route-bootstrap");
     return Response.json({ error: { code: "service-unavailable" } }, { status: 503 });
   }
 };
