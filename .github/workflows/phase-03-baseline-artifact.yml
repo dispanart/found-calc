@@ -1,0 +1,112 @@
+name: Phase 03 Canonical Baseline
+
+on:
+  push:
+    branches:
+      - phase-03-baseline-artifact
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package Phase 03 canonical baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout canonical Phase 03 merge
+        uses: actions/checkout@v4
+        with:
+          ref: 76c658b152b31f746a4d60bc2b61f86b408cde94
+          fetch-depth: 1
+
+      - name: Verify canonical source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_sha="76c658b152b31f746a4d60bc2b61f86b408cde94"
+          expected_tree="515f3a735f9d11faf4f3c0188494c0991d66815c"
+          actual_sha="$(git rev-parse HEAD)"
+          actual_tree="$(git rev-parse HEAD^{tree})"
+          test "$actual_sha" = "$expected_sha"
+          test "$actual_tree" = "$expected_tree"
+          test -z "$(git status --porcelain)"
+
+      - name: Create portable source ZIP and SHA256
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip_name="found-calc-phase-03-product-ui-runtime-discovery.zip"
+          git archive --format=zip --output="$zip_name" 76c658b152b31f746a4d60bc2b61f86b408cde94
+          sha256sum "$zip_name" > SHA256SUMS
+
+      - name: Extract and verify required Phase 03 files
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip_name="found-calc-phase-03-product-ui-runtime-discovery.zip"
+          rm -rf extracted
+          mkdir extracted
+          unzip -q "$zip_name" -d extracted
+
+          required=(
+            "BASELINE.md"
+            "PHASE_HANDOFF.md"
+            "PHASE_CHAT_TEMPLATE.md"
+            "package.json"
+            "pnpm-lock.yaml"
+            "packages/catalog/package.json"
+            "packages/catalog/src/index.ts"
+            "packages/catalog/src/catalog.ts"
+            "packages/engine/package.json"
+            "packages/engine/src/index.ts"
+            "packages/rules/package.json"
+            "packages/rules/src/index.ts"
+            "apps/web/package.json"
+            "apps/web/src/app/[locale]/(public)/calculators/page.tsx"
+            "apps/web/src/app/[locale]/(public)/calculators/[slug]/page.tsx"
+            "apps/web/src/components/calculator/discount-calculator.tsx"
+            "apps/web/src/components/calculator/business-margin-calculator.tsx"
+            "apps/web/src/components/calculator/synthetic-rule-calculator.tsx"
+            "apps/web/src/lib/calculators/runtime.ts"
+            "apps/web/src/lib/presentation/decimal.ts"
+            "apps/web/tests/e2e/phase-03-calculators.spec.ts"
+            "apps/web/tests/e2e/phase-03-accessibility.spec.ts"
+            "docs/verification/phase-03-verification.md"
+            "docs/superpowers/specs/2026-08-28-found-calc-phase-03-product-ui-runtime-discovery-design.md"
+            "docs/superpowers/plans/2026-08-28-found-calc-phase-03-product-ui-runtime-discovery.md"
+            ".github/workflows/phase-03-verification.yml"
+          )
+
+          for path in "${required[@]}"; do
+            test -f "extracted/$path"
+          done
+
+          if find extracted -type d \( -name .git -o -name node_modules -o -name .next -o -name dist -o -name test-results -o -name playwright-report \) -print -quit | grep -q .; then
+            echo "Unexpected generated/dependency directory present in source ZIP"
+            exit 1
+          fi
+
+          cat > ARTIFACT_VERIFICATION.txt <<'EOF'
+          Found Calc Phase 03 canonical baseline artifact
+          Source merge SHA: 76c658b152b31f746a4d60bc2b61f86b408cde94
+          Source tree SHA: 515f3a735f9d11faf4f3c0188494c0991d66815c
+          ZIP: found-calc-phase-03-product-ui-runtime-discovery.zip
+          Method: git archive from the exact verified merged Phase 03 commit
+          Extraction: successful
+          Required Phase 03 source/config/test/docs files: verified
+          Generated/dependency directories: excluded
+          EOF
+
+      - name: Upload canonical baseline artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: found-calc-phase-03-canonical-baseline
+          path: |
+            found-calc-phase-03-product-ui-runtime-discovery.zip
+            SHA256SUMS
+            ARTIFACT_VERIFICATION.txt
+          if-no-files-found: error
+          retention-days: 30
