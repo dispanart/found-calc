@@ -4,7 +4,11 @@ import vinext from "vinext";
 
 export default defineConfig({
   plugins: [
-    vinext(),
+    vinext({
+      nextConfig: {
+        reactStrictMode: true,
+      },
+    }),
     cloudflare({
       viteEnvironment: {
         name: "rsc",

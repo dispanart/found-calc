@@ -7,6 +7,7 @@ const messages = {
     navCalculators: "Kalkulator",
     navWorkspace: "Ruang kerja",
     navAdmin: "Admin",
+    navAccount: "Akun",
     localeSwitchLabel: "Ganti bahasa",
     heroEyebrow: "Kalkulator keputusan, bukan sekadar angka.",
     heroTitle: "Hitung keputusan dengan konteks yang jelas.",
@@ -20,7 +21,7 @@ const messages = {
     discoveryAll: "Lihat semua kalkulator",
     calculatorsTitle: "Kalkulator referensi",
     calculatorsDescription:
-      "Tiga alur referensi Phase 03 membuktikan diskon deterministik, margin progresif, dan aturan versi tanpa menyimpan input Anda.",
+      "Tiga alur referensi menghitung secara lokal; draft hanya disimpan saat Anda memilih untuk menyimpannya.",
     calculatorBack: "Semua kalkulator",
     relatedTitle: "Kalkulator terkait",
     trustTitle: "Fondasi yang dapat ditelusuri",
@@ -33,7 +34,7 @@ const messages = {
     adminTitle: "Admin Found Calc",
     adminBody:
       "Shell ini mengunci batas rute admin. Operasi katalog dan rule management belum diimplementasikan pada Phase 01.",
-    phaseLabel: "Phase 03 · Product UI Runtime & Discovery",
+    phaseLabel: "Phase 04 · Persistence, Auth & Guest Preservation",
   },
   en: {
     brand: "Found Calc",
@@ -41,6 +42,7 @@ const messages = {
     navCalculators: "Calculators",
     navWorkspace: "Workspace",
     navAdmin: "Admin",
+    navAccount: "Account",
     localeSwitchLabel: "Change language",
     heroEyebrow: "Decision calculators, not just arithmetic.",
     heroTitle: "Make a decision with the context intact.",
@@ -54,7 +56,7 @@ const messages = {
     discoveryAll: "View all calculators",
     calculatorsTitle: "Reference calculators",
     calculatorsDescription:
-      "Three Phase 03 reference flows prove deterministic discounts, progressive margin, and versioned rules without storing your inputs.",
+      "Three reference flows calculate locally; drafts are stored only when you explicitly choose to save them.",
     calculatorBack: "All calculators",
     relatedTitle: "Related calculators",
     trustTitle: "A traceable foundation",
@@ -67,7 +69,7 @@ const messages = {
     adminTitle: "Found Calc admin",
     adminBody:
       "This shell locks the admin route boundary. Catalog operations and rule management are not implemented in Phase 01.",
-    phaseLabel: "Phase 03 · Product UI Runtime & Discovery",
+    phaseLabel: "Phase 04 · Persistence, Auth & Guest Preservation",
   },
 } as const;
 

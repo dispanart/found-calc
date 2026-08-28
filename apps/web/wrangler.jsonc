@@ -11,8 +11,7 @@
       "binding": "DB",
       "database_name": "found-calc-local",
       // Local-only placeholder. Replace with a real Cloudflare D1 UUID before remote deploy.
-      "database_id": "00000000-0000-0000-0000-000000000000",
-      "preview_database_id": "found-calc-local"
+      "database_id": "00000000-0000-0000-0000-000000000000"
     }
   ]
 }
