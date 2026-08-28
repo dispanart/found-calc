@@ -75,23 +75,18 @@ export const handleCalculatorStateRequest = async (
 ): Promise<Response> => {
   if (!isSupportedCalculatorId(calculatorId)) return error("unsupported-calculator", 404);
   const repo = createCalculatorStateRepository(services.DB);
-  let failureStage = "request";
 
   try {
     if (method === "GET") {
-      failureStage = "auth-session";
       const owner = await resolveOwner(request, services.auth);
       if (!owner) return error("state-not-found", 404);
-      failureStage = "repository-get";
       const found = await repo.getState(owner.ownerType, owner.ownerId, calculatorId);
       return found ? json(stateResponse(found)) : error("state-not-found", 404);
     }
 
     if (method === "DELETE") {
-      failureStage = "auth-session";
       const owner = await resolveOwner(request, services.auth);
       if (!owner) return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
-      failureStage = "repository-delete";
       await repo.deleteState(owner.ownerType, owner.ownerId, calculatorId);
       return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
     }
@@ -100,7 +95,6 @@ export const handleCalculatorStateRequest = async (
     if (Number.isFinite(declaredLength) && declaredLength > MAX_PERSISTED_STATE_BYTES) {
       return error("payload-too-large", 413);
     }
-    failureStage = "request-body";
     const bodyText = await request.text();
     if (new TextEncoder().encode(bodyText).byteLength > MAX_PERSISTED_STATE_BYTES) {
       return error("payload-too-large", 413);
@@ -115,19 +109,16 @@ export const handleCalculatorStateRequest = async (
     if (!parsed.ok) return error(parsed.code, parsed.code === "payload-too-large" ? 413 : 400);
     if (parsed.value.calculatorId !== calculatorId) return error("calculator-mismatch", 400);
 
-    failureStage = "auth-session";
     const userId = await authenticatedUserId(request, services.auth);
     const existingGuestId = getGuestId(request);
     const mintedGuestId = userId ? undefined : existingGuestId ?? crypto.randomUUID();
     const owner: RequestOwner = userId
       ? { ownerType: "user", ownerId: userId }
       : { ownerType: "guest", ownerId: mintedGuestId! };
-    failureStage = "repository-upsert";
     const stored = await repo.upsertState({ ownerType: owner.ownerType, ownerId: owner.ownerId, state: parsed.value });
     const headers = mintedGuestId && !existingGuestId ? { "Set-Cookie": guestCookieHeader(request, mintedGuestId) } : undefined;
     return json(stateResponse(stored), 200, headers);
   } catch {
-    console.error(`[found-calc][calculator-state] ${failureStage}`);
     return error("storage-unavailable", 503);
   }
 };
