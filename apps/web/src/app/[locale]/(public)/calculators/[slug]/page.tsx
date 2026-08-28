@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { BusinessMarginCalculator } from "@/components/calculator/business-margin-calculator";
 import { CalculatorPageShell } from "@/components/calculator/calculator-page-shell";
 import { DiscountCalculator } from "@/components/calculator/discount-calculator";
+import { SyntheticRuleCalculator } from "@/components/calculator/synthetic-rule-calculator";
 import { isLocale, locales } from "@/i18n/locales";
 
 export function generateStaticParams() {
@@ -42,8 +43,6 @@ export default async function CalculatorPage({
     notFound();
   }
 
-  const placeholder = locale === "id" ? "Interaksi kalkulator akan dirender di area ini." : "Calculator interaction will render in this area.";
-
   return (
     <CalculatorPageShell locale={locale} entry={entry}>
       {entry.id === "reference.discount" ? (
@@ -51,9 +50,7 @@ export default async function CalculatorPage({
       ) : entry.id === "reference.business-margin" ? (
         <BusinessMarginCalculator locale={locale} entry={entry} />
       ) : (
-        <section className="rounded-[var(--radius-card)] border border-dashed border-border bg-card/60 p-6 text-sm text-muted-foreground">
-          {placeholder}
-        </section>
+        <SyntheticRuleCalculator locale={locale} entry={entry} />
       )}
     </CalculatorPageShell>
   );
