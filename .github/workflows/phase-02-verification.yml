@@ -31,6 +31,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Run Phase 02 verification contract
+        run: node --test tests/foundation/phase-02-verification-contract.test.mjs
+
       - name: Enable Corepack
         run: corepack enable
 
