@@ -1,0 +1,82 @@
+name: Phase 02 Baseline Artifact
+
+on:
+  push:
+    branches:
+      - phase-02-baseline-artifact
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    name: Package canonical Phase 02 baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout exact merged main commit
+        uses: actions/checkout@v4
+        with:
+          ref: 8644f4c11221a20c206e9c035f93c157169feef7
+          fetch-depth: 1
+
+      - name: Build and verify canonical archive
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          expected_commit="8644f4c11221a20c206e9c035f93c157169feef7"
+          expected_tree="fe295e1437c3581d3290a2206ffada64dc000fb3"
+          archive="found-calc-phase-02-engine-reference-slices.zip"
+          extract_dir="$RUNNER_TEMP/phase02-extract"
+
+          test "$(git rev-parse HEAD)" = "$expected_commit"
+          test "$(git rev-parse HEAD^{tree})" = "$expected_tree"
+
+          git archive --format=zip --output="$archive" HEAD
+          sha256sum "$archive" > SHA256SUMS
+
+          rm -rf "$extract_dir"
+          mkdir -p "$extract_dir"
+          unzip -q "$archive" -d "$extract_dir"
+
+          required=(
+            "BASELINE.md"
+            "PHASE_HANDOFF.md"
+            "package.json"
+            "pnpm-lock.yaml"
+            "packages/engine/package.json"
+            "packages/engine/src/index.ts"
+            "packages/rules/package.json"
+            "packages/rules/src/index.ts"
+            "docs/verification/phase-02-verification.md"
+            "docs/superpowers/specs/2026-08-28-found-calc-phase-02-deterministic-engine-reference-slices-design.md"
+            "docs/superpowers/plans/2026-08-28-found-calc-phase-02-deterministic-engine-reference-slices.md"
+          )
+
+          for path in "${required[@]}"; do
+            test -f "$extract_dir/$path"
+          done
+
+          {
+            echo "commit=$expected_commit"
+            echo "tree=$expected_tree"
+            echo "archive=$archive"
+            cat SHA256SUMS
+            for path in "${required[@]}"; do
+              echo "verified=$path"
+            done
+          } > ARTIFACT_VERIFICATION.txt
+
+      - name: Upload canonical baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: found-calc-phase-02-canonical-baseline
+          path: |
+            found-calc-phase-02-engine-reference-slices.zip
+            SHA256SUMS
+            ARTIFACT_VERIFICATION.txt
+          if-no-files-found: error
+          retention-days: 30
