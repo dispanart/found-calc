@@ -1,0 +1,47 @@
+name: Phase 02 Verification
+
+on:
+  push:
+    branches:
+      - phase-02-engine-reference-slices
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-02-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify Phase 02 deterministic engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Confirm pnpm
+        run: pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Phase 02 TDD package tests
+        run: pnpm --filter @found-calc/web exec vitest run --root ../.. packages/engine/src/**/*.test.ts packages/rules/src/**/*.test.ts --environment node
+
+      - name: Run Phase 01 regression gate
+        run: pnpm verify:phase01
