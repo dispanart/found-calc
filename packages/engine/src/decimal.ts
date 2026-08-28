@@ -61,7 +61,9 @@ export const parseDecimal = (value: string, scale: number): DecimalParseResult =
     return { ok: false, code: "malformed-number" };
   }
 
-  const [, sign, integerPart, fractionalPart = ""] = match;
+  const sign = match[1] ?? "";
+  const integerPart = match[2]!;
+  const fractionalPart = match[3] ?? "";
   if (fractionalPart.length > scale) {
     return { ok: false, code: "scale-exceeded" };
   }
