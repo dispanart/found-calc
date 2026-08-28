@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -15,7 +16,7 @@ export function SiteHeader({ locale, messages }: SiteHeaderProps) {
   const pathname = usePathname();
   const otherLocale: Locale = locale === "id" ? "en" : "id";
   const primaryNavigationLabel = locale === "id" ? "Navigasi utama" : "Primary navigation";
-  const localeHref = pathname.replace(/^\/(id|en)(?=\/|$)/, `/${otherLocale}`) || `/${otherLocale}`;
+  const localeHref = (pathname.replace(/^\/(id|en)(?=\/|$)/, `/${otherLocale}`) || `/${otherLocale}`) as Route;
 
   return (
     <header className="border-b border-border/80 bg-background/95">
