@@ -2,7 +2,7 @@
 
 import type { ReferenceCatalogEntry } from "@found-calc/catalog";
 import { discountCalculatorDefinition } from "@found-calc/engine";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/locales";
@@ -32,30 +32,27 @@ const localize = (value: string, from: Locale, to: Locale, scale: number) => {
   return parsed.ok ? formatCanonicalDecimal(parsed.value, to) : value;
 };
 
-const SERVER_DRAFT_SNAPSHOT = "server";
-const subscribeLocalDraft = () => () => {};
-const getServerDraftSnapshot = () => SERVER_DRAFT_SNAPSHOT;
+const subscribeClientReady = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
-function useLocalDraftSeed(calculatorId: "reference.discount") {
-  const getSnapshot = useCallback(() => {
-    const draft = readLocalDraft(calculatorId);
-    return draft === null ? "client:null" : `client:${JSON.stringify(draft)}`;
-  }, [calculatorId]);
-  const snapshot = useSyncExternalStore(subscribeLocalDraft, getSnapshot, getServerDraftSnapshot);
-  if (snapshot === SERVER_DRAFT_SNAPSHOT) return { ready: false, draft: null as DiscountDraft | null };
-  if (snapshot === "client:null") return { ready: true, draft: null as DiscountDraft | null };
-  const parsed = JSON.parse(snapshot.slice("client:".length)) as LocalCalculatorDraft;
-  return { ready: true, draft: parsed.calculatorId === calculatorId ? parsed as DiscountDraft : null };
+function useClientReady() {
+  return useSyncExternalStore(subscribeClientReady, getClientSnapshot, getServerSnapshot);
 }
 
 export function DiscountCalculator({ locale, entry }: DiscountCalculatorProps) {
-  const seed = useLocalDraftSeed("reference.discount");
-  return <DiscountCalculatorStateful key={`${entry.id}:${locale}:${seed.ready ? "client" : "server"}`} locale={locale} entry={entry} initialDraft={seed.draft} localDraftReady={seed.ready} />;
+  const clientReady = useClientReady();
+  if (!clientReady) return null;
+  return <DiscountCalculatorStateful key={`${entry.id}:${locale}`} locale={locale} entry={entry} />;
 }
 
-function DiscountCalculatorStateful({ locale, entry, initialDraft, localDraftReady }: DiscountCalculatorProps & { initialDraft: DiscountDraft | null; localDraftReady: boolean }) {
+function DiscountCalculatorStateful({ locale, entry }: DiscountCalculatorProps) {
   const copy = entry.copy[locale];
   const text = validationCopy[locale];
+  const [initialDraft] = useState<DiscountDraft | null>(() => {
+    const draft = readLocalDraft("reference.discount");
+    return draft?.calculatorId === "reference.discount" ? draft : null;
+  });
   const [baseAmount, setBaseAmount] = useState(() => initialDraft === null ? "" : localize(initialDraft.fields.baseAmount, initialDraft.locale, locale, 2));
   const [discounts, setDiscounts] = useState<string[]>(() => initialDraft === null ? [""] : initialDraft.fields.discounts.map((value) => localize(value, initialDraft.locale, locale, 4)));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -63,9 +60,8 @@ function DiscountCalculatorStateful({ locale, entry, initialDraft, localDraftRea
   const [persistableState, setPersistableState] = useState<PersistedCalculatorState | null>(null);
 
   useEffect(() => {
-    if (!localDraftReady) return;
     writeLocalDraft({ calculatorId: "reference.discount", locale, fields: { baseAmount, discounts } });
-  }, [baseAmount, discounts, localDraftReady, locale]);
+  }, [baseAmount, discounts, locale]);
 
   const dirty = () => setPersistableState(null);
   const setDiscount = (index: number, value: string) => {
