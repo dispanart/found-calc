@@ -1,0 +1,138 @@
+name: Phase 04 Canonical Baseline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/verification/phase-04-verification.md
+      - .github/workflows/phase-04-baseline-artifact.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package Phase 04 canonical baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout canonical Phase 04 closure
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Verify canonical source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "main"
+          source_sha="$GITHUB_SHA"
+          source_tree="$(git rev-parse HEAD^{tree})"
+          actual_sha="$(git rev-parse HEAD)"
+          test "$actual_sha" = "$source_sha"
+          test -n "$source_tree"
+          test -z "$(git status --porcelain)"
+          grep -Fq "Last canonical completed phase:** Phase 04 — Persistence, Auth & Guest Preservation" PHASE_HANDOFF.md
+          grep -Fq "Found Calc Phase 04 — Persistence, Auth & Guest Preservation" BASELINE.md
+
+      - name: Create portable source ZIP and SHA256
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip_name="found-calc-phase-04-persistence-auth-guest-preservation.zip"
+          git archive --format=zip --output="$zip_name" "$GITHUB_SHA"
+          sha256sum "$zip_name" > SHA256SUMS
+
+      - name: Extract and verify required Phase 04 files
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip_name="found-calc-phase-04-persistence-auth-guest-preservation.zip"
+          rm -rf extracted
+          mkdir extracted
+          unzip -q "$zip_name" -d extracted
+
+          required=(
+            "BASELINE.md"
+            "PHASE_HANDOFF.md"
+            "PHASE_CHAT_TEMPLATE.md"
+            "package.json"
+            "pnpm-lock.yaml"
+            "packages/catalog/package.json"
+            "packages/catalog/src/index.ts"
+            "packages/engine/package.json"
+            "packages/engine/src/index.ts"
+            "packages/rules/package.json"
+            "packages/rules/src/index.ts"
+            "apps/web/package.json"
+            "apps/web/wrangler.jsonc"
+            "apps/web/vite.config.ts"
+            "apps/web/next.config.ts"
+            "apps/web/migrations/0001_phase04_auth_and_calculator_state.sql"
+            "apps/web/src/lib/auth/server.ts"
+            "apps/web/src/lib/auth/client.ts"
+            "apps/web/src/lib/persistence/schema.ts"
+            "apps/web/src/lib/persistence/state.ts"
+            "apps/web/src/lib/persistence/repository.ts"
+            "apps/web/src/lib/persistence/http.ts"
+            "apps/web/src/lib/persistence/local-draft.ts"
+            "apps/web/src/components/auth/auth-panel.tsx"
+            "apps/web/src/components/calculator/persistence-controls.tsx"
+            "apps/web/src/components/calculator/discount-calculator.tsx"
+            "apps/web/src/components/calculator/business-margin-calculator.tsx"
+            "apps/web/src/components/calculator/synthetic-rule-calculator.tsx"
+            "apps/web/src/components/workspace/persistence-summary.tsx"
+            "apps/web/src/app/api/auth/[...all]/route.ts"
+            "apps/web/src/app/api/calculator-state/[calculatorId]/route.ts"
+            "apps/web/src/app/api/guest/claim/route.ts"
+            "apps/web/tests/cloudflare/phase-04-auth.test.ts"
+            "apps/web/tests/cloudflare/phase-04-persistence.test.ts"
+            "apps/web/tests/cloudflare/phase-04-state-api.test.ts"
+            "apps/web/tests/e2e/phase-04-auth-guest.spec.ts"
+            "tests/foundation/phase-04-verification-contract.test.mjs"
+            "docs/verification/phase-04-verification.md"
+            "docs/superpowers/specs/2026-08-28-found-calc-phase-04-persistence-auth-guest-preservation-design.md"
+            "docs/superpowers/plans/2026-08-28-found-calc-phase-04-persistence-auth-guest-preservation.md"
+            ".github/workflows/phase-04-verification.yml"
+            ".github/workflows/phase-04-baseline-artifact.yml"
+          )
+
+          for path in "${required[@]}"; do
+            test -f "extracted/$path"
+          done
+
+          test ! -e "extracted/.github/workflows/phase-04-lockfile.yml"
+
+          if find extracted -type d \( -name .git -o -name node_modules -o -name .next -o -name dist -o -name test-results -o -name playwright-report -o -name .wrangler \) -print -quit | grep -q .; then
+            echo "Unexpected generated/dependency directory present in source ZIP"
+            exit 1
+          fi
+
+          source_sha="$GITHUB_SHA"
+          source_tree="$(git rev-parse HEAD^{tree})"
+          cat > ARTIFACT_VERIFICATION.txt <<EOF
+          Found Calc Phase 04 canonical baseline artifact
+          Source closure SHA: $source_sha
+          Source tree SHA: $source_tree
+          ZIP: found-calc-phase-04-persistence-auth-guest-preservation.zip
+          Method: git archive from the exact merged Phase 04 closure commit on main
+          Extraction: successful
+          Required Phase 04 source/config/test/docs files: verified
+          Temporary Phase 04 lockfile workflow: absent
+          Generated/dependency directories: excluded
+          EOF
+
+      - name: Upload canonical baseline artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: found-calc-phase-04-canonical-baseline
+          path: |
+            found-calc-phase-04-persistence-auth-guest-preservation.zip
+            SHA256SUMS
+            ARTIFACT_VERIFICATION.txt
+          if-no-files-found: error
+          retention-days: 30
