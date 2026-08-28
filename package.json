@@ -24,7 +24,8 @@
     "test:foundation": "node --experimental-strip-types --test apps/web/tests/foundation/*.test.m* tests/foundation/*.test.m*",
     "typecheck:catalog": "pnpm --filter @found-calc/catalog typecheck",
     "test:catalog": "pnpm --filter @found-calc/catalog test",
-    "verify:phase03": "node scripts/verify-phase-03.mjs"
+    "verify:phase03": "node scripts/verify-phase-03.mjs",
+    "verify:phase04": "node scripts/verify-phase-04.mjs"
   },
   "engines": {
     "node": ">=22.0.0"
