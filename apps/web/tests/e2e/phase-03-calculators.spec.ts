@@ -40,12 +40,12 @@ test("business margin progresses from gross result to contribution and scenario"
   await expect(page.getByRole("status")).toContainText("40.00");
   await expect(page.getByRole("status")).toContainText("40.0000%");
 
-  await page.getByLabel("Variable selling cost per order").fill("15.00");
+  await page.getByLabel("Variable selling cost per order", { exact: true }).fill("15.00");
   await page.getByRole("button", { name: "Calculate margin" }).click();
   await expect(page.getByRole("status")).toContainText("25.00");
   await expect(page.getByRole("status")).toContainText("25.0000%");
 
-  await page.getByLabel("Scenario variable selling cost per order").fill("10.00");
+  await page.getByLabel("Scenario variable selling cost per order", { exact: true }).fill("10.00");
   await page.getByRole("button", { name: "View scenario" }).click();
   await expect(page.getByText("Baseline")).toBeVisible();
   await expect(page.getByText("Scenario", { exact: true })).toBeVisible();
