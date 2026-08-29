@@ -46,6 +46,31 @@ export type BillingEntitlementSnapshot = {
   readonly keys: readonly string[];
 };
 
+export type EffectiveCommercialAccess = {
+  readonly tier: CommercialTier;
+  readonly source: "friends" | "trial" | "paid";
+  readonly keys: readonly string[];
+  readonly limits: CommercialLimits;
+  readonly accessUntil: number | null;
+};
+
+export type CommercialAccessTrialInput = {
+  readonly startedAt: number;
+  readonly endsAt: number;
+  readonly convertedAt: number | null;
+};
+
+export type ResolveCommercialAccessInput = {
+  readonly paidTier: InternalPaidTier | null;
+  readonly subscriptionStatus: BillingSubscriptionStatus | null;
+  readonly paidThroughAt: number | null;
+  readonly paidKeys?: readonly string[];
+  readonly trial: CommercialAccessTrialInput | null;
+  readonly trialKeys?: readonly string[];
+  readonly now: number;
+  readonly checkoutPending?: boolean;
+};
+
 export const isBillingSubscriptionStatus = (value: unknown): value is BillingSubscriptionStatus =>
   value === "pending" || value === "active" || value === "past_due" || value === "inactive";
 
