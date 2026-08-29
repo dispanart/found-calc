@@ -10,20 +10,20 @@
 
 `found-calc-phase-07-billing-entitlements-xendit.zip`
 
-GitHub `main` remains the collaborative canonical repository. After merge, `.github/workflows/phase-07-baseline-artifact.yml` archives the exact merged `GITHUB_SHA` with `git archive`, writes `SHA256SUMS`, verifies extraction and required files, and records commit/tree identity in `ARTIFACT_VERIFICATION.txt`. The resulting ZIP is the portable recovery/handoff source for Phase 08.
+GitHub `main` remains the collaborative canonical repository. After merge, `.github/workflows/phase-07-baseline-artifact.yml` archives the exact merged `GITHUB_SHA` with `git archive`, writes `SHA256SUMS`, verifies ZIP integrity, extraction, and required files, and records exact source commit/tree provenance in `ARTIFACT_VERIFICATION.txt`. The resulting ZIP is the portable recovery/handoff source for Phase 08.
 
 Historical predecessor provenance: Phase 07 started from `found-calc-phase-06-goals-projects-profiles-workspace.zip`.
 
 ## Canonical implementation evidence
 
-A verified implementation milestone before final review hardening was:
+Final production/runtime candidate before closure-metadata-only changes:
 
-- source SHA: `4b0a50efbe8411bb16b35ab88fcab00fd7b1cfce`;
-- GitHub Actions run: `33263359788`;
-- full verification job: `99129009378` — **SUCCESS**;
-- built Worker smoke job: `99129009441` — **SUCCESS**.
+- source SHA: `602d214add0424b0466d0452c8a9b8220e193faa`;
+- PR synthetic-merge GitHub Actions run: `33265992747`;
+- full verification job: `99136070192` — **SUCCESS**;
+- built Worker smoke job: `99136070354` — **SUCCESS**.
 
-Final review then added regression-proven hardening for ambiguous provider plan updates and the known local Wrangler/Miniflare `Network connection lost` proxy signature. Merge remains conditional on a fresh exact-head Phase 07 run passing both the full verifier and built-Worker smoke. The canonical artifact workflow records the exact merged identity dynamically.
+That exact source includes the regression-proven hardening for ambiguous Xendit provider plan updates, cross-wired webhook identity, deterministic Worker diagnostics, and recovery from the known local Wrangler/Miniflare fatal `Network connection lost.` proxy signature. Only closure metadata/provenance may change after this milestone; merge remains conditional on a fresh exact closure-head Phase 07 run passing both the full verifier and built-Worker smoke. The canonical artifact workflow records the exact merged identity dynamically.
 
 ## Completed deliverables
 
@@ -38,7 +38,7 @@ Final review then added regression-proven hardening for ambiguous provider plan 
 - Localized ID/EN billing workspace UI, monthly/annual offers, lifecycle messaging, keyboard/focus/accessibility coverage, and 390px no-overflow coverage.
 - Free public calculators remain usable; Phase 01–06 calculator/rule/persistence/workspace truth is not retroactively paywalled or reinterpreted.
 - `verify:phase07` as a fail-fast Phase 06→01 regression superset plus Phase 07 foundation/unit/D1/browser/build checks.
-- Deterministic built vinext Worker smoke with named checkpoints, sanitized diagnostics, and a bounded retry only for the exact known local Miniflare connection-loss proxy signature.
+- Deterministic built vinext Worker smoke with named checkpoints, sanitized diagnostics, and bounded recovery only for the exact known local Miniflare connection-loss proxy signature.
 
 Detailed evidence: `docs/verification/phase-07-verification.md`.
 
@@ -68,9 +68,9 @@ Phase 07 uses the separate `0004_phase07_billing.sql` domain. Webhook inbox idem
 
 An earlier Phase 07 Worker smoke produced a false-negative because a `curl ... | grep -q` assertion ran under `set -euo pipefail`: after `grep -q` found the match and closed the pipe, `curl` could exit with code 23 even though the request succeeded. The smoke now stores responses first, checks HTTP status/body separately, runs as a dedicated parallel job, and emits named sanitized checkpoints.
 
-Subsequent GitHub-hosted runs repeatedly exposed the local Wrangler/Miniflare internal HTTP 500 body `Error: Network connection lost.` after successful startup/migrations and auth setup. The harness tolerates only that exact status/body signature with at most three attempts and a two-second delay; arbitrary application 500s still fail immediately. Signup remains non-retried because it mutates state.
+Later GitHub-hosted Node 22 runs exposed the local Wrangler/Miniflare regression whose exact proxy response is HTTP 500 with body `Error: Network connection lost.` and which can terminate `wrangler dev`, causing subsequent requests to receive connection refused. The final harness tolerates only that exact tooling signature: it stops/restarts the local Wrangler process with the same supported `--persist-to` D1 directory, re-probes readiness, and retries at most three attempts. Arbitrary Found Calc/application 500s still fail immediately. Because signup mutates state, each retry attempt uses an isolated smoke identity so an ambiguous first POST is never replayed against the same email.
 
-Current Wrangler documentation confirms `wrangler dev --persist-to <dir>` is the supported custom local persistence mechanism and that local development bindings can override configured vars; the smoke therefore keeps the supported local D1/runtime model rather than introducing a deployment-specific workaround.
+Current Context7 `/cloudflare/workers-sdk` documentation confirms `wrangler dev --persist-to <dir>` is the supported custom local persistence mechanism and D1 local migration tooling supports `--local --persist-to`; the recovery therefore preserves the same local D1 state across a tooling-process restart rather than introducing a deployment-specific data workaround.
 
 ## Preserved security and interaction contracts
 

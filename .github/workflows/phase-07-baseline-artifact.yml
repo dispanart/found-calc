@@ -42,6 +42,7 @@ jobs:
           VERIFY_DIR="$RUNNER_TEMP/found-calc-phase07-baseline"
           rm -rf "$VERIFY_DIR"
           mkdir -p "$VERIFY_DIR"
+          unzip -tq "$ARTIFACT"
           unzip -q "$ARTIFACT" -d "$VERIFY_DIR"
 
           required=(
@@ -103,15 +104,15 @@ jobs:
           fi
 
           source_tree="$(git rev-parse "$GITHUB_SHA^{tree}")"
-          archive_tree="$(git rev-parse "$GITHUB_SHA^{tree}")"
-          test "$source_tree" = "$archive_tree"
+          archive_sha256="$(cut -d' ' -f1 SHA256SUMS)"
 
           {
             echo "artifact=$ARTIFACT"
             echo "source_commit=$GITHUB_SHA"
             echo "source_tree=$source_tree"
-            echo "archive_tree=$archive_tree"
-            echo "archive_sha256=$(cut -d' ' -f1 SHA256SUMS)"
+            echo "archive_provenance=git-archive-exact-github-sha"
+            echo "archive_sha256=$archive_sha256"
+            echo "zip_integrity=PASS"
             echo "required_files=${#required[@]}"
             echo "extraction_verification=PASS"
           } > ARTIFACT_VERIFICATION.txt
