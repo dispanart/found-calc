@@ -71,8 +71,19 @@ const rowToStored = (row: typeof ruleVersions.$inferSelect): StoredRuleVersion =
   };
 };
 
-const looksLikeConstraint = (error: unknown, marker: string): boolean =>
-  error instanceof Error && error.message.includes(marker);
+const errorChainIncludes = (error: unknown, marker: string): boolean => {
+  const needle = marker.toLowerCase();
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+
+  while (current instanceof Error && !seen.has(current)) {
+    seen.add(current);
+    if (current.message.toLowerCase().includes(needle)) return true;
+    current = current.cause;
+  }
+
+  return false;
+};
 
 export const createRuleVersionRepository = (binding: D1Database) => {
   const db = drizzle(binding);
@@ -110,7 +121,7 @@ export const createRuleVersionRepository = (binding: D1Database) => {
         createdByUserId: actorId,
       });
     } catch (error) {
-      if (looksLikeConstraint(error, "UNIQUE") || looksLikeConstraint(error, "unique")) {
+      if (errorChainIncludes(error, "unique constraint failed")) {
         throw new RuleRepositoryError("duplicate-version");
       }
       throw error;
@@ -138,7 +149,7 @@ export const createRuleVersionRepository = (binding: D1Database) => {
         .where(and(eq(ruleVersions.id, id), eq(ruleVersions.status, "draft")));
       if (!result.meta.changes) throw new RuleRepositoryError("rule-version-not-draft");
     } catch (error) {
-      if (looksLikeConstraint(error, "rule_version_publication_overlap")) {
+      if (errorChainIncludes(error, "rule_version_publication_overlap")) {
         throw new RuleRepositoryError("publication-overlap");
       }
       throw error;
