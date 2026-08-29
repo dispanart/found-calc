@@ -39,27 +39,16 @@ test("Phase 05 built Worker smoke uses one fresh isolated D1 persistence state",
   assert.doesNotMatch(workflow, /000[12][^\n]*\|\| true/);
 });
 
-test("Phase 05 closure records a portable canonical handoff", () => {
-  const baseline = read("BASELINE.md");
-  const handoff = read("PHASE_HANDOFF.md");
-  const template = read("PHASE_CHAT_TEMPLATE.md");
+test("Phase 05 historical closure evidence remains portable after successor baselines advance", () => {
   const verificationPath = "docs/verification/phase-05-verification.md";
   const workflowPath = ".github/workflows/phase-05-baseline-artifact.yml";
-
-  assert.match(baseline, /Phase 05/);
-  assert.match(baseline, /COMPLETE/);
-  assert.match(baseline, /found-calc-phase-05-versioned-rule-platform-admin-core\.zip/);
-  assert.match(handoff, /last canonical completed phase is \*\*Phase 05/i);
-  assert.match(handoff, /Phase 06 — Goals, Projects, Profiles & Workspace/);
-  assert.match(template, /found-calc-phase-05-versioned-rule-platform-admin-core\.zip/);
-  assert.match(template, /Phase 06/);
-  assert.match(template, /Goals, Projects, Profiles & Workspace/);
 
   assert.equal(existsSync(url(verificationPath)), true, `${verificationPath} must exist`);
   const verification = read(verificationPath);
   assert.match(verification, /\*\*Phase:\*\* 05 — Versioned Rule Platform \+ Admin Core/);
   assert.match(verification, /33232447867/);
   assert.match(verification, /eb67641aeb47222f44258251c2caea93b6809b7f/);
+  assert.match(verification, /found-calc-phase-05-versioned-rule-platform-admin-core\.zip/);
 
   assert.equal(existsSync(url(workflowPath)), true, `${workflowPath} must exist`);
   const workflow = read(workflowPath);
