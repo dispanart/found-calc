@@ -99,7 +99,6 @@ function SyntheticRuleCalculatorStateful({ locale, entry }: SyntheticRuleCalcula
 
   useEffect(() => {
     const controller = new AbortController();
-    setRuleFeedStatus("loading");
     fetchPublishedRuleVersions(SYNTHETIC_RATE_RULE_ID, controller.signal)
       .then((versions) => {
         setRuleVersions(versions);
