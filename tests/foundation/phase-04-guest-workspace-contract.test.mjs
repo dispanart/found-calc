@@ -14,7 +14,7 @@ test("successful authentication claims guest drafts without rolling back the ses
   assert.match(authPanel, /await refetch\(\)/);
 });
 
-test("workspace is an auth-aware three-calculator persistence summary, not projects/history", () => {
+test("Phase 04 persistence summary remains isolated and embedded after successor workspace phases", () => {
   const summaryPath = "apps/web/src/components/workspace/persistence-summary.tsx";
   assert.equal(existsSync(url(summaryPath)), true, `${summaryPath} must exist`);
   const summary = read(summaryPath);
@@ -26,7 +26,10 @@ test("workspace is an auth-aware three-calculator persistence summary, not proje
   assert.doesNotMatch(summary, /project|history|collaborat/i);
 
   const page = read("apps/web/src/app/[locale]/(workspace)/workspace/page.tsx");
-  assert.match(page, /PersistenceSummary/);
+  assert.match(page, /WorkspaceDashboard/);
+  const dashboard = read("apps/web/src/components/workspace/workspace-dashboard.tsx");
+  assert.match(dashboard, /<PersistenceSummary\b/);
+  assert.match(dashboard, /latest drafts|draft terbaru/i);
 });
 
 test("Phase 04 browser verification uses vinext with the Cloudflare Vite runtime and exposes CI auth env", () => {

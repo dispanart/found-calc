@@ -7,6 +7,7 @@ import { CalculatorPageShell } from "@/components/calculator/calculator-page-she
 import { DiscountCalculator } from "@/components/calculator/discount-calculator";
 import { SyntheticRuleCalculator } from "@/components/calculator/synthetic-rule-calculator";
 import { isLocale, locales } from "@/i18n/locales";
+import { isWorkspaceId } from "@/lib/workspace/contracts";
 
 export function generateStaticParams() {
   return locales.flatMap((locale) => referenceCatalog.map((entry) => ({ locale, slug: entry.slug })));
@@ -33,11 +34,16 @@ export async function generateMetadata({
 
 export default async function CalculatorPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<{ record?: string | string[] }>;
 }) {
   const { locale, slug } = await params;
+  const query = await searchParams;
   const entry = getReferenceCalculatorBySlug(slug);
+  const requestedRecord = Array.isArray(query.record) ? query.record[0] : query.record;
+  const recordId = isWorkspaceId(requestedRecord) ? requestedRecord : undefined;
 
   if (!isLocale(locale) || entry === undefined) {
     notFound();
@@ -46,11 +52,11 @@ export default async function CalculatorPage({
   return (
     <CalculatorPageShell locale={locale} entry={entry}>
       {entry.id === "reference.discount" ? (
-        <DiscountCalculator locale={locale} entry={entry} />
+        <DiscountCalculator locale={locale} entry={entry} recordId={recordId} />
       ) : entry.id === "reference.business-margin" ? (
-        <BusinessMarginCalculator locale={locale} entry={entry} />
+        <BusinessMarginCalculator locale={locale} entry={entry} recordId={recordId} />
       ) : (
-        <SyntheticRuleCalculator locale={locale} entry={entry} />
+        <SyntheticRuleCalculator locale={locale} entry={entry} recordId={recordId} />
       )}
     </CalculatorPageShell>
   );

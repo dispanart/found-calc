@@ -20,8 +20,9 @@ import { PersistenceControls } from "./persistence-controls";
 import { ResultPanel } from "./result-panel";
 import { TrustPanel } from "./trust-panel";
 import { ValidationSummary } from "./validation-summary";
+import { WorkspaceCalculationControls } from "./workspace-calculation-controls";
 
-interface SyntheticRuleCalculatorProps { locale: Locale; entry: ReferenceCatalogEntry; }
+interface SyntheticRuleCalculatorProps { locale: Locale; entry: ReferenceCatalogEntry; recordId?: string; }
 type SyntheticDraft = Extract<LocalCalculatorDraft, { calculatorId: "reference.synthetic-rule" }>;
 type RuleFeedStatus = "loading" | "ready" | "error";
 
@@ -70,13 +71,13 @@ function useClientReady() {
   return useSyncExternalStore(subscribeClientReady, getClientSnapshot, getServerSnapshot);
 }
 
-export function SyntheticRuleCalculator({ locale, entry }: SyntheticRuleCalculatorProps) {
+export function SyntheticRuleCalculator({ locale, entry, recordId }: SyntheticRuleCalculatorProps) {
   const clientReady = useClientReady();
   if (!clientReady) return null;
-  return <SyntheticRuleCalculatorStateful key={`${entry.id}:${locale}`} locale={locale} entry={entry} />;
+  return <SyntheticRuleCalculatorStateful key={`${entry.id}:${locale}`} locale={locale} entry={entry} recordId={recordId} />;
 }
 
-function SyntheticRuleCalculatorStateful({ locale, entry }: SyntheticRuleCalculatorProps) {
+function SyntheticRuleCalculatorStateful({ locale, entry, recordId }: SyntheticRuleCalculatorProps) {
   const copy = entry.copy[locale];
   const text = textByLocale[locale];
   const [initialDraft] = useState<SyntheticDraft | null>(() => {
@@ -193,6 +194,14 @@ function SyntheticRuleCalculatorStateful({ locale, entry }: SyntheticRuleCalcula
           <ValidationSummary title={text.summary} errors={errorList} />
         </div>
         <PersistenceControls locale={locale} calculatorId="reference.synthetic-rule" state={persistableState} onLoad={loadPersisted} />
+        <WorkspaceCalculationControls
+          locale={locale}
+          calculatorId="reference.synthetic-rule"
+          state={persistableState}
+          onLoad={loadPersisted}
+          recordId={recordId}
+          ruleContext={dependency === undefined ? undefined : { ruleId: SYNTHETIC_RATE_RULE_ID, versionId: dependency.versionId }}
+        />
       </section>
       <div className="min-w-0 space-y-5">
         {outcome?.ok && dependency !== undefined ? (

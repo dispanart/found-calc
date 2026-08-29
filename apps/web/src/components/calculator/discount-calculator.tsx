@@ -14,10 +14,12 @@ import { CalculatorField } from "./field";
 import { PersistenceControls } from "./persistence-controls";
 import { ResultPanel } from "./result-panel";
 import { ValidationSummary } from "./validation-summary";
+import { WorkspaceCalculationControls } from "./workspace-calculation-controls";
 
 interface DiscountCalculatorProps {
   locale: Locale;
   entry: ReferenceCatalogEntry;
+  recordId?: string;
 }
 type DiscountDraft = Extract<LocalCalculatorDraft, { calculatorId: "reference.discount" }>;
 
@@ -40,13 +42,13 @@ function useClientReady() {
   return useSyncExternalStore(subscribeClientReady, getClientSnapshot, getServerSnapshot);
 }
 
-export function DiscountCalculator({ locale, entry }: DiscountCalculatorProps) {
+export function DiscountCalculator({ locale, entry, recordId }: DiscountCalculatorProps) {
   const clientReady = useClientReady();
   if (!clientReady) return null;
-  return <DiscountCalculatorStateful key={`${entry.id}:${locale}`} locale={locale} entry={entry} />;
+  return <DiscountCalculatorStateful key={`${entry.id}:${locale}`} locale={locale} entry={entry} recordId={recordId} />;
 }
 
-function DiscountCalculatorStateful({ locale, entry }: DiscountCalculatorProps) {
+function DiscountCalculatorStateful({ locale, entry, recordId }: DiscountCalculatorProps) {
   const copy = entry.copy[locale];
   const text = validationCopy[locale];
   const [initialDraft] = useState<DiscountDraft | null>(() => {
@@ -137,6 +139,7 @@ function DiscountCalculatorStateful({ locale, entry }: DiscountCalculatorProps) 
           <ValidationSummary title={text.summary} errors={errorList} />
         </div>
         <PersistenceControls locale={locale} calculatorId="reference.discount" state={persistableState} onLoad={loadPersisted} />
+        <WorkspaceCalculationControls locale={locale} calculatorId="reference.discount" state={persistableState} onLoad={loadPersisted} recordId={recordId} />
       </section>
       <div className="min-w-0">
         {outcome?.ok ? <ResultPanel title={text.result}>

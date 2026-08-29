@@ -15,8 +15,9 @@ import { PersistenceControls } from "./persistence-controls";
 import { ResultPanel } from "./result-panel";
 import { TrustPanel } from "./trust-panel";
 import { ValidationSummary } from "./validation-summary";
+import { WorkspaceCalculationControls } from "./workspace-calculation-controls";
 
-interface BusinessMarginCalculatorProps { locale: Locale; entry: ReferenceCatalogEntry; }
+interface BusinessMarginCalculatorProps { locale: Locale; entry: ReferenceCatalogEntry; recordId?: string; }
 type BusinessMarginDraft = Extract<LocalCalculatorDraft, { calculatorId: "reference.business-margin" }>;
 const textByLocale = {
   id: { summary: "Periksa input berikut.", invalid: "Masukkan angka yang valid.", required: "Kolom ini wajib diisi.", range: "Nilai berada di luar rentang yang diizinkan.", result: "Hasil margin", scenarioField: "Skenario biaya variabel per pesanan", scenarioRequired: "Masukkan biaya variabel untuk skenario." },
@@ -41,13 +42,13 @@ function useClientReady() {
   return useSyncExternalStore(subscribeClientReady, getClientSnapshot, getServerSnapshot);
 }
 
-export function BusinessMarginCalculator({ locale, entry }: BusinessMarginCalculatorProps) {
+export function BusinessMarginCalculator({ locale, entry, recordId }: BusinessMarginCalculatorProps) {
   const clientReady = useClientReady();
   if (!clientReady) return null;
-  return <BusinessMarginCalculatorStateful key={`${entry.id}:${locale}`} locale={locale} entry={entry} />;
+  return <BusinessMarginCalculatorStateful key={`${entry.id}:${locale}`} locale={locale} entry={entry} recordId={recordId} />;
 }
 
-function BusinessMarginCalculatorStateful({ locale, entry }: BusinessMarginCalculatorProps) {
+function BusinessMarginCalculatorStateful({ locale, entry, recordId }: BusinessMarginCalculatorProps) {
   const copy = entry.copy[locale]; const text = textByLocale[locale];
   const [initialDraft] = useState<BusinessMarginDraft | null>(() => {
     const draft = readLocalDraft("reference.business-margin");
@@ -120,6 +121,7 @@ function BusinessMarginCalculatorStateful({ locale, entry }: BusinessMarginCalcu
       </div>
       {outcome?.ok ? <div className="mt-8 border-t border-border pt-7"><h2 className="text-lg font-bold tracking-[-0.025em]">{copy.ui.recommendationTitle}</h2><div className="mt-4 space-y-4"><CalculatorField id="margin-scenario-variable-cost" label={text.scenarioField} value={scenarioVariableCost} onChange={(event) => { dirty(); setScenarioVariableCost(event.target.value); }} inputMode="decimal" autoComplete="off" error={fieldErrors.scenarioVariableSellingCostPerOrder} /><Button type="button" variant="outline" onClick={runScenario}>{copy.ui.runScenario}</Button></div></div> : null}
       <PersistenceControls locale={locale} calculatorId="reference.business-margin" state={persistableState} onLoad={loadPersisted} />
+      <WorkspaceCalculationControls locale={locale} calculatorId="reference.business-margin" state={persistableState} onLoad={loadPersisted} recordId={recordId} />
     </section>
     <div className="min-w-0 space-y-5">
       {outcome?.ok ? <ResultPanel title={text.result}><dl className="grid min-w-0 gap-4 sm:grid-cols-2">{resultValues(outcome.result).map((value) => <div key={value.id} className="min-w-0"><dt className="text-xs font-semibold text-trust-foreground/70">{copy.results[value.id] ?? value.id}</dt><dd className="mt-1 break-words text-xl font-bold text-trust-foreground">{formatCanonicalDecimal(value.value, locale, { style: value.unit === "percent" ? "percent" : "decimal" })}</dd></div>)}</dl>{scenarioOutcome?.ok ? <div className="mt-7 grid min-w-0 gap-4 border-t border-primary/15 pt-5 sm:grid-cols-3"><div><p className="text-xs font-semibold text-trust-foreground/70">{copy.ui.baseline}</p><p className="mt-1 break-words text-lg font-bold">{formatCanonicalDecimal(scenarioOutcome.result.baseline.primaryAnswer.value, locale)}</p></div><div><p className="text-xs font-semibold text-trust-foreground/70">{copy.ui.scenario}</p><p className="mt-1 break-words text-lg font-bold">{formatCanonicalDecimal(scenarioOutcome.result.scenario.primaryAnswer.value, locale)}</p></div><div><p className="text-xs font-semibold text-trust-foreground/70">{copy.ui.impact}</p><p data-testid="scenario-impact" className="mt-1 break-words text-lg font-bold">{formatCanonicalDecimal(scenarioOutcome.result.impact.value, locale)}</p></div></div> : null}</ResultPanel> : <div className="rounded-[var(--radius-card)] border border-dashed border-border bg-card/50 p-6 text-sm leading-6 text-muted-foreground">{locale === "id" ? "Mulai dengan harga jual dan biaya produk. Tambahkan biaya variabel saat relevan." : "Start with selling price and product cost. Add variable selling cost when it is relevant."}</div>}

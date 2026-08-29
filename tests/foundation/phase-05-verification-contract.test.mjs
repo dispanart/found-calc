@@ -18,11 +18,11 @@ test("Phase 05 verification gate is wired as a Phase 04 regression superset", ()
   assert.match(script, /verify:phase04/);
 });
 
-test("Phase 05 CI applies both local migrations and owns main PR verification", () => {
+test("Phase 05 CI keeps its completed phase branch verification and migration coverage", () => {
   const workflowPath = ".github/workflows/phase-05-verification.yml";
   assert.equal(existsSync(url(workflowPath)), true, `${workflowPath} must exist`);
   const workflow = read(workflowPath);
-  assert.match(workflow, /pull_request:\s*\n\s*branches:\s*\n\s*- main/);
+  assert.match(workflow, /phase-05-versioned-rule-platform-admin-core/);
   assert.match(workflow, /0001_phase04_auth_and_calculator_state\.sql/);
   assert.match(workflow, /0002_phase05_rule_platform_admin\.sql/);
   assert.match(workflow, /BETTER_AUTH_ADMIN_USER_IDS/);

@@ -2,6 +2,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { env } from "cloudflare:workers";
 import phase04MigrationSql from "../../migrations/0001_phase04_auth_and_calculator_state.sql?raw";
 import phase05MigrationSql from "../../migrations/0002_phase05_rule_platform_admin.sql?raw";
+import phase06MigrationSql from "../../migrations/0003_phase06_workspace.sql?raw";
 
 const phase04TablesInDropOrder = [
   "calculator_state",
@@ -12,12 +13,19 @@ const phase04TablesInDropOrder = [
 ] as const;
 
 const currentTriggersInDropOrder = [
+  "workspace_project_invite_redeem_member",
   "rule_version_published_delete_forbidden",
   "rule_version_published_immutable",
   "rule_version_publication_overlap",
 ] as const;
 
 const currentTablesInDropOrder = [
+  "workspace_calculation",
+  "workspace_project_invite",
+  "workspace_project_member",
+  "workspace_project",
+  "workspace_goal",
+  "user_profile",
   "rule_version",
   ...phase04TablesInDropOrder,
 ] as const;
@@ -74,6 +82,7 @@ export const resetCurrentDatabase = async () => {
   await env.DB.batch([...dropTriggers, ...dropTables]);
   await applySql(env.DB, phase04MigrationSql);
   await applySql(env.DB, phase05MigrationSql);
+  await applySql(env.DB, phase06MigrationSql);
 };
 
 export const resetPhase04Database = async (db: D1Database, migrationSql: string) => {
