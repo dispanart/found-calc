@@ -49,3 +49,12 @@ test("Phase 06 built Worker smoke uses one isolated state with all three migrati
   assert.equal((workflow.match(/--persist-to "\$smoke_state"/g) ?? []).length, 4);
   assert.doesNotMatch(workflow, /000[123][^\n]*\|\| true/);
 });
+
+test("Phase 06 built Worker smoke validates the owned/shared project collection contract", () => {
+  const workflow = read(".github/workflows/phase-06-verification.yml");
+
+  assert.doesNotMatch(workflow, /grep -Fq '\"projects\":\[\]'/);
+  assert.match(workflow, /JSON\.parse/);
+  assert.match(workflow, /projects\.owned/);
+  assert.match(workflow, /projects\.shared/);
+});
