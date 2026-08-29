@@ -18,11 +18,30 @@ test("Phase 07 has a fail-fast verification superset and dedicated CI migration/
   const workflow = read(".github/workflows/phase-07-verification.yml");
   assert.match(workflow, /0004_phase07_billing\.sql/);
   assert.match(workflow, /pnpm verify:phase07/);
-  assert.match(workflow, /api\/billing\/status/);
-  assert.match(workflow, /api\/billing\/webhooks\/xendit/);
   assert.match(workflow, /dist\/server\/wrangler\.json/);
-  assert.doesNotMatch(workflow, /--write-out/);
-  assert.match(workflow, /-w ['"]%\{http_code\}['"]/);
+  assert.match(workflow, /scripts\/smoke-phase-07-worker\.sh/);
+});
+
+test("Phase 07 built Worker smoke exposes deterministic, sanitized runtime checkpoints", () => {
+  const path = "scripts/smoke-phase-07-worker.sh";
+  assert.equal(existsSync(url(path)), true, `${path} must exist`);
+
+  const smoke = read(path);
+  for (const checkpoint of ["worker-startup", "anonymous-status", "invalid-webhook", "auth-signup", "authenticated-status"]) {
+    assert.match(smoke, new RegExp(checkpoint));
+  }
+  for (const boundary of ["/api/billing/status", "/api/billing/webhooks/xendit", "/api/auth/sign-up/email"]) {
+    assert.match(smoke, new RegExp(boundary.replaceAll("/", "\\/")));
+  }
+  for (const planId of ["pro-monthly", "pro-annual", "business-monthly", "business-annual"]) {
+    assert.match(smoke, new RegExp(planId));
+  }
+  assert.match(smoke, /::error title=Phase 07 Worker smoke/);
+  assert.match(smoke, /REDACTED/);
+  assert.match(smoke, /XENDIT_WEBHOOK_TOKEN/);
+  assert.match(smoke, /BETTER_AUTH_SECRET/);
+  assert.match(smoke, /cookie/i);
+  assert.doesNotMatch(smoke, /set -x/);
 });
 
 test("Phase 07 package and local env examples declare only placeholder billing configuration", () => {
