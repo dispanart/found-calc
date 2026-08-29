@@ -33,8 +33,8 @@ const messages = {
       "Shell ini mengunci batas rute workspace. Fitur proyek, skenario, dan penyimpanan akan hadir pada fase yang telah disetujui.",
     adminTitle: "Admin Found Calc",
     adminBody:
-      "Shell ini mengunci batas rute admin. Operasi katalog dan rule management belum diimplementasikan pada Phase 01.",
-    phaseLabel: "Phase 04 · Persistence, Auth & Guest Preservation",
+      "Kelola lifecycle draft dan publikasi untuk aturan referensi sintetis. Operasi ini dilindungi otorisasi admin dan tidak mencakup data aturan produksi.",
+    phaseLabel: "Phase 05 · Versioned Rule Platform + Admin Core",
   },
   en: {
     brand: "Found Calc",
@@ -68,8 +68,8 @@ const messages = {
       "This shell locks the workspace route boundary. Projects, scenarios, and persistence arrive in their approved phases.",
     adminTitle: "Found Calc admin",
     adminBody:
-      "This shell locks the admin route boundary. Catalog operations and rule management are not implemented in Phase 01.",
-    phaseLabel: "Phase 04 · Persistence, Auth & Guest Preservation",
+      "Manage draft and publication lifecycle for the synthetic reference rule. These operations require admin authorization and do not include production rule data.",
+    phaseLabel: "Phase 05 · Versioned Rule Platform + Admin Core",
   },
 } as const;
 

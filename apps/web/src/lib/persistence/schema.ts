@@ -14,6 +14,10 @@ export const authUsers = sqliteTable("user", {
   image: text("image"),
   createdAt: timestampMs("created_at"),
   updatedAt: timestampMs("updated_at"),
+  role: text("role").default("user"),
+  banned: integer("banned", { mode: "boolean" }).default(false),
+  banReason: text("ban_reason"),
+  banExpires: integer("ban_expires", { mode: "timestamp_ms" }),
 });
 
 export const authSessions = sqliteTable(
@@ -89,6 +93,30 @@ export const calculatorStates = sqliteTable(
       table.calculatorId,
     ),
     index("calculator_state_owner_idx").on(table.ownerType, table.ownerId),
+  ],
+);
+
+export const ruleVersions = sqliteTable(
+  "rule_version",
+  {
+    id: text("id").primaryKey(),
+    ruleId: text("rule_id").notNull(),
+    versionId: text("version_id").notNull(),
+    effectiveFrom: text("effective_from").notNull(),
+    effectiveUntil: text("effective_until"),
+    payloadJson: text("payload_json").notNull(),
+    sourceId: text("source_id").notNull(),
+    sourceUrl: text("source_url"),
+    status: text("status", { enum: ["draft", "published"] }).notNull(),
+    createdByUserId: text("created_by_user_id").references(() => authUsers.id, { onDelete: "set null" }),
+    createdAt: timestampMs("created_at"),
+    publishedByUserId: text("published_by_user_id").references(() => authUsers.id, { onDelete: "set null" }),
+    publishedAt: integer("published_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [
+    uniqueIndex("rule_version_rule_version_unique").on(table.ruleId, table.versionId),
+    index("rule_version_rule_status_idx").on(table.ruleId, table.status, table.effectiveFrom),
+    index("rule_version_status_idx").on(table.status),
   ],
 );
 
