@@ -1,146 +1,136 @@
 # Found Calc — Phase Handoff
 
 **Project:** Found Calc  
-**Last canonical completed phase:** Phase 04 — Persistence, Auth & Guest Preservation  
+**Last canonical completed phase is **Phase 05 — Versioned Rule Platform + Admin Core**  
 **Current status:** COMPLETE  
-**Next phase:** Phase 05 — resolve the exact approved title and scope from the canonical Phase Workflow before implementation
+**Next phase:** **Phase 06 — Goals, Projects, Profiles & Workspace**
 
 ## Rule: one phase = one new chat
 
-Start Phase 05 in a **new chat inside the same Found Calc project** and attach:
+Start Phase 06 in a **new chat inside the same Found Calc project** and attach:
 
-`found-calc-phase-04-persistence-auth-guest-preservation.zip`
+`found-calc-phase-05-versioned-rule-platform-admin-core.zip`
 
-Also attach or otherwise make available the canonical Found Calc Phase Workflow if it is not already present in the new chat/project context. The repository deliberately does not invent the Phase 05 title or scope when that source is unavailable.
+Use the exact post-merge artifact produced from `main`. GitHub `main` is the collaborative canonical repository; the ZIP is the portable recovery/handoff baseline. The Phase 05 post-merge artifact workflow archives the exact merged `GITHUB_SHA`, writes `SHA256SUMS`, verifies required files/extraction, and records commit/tree identity in `ARTIFACT_VERIFICATION.txt`.
 
-The ZIP is the portable recovery/handoff baseline. GitHub `main` is the collaborative canonical repository. The Phase 04 post-merge baseline workflow packages the exact merged closure tree, records its commit/tree identity, writes `SHA256SUMS`, verifies extraction and required Phase 04 files, and uploads the portable baseline artifact.
-
-## Required reading order for Phase 05
+## Required reading order for Phase 06
 
 1. `BASELINE.md`
 2. `PHASE_HANDOFF.md`
-3. `docs/verification/phase-04-verification.md`
-4. `docs/superpowers/specs/2026-08-28-found-calc-phase-04-persistence-auth-guest-preservation-design.md`
-5. `docs/superpowers/plans/2026-08-28-found-calc-phase-04-persistence-auth-guest-preservation.md`
+3. `docs/verification/phase-05-verification.md`
+4. `docs/superpowers/specs/2026-08-29-found-calc-phase-05-versioned-rule-platform-admin-core-design.md`
+5. `docs/superpowers/plans/2026-08-29-found-calc-phase-05-versioned-rule-platform-admin-core.md`
 6. approved Master Product & Architecture Design Spec
 7. Tech Stack ADR
 8. Design System Decision / requirements / component inventory
 9. Accessibility & Responsive Contract
-10. canonical Phase Workflow — resolve the exact Phase 05 title, scope, acceptance criteria, and exclusions before writing the Phase 05 plan
+10. canonical Phase Workflow and the approved Phase 06 scope/acceptance criteria
 
-## Starter prompt for the new Phase 05 chat
+## Starter prompt for the new Phase 06 chat
 
 ```text
 @Superpowers @GitHub @Context7
 
-Start Found Calc Phase 05 from the attached canonical `found-calc-phase-04-persistence-auth-guest-preservation.zip`.
+Start Found Calc Phase 06 — Goals, Projects, Profiles & Workspace from the attached canonical `found-calc-phase-05-versioned-rule-platform-admin-core.zip`.
 
 Before implementation:
 1. Read BASELINE.md and PHASE_HANDOFF.md.
-2. Read docs/verification/phase-04-verification.md and the approved Phase 04 spec/plan.
+2. Read docs/verification/phase-05-verification.md and the approved Phase 05 design/plan.
 3. Read the approved Master Product & Architecture Design Spec, Tech Stack ADR, design-system/accessibility contracts, and canonical Phase Workflow.
-4. Resolve and state the exact approved Phase 05 title and implementation scope from the canonical Phase Workflow before planning. Do not infer the Phase 05 name/scope from deferred items and do not pull Phase 06+ work forward.
-5. Treat Phase 01 platform foundation, Phase 02 deterministic engine/rules truth, Phase 03 catalog/product runtime, and Phase 04 persistence/auth/guest-preservation boundaries as approved baseline. Reopen them only for a verified implementation blocker under change control.
-6. Keep reference calculation truth local and deterministic; persistence APIs may validate canonical input but may not calculate results.
-7. Use Context7 for current framework/library documentation and the Cloudflare skill/current Cloudflare docs for Workers-specific work.
-8. Use Superpowers brainstorming/writing-plans/TDD/systematic-debugging/verification-before-completion as required.
-9. Preserve ID/EN, accessibility, privacy/trust constraints, guest-context preservation, and the Rp0 fixed-infrastructure target excluding domain/payment transaction fees.
+4. Confirm the exact approved Phase 06 acceptance criteria and exclusions before planning; do not pull Phase 07+ work forward.
+5. Treat Phase 01 platform foundation, Phase 02 deterministic engine/rules truth, Phase 03 catalog/product runtime, Phase 04 persistence/auth/guest preservation, and Phase 05 versioned-rule/admin boundaries as approved baseline. Reopen them only for a verified implementation blocker under change control.
+6. Preserve the rule boundary: D1/admin/public feeds may store and transport versioned data, but calculator arithmetic remains local/deterministic and @found-calc/rules remains version/effective-date truth.
+7. Preserve Phase 04 guest/local/auth state semantics while extending workspace behavior only as Phase 06 explicitly authorizes.
+8. Use Context7 for current framework/library documentation and the Cloudflare skill/current Cloudflare docs for Workers-specific work.
+9. Use Superpowers brainstorming/writing-plans/TDD/systematic-debugging/verification-before-completion as required.
+10. Preserve ID/EN, accessibility, privacy/trust constraints, guest-context preservation, and the Rp0 fixed-infrastructure target excluding domain/payment transaction fees.
 
-Create the Phase 05 implementation design/plan first. At Phase 05 completion, produce the next complete ZIP baseline and updated handoff.
+Create the Phase 06 design/implementation plan first. At completion, produce the next complete canonical ZIP baseline and updated handoff.
 ```
 
-## Phase 04 completion evidence
+## Phase 05 completion evidence
 
-The final implementation snapshot before continuity closure is:
+The verified implementation snapshot before continuity closure is:
 
-- source SHA: `5073c3c97667775adc13708ca5507eb809895ebf`;
-- implementation merge commit: `4cc9fe3c84ea56a0caf587754547da0a59a772e5`;
-- GitHub Actions run: `33199332188`;
-- job: `98944559520`;
+- source SHA: `eb67641aeb47222f44258251c2caea93b6809b7f`;
+- GitHub Actions run: `33232447867`;
+- job: `99047494137`;
 - result: **SUCCESS**.
 
-The Phase 04 closure PR is required to receive a separate fresh green `verify:phase04` run before merge. The post-merge baseline workflow then records the exact canonical closure merge SHA/tree in `ARTIFACT_VERIFICATION.txt`.
+The Phase 05 closure tree must receive a separate fresh green `Phase 05 Verification` run before merge. After merge, the Phase 05 canonical artifact workflow records the exact merged SHA/tree dynamically.
 
-Phase 04 establishes:
+Phase 05 establishes:
 
-- Better Auth 1.6.29 email/password sign-up, sign-in, sign-out, and D1-backed sessions;
-- Better Auth core SQLite/D1 tables plus a narrow `calculator_state` table for the three reference calculator drafts;
-- strict persisted-state validation using canonical calculator IDs/versions/input shapes with a 16 KiB API boundary;
-- explicit first-party GET/PUT/DELETE calculator-state routes and idempotent POST guest claim;
-- opaque HttpOnly first-party guest ownership, minted only on guest persistence mutation;
-- browser-only unsaved local drafts that survive ID/EN locale navigation without auth-token storage or automatic network writes;
-- explicit Save/Load/Delete controls on all three reference calculators while calculations remain local/deterministic;
-- post-auth guest draft claiming with retryable preservation failure semantics;
-- localized account UI and an auth-aware three-calculator workspace persistence summary;
-- vinext/Cloudflare Vite/workerd runtime isolation from the canonical Next/Turbopack `cloudflare:workers` build stub;
-- Phase 04 CI as a superset of all Phase 03/02/01 regression gates, production builds, local D1 migration, browser flows, and built Worker smoke.
+- D1-backed immutable versioned rule records with draft/published lifecycle metadata;
+- effective-period validation and publication overlap protection owned by `@found-calc/rules`;
+- synthetic/reference-only seed data, not production regulatory truth;
+- Better Auth admin bootstrap and server-side rule-admin authorization;
+- a published-only public rule feed plus protected admin list/create/publish APIs;
+- localized ID/EN rule-admin UI with explicit synthetic-only trust messaging;
+- synthetic reference runtime consumption of the first-party published feed while date resolution and arithmetic remain local;
+- Phase 04 local/guest/auth draft preservation and workspace summary as inherited behavior;
+- a full Phase 05 gate covering contracts, rules, web unit, Cloudflare D1/auth/rule tests, browser flows, Next/vinext builds, inherited Phase 04→01 regressions, and built Worker rule-route smoke.
 
-See `docs/verification/phase-04-verification.md` for exact counts, TDD/debug evidence, warnings, and exclusions.
+See `docs/verification/phase-05-verification.md` for exact counts, RED→GREEN/debug evidence, known warnings, and closure/artifact rules.
 
-## Stable Phase 04 boundaries
+## Stable Phase 05 boundaries to preserve
 
 ### Engine
 
-`@found-calc/engine` owns deterministic calculation truth only. Do not move auth, persistence, locale parsing, React/Next code, rule resolution, Worker bindings, or network I/O into the engine.
+`@found-calc/engine` owns deterministic formula truth only. Do not move auth, persistence, locale parsing, React/Next code, rule publication/version resolution, Worker bindings, or network I/O into the engine.
 
 ### Rules
 
-`@found-calc/rules` owns immutable effective-date/version selection outside the engine. Persisted synthetic state stores only input/date context; provenance is resolved again when calculation runs.
+`@found-calc/rules` owns immutable version/effective-period/publication semantics. D1/repositories store and hydrate records; UI/routes do not redefine those semantics.
 
 ### Catalog
 
-`@found-calc/catalog` owns reference calculator identity, canonical slugs, localized discovery/trust copy, category metadata, and relationships. It does not own formulas, auth, persistence, billing, or production rule datasets.
+`@found-calc/catalog` owns calculator identity, canonical slugs, localized discovery/trust copy, category metadata, and relationships. It does not own formulas, auth, persistence, billing, or production rule datasets.
 
 ### Product runtime
 
-`apps/web` owns localized presentation, public forms/results, accessible interaction, auth UI, local draft preservation, explicit persistence controls, and workspace persistence summary. Reference calculations remain local and do not use a calculation API.
+`apps/web` owns localized presentation, accessible interaction, first-party API consumption, auth/admin UI, local draft preservation, and workspace surfaces. Reference calculations remain local and deterministic.
 
-### Persistence/auth
+### Persistence/auth/admin
 
-D1 stores Better Auth records plus validated canonical calculator input drafts. Better Auth owns credentials/session behavior. Guest persistence uses an opaque HttpOnly cookie. No auth/session token belongs in localStorage.
+D1 stores Better Auth records, validated calculator drafts, and versioned rule records. Better Auth owns credentials/session behavior. Guest ownership stays opaque and first-party. Server-side authorization—not client state—is authoritative for admin mutation access.
 
-### Runtime configuration
+### Public rule API
 
-Canonical `next build` may use the non-executing Cloudflare Worker build stub. vinext/workerd must use native `cloudflare:workers` bindings and must not inherit that Node-only alias.
+Only published versions required for the synthetic reference runtime are public. Drafts, audit actor IDs, SQL details, and internal storage exceptions remain non-public.
 
-## Phase 04 interaction contracts to preserve
+## Phase 05 interaction/contracts to preserve into Phase 06
 
+- public calculators remain usable without authentication;
 - unsaved local drafts survive locale navigation/reload without automatic network persistence;
-- loading malformed/failed persisted data does not overwrite the current in-progress local draft;
-- save is explicit and only sends validated canonical draft input;
-- guest ownership cookie is created only on guest persistence mutation;
-- authenticated ownership wins over guest ownership;
-- guest claim is idempotent, newer state wins, and successful sign-in is not rolled back by claim failure;
-- workspace remains a draft summary, not Projects/history;
-- discount/business-margin/synthetic-rule formula truth and Phase 03 accessibility/provenance behavior remain unchanged;
-- no server endpoint calculates calculator answers.
+- guest claim remains idempotent and successful authentication is not rolled back by claim failure;
+- Phase 06 workspace expansion must not silently reinterpret Phase 04 calculator-draft records as Projects/history without an explicit migration/domain boundary;
+- published rule versions remain immutable and publication periods may not overlap for the same rule;
+- synthetic rule-feed failure remains explicit and does not silently fall back to hidden fixture truth;
+- admin access is rechecked server-side;
+- no server endpoint calculates calculator answers;
+- no raw calculator input logging, browser auth-token storage, fingerprinting, or production secrets are introduced.
 
-## Explicitly deferred beyond Phase 04
+## Phase 06 scope guard
 
-- remote D1/prod Cloudflare provisioning, deploy/DNS/secrets mutation;
-- Xendit/payment/subscription/entitlement/invoice/webhook flows;
-- production regulatory rule packs;
-- production-scale catalog/SEO publishing and Admin publishing tooling;
-- Goals, Projects, named history, sharing/collaboration/exports;
-- analytics/telemetry, AI explanations, OAuth, email verification/reset delivery, 2FA, and passkeys.
-
-These exclusions are not permission to implement them all in Phase 05. Phase 05 must follow the canonical Phase Workflow and its exact approved scope.
+The approved next phase is **Goals, Projects, Profiles & Workspace**. Its exact design must still be derived from the canonical Phase Workflow/architecture sources before implementation. The Phase 05 baseline does not itself authorize billing, payments, production regulatory catalogs, analytics, AI, launch certification, remote production infrastructure, or any Phase 07+ feature.
 
 ## Known platform notes
 
 - the all-zero D1 UUID remains local/test-only and must not be mistaken for a deployable remote database;
-- `vinext check` reports 90% compatibility with 0 issues; partial notes are `next/font/google` CDN loading and `reactStrictMode` App Router behavior;
-- Cloudflare Vitest may emit the inherited pre-build vinext entry static-analysis warning while runtime tests pass;
-- current GitHub Actions can warn that actions implemented on Node 20 are being forced onto Node 24 by the runner; the project job itself uses Node 22;
-- one signed-out 390px workspace Playwright scenario can hit a transient vinext network loss and passed on retry in the final implementation run; persistence/claim passed normally;
-- no credentials or production secrets are included in the baseline artifact.
+- `vinext check` reports 90% compatibility with 0 issues; partial notes are `next/font/google` CDN loading and App Router `reactStrictMode` behavior;
+- Cloudflare Vitest may emit the inherited pre-build generated-entry static-analysis warning while runtime tests pass;
+- generated Worker types can emit two non-blocking unused eslint-disable warnings;
+- one inherited signed-out 390 px workspace browser scenario can transiently fail during vinext network churn and passed on retry in the successful implementation run; the guest claim flow passed normally;
+- current GitHub Actions can warn that Node 20-based action internals are forced onto Node 24; the project job uses Node 22;
+- no credentials or production secrets belong in the portable artifact.
 
 ## Change control
 
-If Phase 05 exposes a conflict with approved Phase 01–04 architecture/contracts:
+If Phase 06 exposes a conflict with approved Phase 01–05 architecture/contracts:
 
 1. stop the affected work;
 2. capture reproducible failing evidence;
-3. identify whether the blocker is product scope, framework/runtime behavior, persistence/auth semantics, or a true architecture conflict;
+3. identify whether the blocker is product scope, framework/runtime behavior, persistence/auth/rule semantics, or a true architecture conflict;
 4. propose the smallest compatible amendment;
 5. obtain approval before changing an approved boundary or deterministic-truth contract.
