@@ -38,3 +38,42 @@ test("Phase 05 built Worker smoke uses one fresh isolated D1 persistence state",
   assert.equal((workflow.match(/--persist-to \"\$smoke_state\"/g) ?? []).length, 3);
   assert.doesNotMatch(workflow, /000[12][^\n]*\|\| true/);
 });
+
+test("Phase 05 closure records a portable canonical handoff", () => {
+  const baseline = read("BASELINE.md");
+  const handoff = read("PHASE_HANDOFF.md");
+  const template = read("PHASE_CHAT_TEMPLATE.md");
+  const verificationPath = "docs/verification/phase-05-verification.md";
+  const workflowPath = ".github/workflows/phase-05-baseline-artifact.yml";
+
+  assert.match(baseline, /Phase 05/);
+  assert.match(baseline, /COMPLETE/);
+  assert.match(baseline, /found-calc-phase-05-versioned-rule-platform-admin-core\.zip/);
+  assert.match(handoff, /last canonical completed phase is \*\*Phase 05/i);
+  assert.match(handoff, /Phase 06 — Goals, Projects, Profiles & Workspace/);
+  assert.match(template, /found-calc-phase-05-versioned-rule-platform-admin-core\.zip/);
+  assert.match(template, /Phase 06/);
+  assert.match(template, /Goals, Projects, Profiles & Workspace/);
+
+  assert.equal(existsSync(url(verificationPath)), true, `${verificationPath} must exist`);
+  const verification = read(verificationPath);
+  assert.match(verification, /Phase 05 — Versioned Rule Platform \+ Admin Core/);
+  assert.match(verification, /33232447867/);
+  assert.match(verification, /eb67641aeb47222f44258251c2caea93b6809b7f/);
+
+  assert.equal(existsSync(url(workflowPath)), true, `${workflowPath} must exist`);
+  const workflow = read(workflowPath);
+  assert.match(workflow, /found-calc-phase-05-versioned-rule-platform-admin-core\.zip/);
+  assert.match(workflow, /git archive --format=zip --output="\$ARTIFACT" "\$GITHUB_SHA"/);
+  assert.match(workflow, /SHA256SUMS/);
+  assert.match(workflow, /ARTIFACT_VERIFICATION\.txt/);
+});
+
+test("Phase 05 canonical artifact trigger cannot interfere with later phase handoffs", () => {
+  const workflow = read(".github/workflows/phase-05-baseline-artifact.yml");
+  assert.doesNotMatch(workflow, /^\s{6}-\s+BASELINE\.md\s*$/m);
+  assert.doesNotMatch(workflow, /^\s{6}-\s+PHASE_HANDOFF\.md\s*$/m);
+  assert.doesNotMatch(workflow, /^\s{6}-\s+PHASE_CHAT_TEMPLATE\.md\s*$/m);
+  assert.match(workflow, /docs\/verification\/phase-05-verification\.md/);
+  assert.match(workflow, /\.github\/workflows\/phase-05-baseline-artifact\.yml/);
+});
