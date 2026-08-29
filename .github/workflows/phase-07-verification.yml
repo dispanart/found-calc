@@ -1,0 +1,82 @@
+name: Phase 07 Verification
+
+on:
+  push:
+    branches:
+      - phase-07-billing-entitlements-xendit
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-07-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BETTER_AUTH_SECRET: phase-07-ci-test-secret-not-for-production-000000000000000000000000
+  BETTER_AUTH_URL: http://127.0.0.1:3000
+  BETTER_AUTH_ADMIN_USER_IDS: phase-07-ci-admin-bootstrap
+  BILLING_PLANS_JSON: '[{"id":"pro-monthly","displayName":{"id":"Pro","en":"Pro"},"description":{"id":"Konfigurasi verifikasi Pro","en":"Pro verification configuration"},"amount":25000,"currency":"IDR","country":"ID","interval":"MONTH","intervalCount":1,"billingDay":15,"totalRecurrence":null,"failedCycleAction":"RESUME","entitlements":["advanced_scenarios","history_depth"]},{"id":"pro-annual","displayName":{"id":"Pro","en":"Pro"},"description":{"id":"Konfigurasi verifikasi Pro","en":"Pro verification configuration"},"amount":250000,"currency":"IDR","country":"ID","interval":"MONTH","intervalCount":12,"billingDay":15,"totalRecurrence":null,"failedCycleAction":"RESUME","entitlements":["advanced_scenarios","history_depth"]},{"id":"business-monthly","displayName":{"id":"Business","en":"Business"},"description":{"id":"Konfigurasi verifikasi Business","en":"Business verification configuration"},"amount":75000,"currency":"IDR","country":"ID","interval":"MONTH","intervalCount":1,"billingDay":15,"totalRecurrence":null,"failedCycleAction":"RESUME","entitlements":["advanced_scenarios","history_depth","bulk_sku","export","team_access"]},{"id":"business-annual","displayName":{"id":"Business","en":"Business"},"description":{"id":"Konfigurasi verifikasi Business","en":"Business verification configuration"},"amount":750000,"currency":"IDR","country":"ID","interval":"MONTH","intervalCount":12,"billingDay":15,"totalRecurrence":null,"failedCycleAction":"RESUME","entitlements":["advanced_scenarios","history_depth","bulk_sku","export","team_access"]}]'
+  PUBLIC_APP_ORIGIN: https://found.example
+  XENDIT_SECRET_API_KEY: phase-07-provider-secret-test-only
+  XENDIT_WEBHOOK_TOKEN: phase-07-webhook-token-test-only-000000
+
+jobs:
+  verify:
+    name: Verify Phase 07 billing, entitlements and Xendit boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Confirm pnpm
+        run: pnpm --version
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
+      - name: Reset and apply local D1 migrations
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .wrangler/state
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0001_phase04_auth_and_calculator_state.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0002_phase05_rule_platform_admin.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0003_phase06_workspace.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0004_phase07_billing.sql --yes
+      - name: Run Phase 07 verification gate
+        run: pnpm verify:phase07
+
+  worker-smoke:
+    name: Smoke-test built vinext Worker billing boundaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Confirm pnpm
+        run: pnpm --version
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build vinext Worker
+        run: pnpm --filter @found-calc/web build:vinext
+      - name: Run deterministic Worker smoke
+        shell: bash
+        run: bash scripts/smoke-phase-07-worker.sh

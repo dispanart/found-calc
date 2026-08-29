@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import phase04MigrationSql from "../../migrations/0001_phase04_auth_and_calculator_state.sql?raw";
 import phase05MigrationSql from "../../migrations/0002_phase05_rule_platform_admin.sql?raw";
 import phase06MigrationSql from "../../migrations/0003_phase06_workspace.sql?raw";
+import phase07MigrationSql from "../../migrations/0004_phase07_billing.sql?raw";
 
 const phase04TablesInDropOrder = [
   "calculator_state",
@@ -20,6 +21,10 @@ const currentTriggersInDropOrder = [
 ] as const;
 
 const currentTablesInDropOrder = [
+  "billing_webhook_inbox",
+  "billing_subscription",
+  "billing_checkout",
+  "billing_customer",
   "workspace_calculation",
   "workspace_project_invite",
   "workspace_project_member",
@@ -50,6 +55,7 @@ export const resetCurrentDatabase = async () => {
   await applySql(env.DB, phase04MigrationSql);
   await applySql(env.DB, phase05MigrationSql);
   await applySql(env.DB, phase06MigrationSql);
+  await applySql(env.DB, phase07MigrationSql);
 };
 
 export const resetPhase04Database = async (db: D1Database, migrationSql: string) => {

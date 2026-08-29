@@ -18,12 +18,13 @@ test("Phase 06 verification is a Phase 05 regression superset", () => {
   assert.match(script, /verify:phase05/);
 });
 
-test("Phase 06 owns main PR verification and applies the full D1 migration chain", () => {
+test("Phase 06 retains branch/manual verification and applies the full D1 migration chain after successor handoff", () => {
   const workflowPath = ".github/workflows/phase-06-verification.yml";
   assert.equal(existsSync(url(workflowPath)), true, `${workflowPath} must exist`);
   const workflow = read(workflowPath);
-  assert.match(workflow, /pull_request:\s*\n\s*branches:\s*\n\s*- main/);
+  assert.doesNotMatch(workflow, /pull_request:\s*\n\s*branches:\s*\n\s*- main/);
   assert.match(workflow, /phase-06-goals-projects-profiles-workspace/);
+  assert.match(workflow, /workflow_dispatch\s*:/);
   for (const migration of [
     "0001_phase04_auth_and_calculator_state.sql",
     "0002_phase05_rule_platform_admin.sql",
@@ -59,24 +60,9 @@ test("Phase 06 built Worker smoke validates the owned/shared project collection 
   assert.match(workflow, /projects\.shared/);
 });
 
-test("Phase 06 closure records a portable canonical handoff to Phase 07", () => {
-  const baseline = read("BASELINE.md");
-  const handoff = read("PHASE_HANDOFF.md");
-  const template = read("PHASE_CHAT_TEMPLATE.md");
+test("Phase 06 historical closure evidence remains portable after successor baselines advance", () => {
   const verificationPath = "docs/verification/phase-06-verification.md";
   const workflowPath = ".github/workflows/phase-06-baseline-artifact.yml";
-
-  assert.match(baseline, /Phase 06 — Goals, Projects, Profiles & Workspace/);
-  assert.match(baseline, /COMPLETE/);
-  assert.match(baseline, /Phase 07 — Billing, Entitlements & Xendit/);
-  assert.match(baseline, /found-calc-phase-06-goals-projects-profiles-workspace\.zip/);
-
-  assert.match(handoff, /last canonical completed phase is \*\*Phase 06/i);
-  assert.match(handoff, /Phase 07 — Billing, Entitlements & Xendit/);
-  assert.match(handoff, /found-calc-phase-06-goals-projects-profiles-workspace\.zip/);
-
-  assert.match(template, /found-calc-phase-06-goals-projects-profiles-workspace\.zip/);
-  assert.match(template, /Phase 07 — Billing, Entitlements & Xendit/);
 
   assert.equal(existsSync(url(verificationPath)), true, `${verificationPath} must exist`);
   const verification = read(verificationPath);
@@ -84,6 +70,7 @@ test("Phase 06 closure records a portable canonical handoff to Phase 07", () => 
   assert.match(verification, /33242970535/);
   assert.match(verification, /bb1eb7fc98de5673c271c22e6aa12563e78fc92d/);
   assert.match(verification, /99075355501/);
+  assert.match(verification, /found-calc-phase-06-goals-projects-profiles-workspace\.zip/);
 
   assert.equal(existsSync(url(workflowPath)), true, `${workflowPath} must exist`);
   const workflow = read(workflowPath);

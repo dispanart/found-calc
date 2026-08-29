@@ -1,84 +1,74 @@
 # Found Calc — Phase Handoff
 
 **Project:** Found Calc  
-Last canonical completed phase is **Phase 06 — Goals, Projects, Profiles & Workspace**  
+Last canonical completed phase is **Phase 07 — Billing, Entitlements & Xendit**  
 **Current status:** COMPLETE  
-**Next phase:** **Phase 07 — Billing, Entitlements & Xendit**
+**Next phase:** **Phase 08 — Frozen V1 Catalog Production**
 
 ## Rule: one phase = one new chat
 
-Start Phase 07 in a **new chat inside the same Found Calc project** and attach:
+Start Phase 08 in a **new chat inside the same Found Calc project** and attach:
 
-`found-calc-phase-06-goals-projects-profiles-workspace.zip`
+`found-calc-phase-07-billing-entitlements-xendit.zip`
 
-Use the exact post-merge artifact produced from `main`. Its workflow archives the exact merged `GITHUB_SHA`, writes `SHA256SUMS`, verifies extraction/required files, and records commit/tree identity in `ARTIFACT_VERIFICATION.txt`.
+Use the exact post-merge artifact produced from `main`. The artifact workflow archives the merged `GITHUB_SHA`, writes `SHA256SUMS`, verifies extraction and required files, and records commit/tree identity in `ARTIFACT_VERIFICATION.txt`.
 
-Historical predecessor record for regression continuity: immediately before Phase 06, last canonical completed phase is **Phase 05 — Versioned Rule Platform + Admin Core**, and Phase 06 started from `found-calc-phase-05-versioned-rule-platform-admin-core.zip`.
+Historical predecessor continuity: Phase 07 started from `found-calc-phase-06-goals-projects-profiles-workspace.zip`.
 
-## Required reading order for Phase 07
+## Required reading order for Phase 08
 
 1. `BASELINE.md`
 2. `PHASE_HANDOFF.md`
-3. `docs/verification/phase-06-verification.md`
-4. `docs/superpowers/specs/2026-08-29-found-calc-phase-06-goals-projects-profiles-workspace-design.md`
-5. `docs/superpowers/plans/2026-08-29-found-calc-phase-06-goals-projects-profiles-workspace.md`
+3. `docs/verification/phase-07-verification.md`
+4. `docs/superpowers/specs/2026-08-29-found-calc-phase-07-billing-entitlements-xendit-design.md`
+5. `docs/superpowers/plans/2026-08-29-found-calc-phase-07-billing-entitlements-xendit.md`
 6. approved Master Product & Architecture Design Spec
 7. Tech Stack ADR
 8. Design System Decision / component requirements
 9. Accessibility & Responsive Contract
-10. canonical Phase Workflow and exact approved Phase 07 acceptance criteria/exclusions
+10. canonical Phase Workflow and exact approved Phase 08 acceptance criteria/exclusions
 
-## Starter prompt for the new Phase 07 chat
+## Starter prompt for the new Phase 08 chat
 
 ```text
 @Superpowers @GitHub @Context7
 
-Start Found Calc Phase 07 — Billing, Entitlements & Xendit from the attached canonical `found-calc-phase-06-goals-projects-profiles-workspace.zip`.
+Start Found Calc Phase 08 — Frozen V1 Catalog Production from the attached canonical `found-calc-phase-07-billing-entitlements-xendit.zip`.
 
 Before implementation:
 1. Read BASELINE.md and PHASE_HANDOFF.md.
-2. Read docs/verification/phase-06-verification.md and the approved Phase 06 design/plan.
+2. Read docs/verification/phase-07-verification.md and the approved Phase 07 design/plan.
 3. Read the approved architecture, Tech Stack ADR, design-system/accessibility contracts, and canonical Phase Workflow.
-4. Confirm exact Phase 07 acceptance criteria and exclusions before planning; do not pull Phase 08+ scope forward.
-5. Treat Phase 01–06 architecture and regression boundaries as approved baseline; reopen them only for a verified blocker under change control.
-6. Preserve deterministic engine truth, Phase 04 latest-draft semantics, Phase 05 rule semantics, and the separate Phase 06 workspace/Project-history domain.
-7. Preserve server-derived authorization, private Goals, privacy-safe exports, and hashed one-time invites.
-8. Use Context7 for current framework/library docs, the Cloudflare skill/current Cloudflare docs for Workers, and current official Xendit documentation for Xendit contracts.
+4. Confirm the exact frozen V1 catalog and Phase 08A–08M acceptance criteria before planning; do not pull Phase 09+ scope forward.
+5. Treat Phase 01–07 architecture and regression boundaries as approved baseline; reopen them only for a verified blocker under change control.
+6. Preserve deterministic engine truth, immutable rule/version semantics, guest/auth persistence, workspace domains, and billing/entitlement authority boundaries.
+7. Preserve webhook-authoritative entitlements: browser checkout return never grants paid capability.
+8. Use Context7 and current Cloudflare documentation for framework/runtime behavior; use authoritative domain sources for calculators that require regulated or time-sensitive rules.
 9. Use Superpowers brainstorming/writing-plans/TDD/systematic-debugging/verification-before-completion as required.
-10. Preserve ID/EN, accessibility, privacy/trust, guest context, and the Rp0 fixed-infrastructure target excluding domain/payment transaction fees.
+10. Preserve ID/EN, calculator-specific UX, mobile/accessibility, trust/source metadata, privacy, and the Rp0 fixed-infrastructure target excluding domain/payment transaction fees.
 
-Create the Phase 07 design/implementation plan first. At completion, produce the next canonical ZIP baseline and updated handoff.
+Implement Phase 08 in the approved 08A–08M batches. Each calculator must pass its approved Spec → Formula → Fixtures → Inputs → Results → Guidance → Scenario → Recommendation → Source → ID/EN → UI → Mobile → Accessibility → Analytics → Admin QA path. Do not replace calculator-specific UX with a generic formula form.
 ```
 
-## Phase 06 completion evidence
+## Stable Phase 07 contracts to preserve
 
-Verified implementation snapshot before continuity closure:
+- `@found-calc/engine` remains the only calculator arithmetic truth layer.
+- First-party D1 billing state is authorization/entitlement truth; Xendit is the payment/subscription processor.
+- Free calculators remain usable without a retroactive paywall.
+- Approved V1 commercial coordinates are Free Rp0; Pro Rp25.000/month or Rp250.000/year; Business Rp75.000/month or Rp750.000/year.
+- Paid access is capability-based rather than scattered plan-name checks.
+- Webhooks are authoritative for entitlement transitions; checkout return URLs are informational only.
+- Duplicate, stale, delayed, retry, failed-payment, cancellation, upgrade, and downgrade flows preserve idempotent/ordered first-party state.
+- Billing status/entitlement reads do not query Xendit.
+- Provider credentials, webhook tokens, raw cookies, and production secrets never enter browser state, source, diagnostic output, or portable artifacts.
+- The built vinext Worker has a deterministic smoke gate covering Worker startup, D1 migrations, anonymous billing authorization, webhook-token rejection, Better Auth signup/cookie flow, and authenticated billing status.
 
-- source SHA: `bb1eb7fc98de5673c271c22e6aa12563e78fc92d`;
-- GitHub Actions run: `33242970535`;
-- job: `99075355501`;
-- result: **SUCCESS**.
+## Phase 08 scope guard
 
-That run passed the full Phase 06 verifier and authenticated built-Worker smoke. The closure head must receive a separate fresh green `Phase 06 Verification` run before merge. After merge, the Phase 06 artifact workflow records the exact merged SHA/tree dynamically.
+The approved successor is **Phase 08 — Frozen V1 Catalog Production**. The frozen catalog is divided into 08A Quick, 08B Finance & Salary, 08C Indonesia Regulatory, 08D Business, 08E Seller/Marketplace, 08F Creator/Affiliate, 08G Freelancer/Agency, 08H Family/Education, 08I Home/Vehicle/Life, 08J Goals, 08K Health/Nutrition, 08L Sport, and 08M Religion/Fiqh.
 
-## Stable Phase 06 contracts to preserve
-
-- `@found-calc/engine` owns deterministic formula truth; payment/entitlement code must not become calculator truth.
-- `@found-calc/rules` owns version/effective-period/publication semantics.
-- Phase 04 latest drafts and Phase 06 named Project history are separate domains.
-- Better Auth owns credentials/session behavior; Project roles are derived server-side from session identity plus D1.
-- Goals remain private to owners; shared Project/export surfaces do not leak private Goal metadata, emails, or invite secrets.
-- Invite codes are random, hashed at rest, expiring, and one-time.
-- Public calculators and local deterministic arithmetic remain available according to the approved product baseline unless Phase 07 explicitly gates a separately defined paid capability.
-- No server endpoint calculates calculator answers.
-- No raw calculator input logging, browser auth-token storage, fingerprinting, or source-committed production secret.
-
-## Phase 07 scope guard
-
-The approved successor is **Phase 07 — Billing, Entitlements & Xendit**. The title alone does not authorize invented pricing, plans, entitlement semantics, webhook behavior, payment methods, credentials, or Phase 08+ work. Derive all such details from the approved Phase Workflow/design process and current official provider documentation.
-
-The Rp0 fixed-infrastructure target remains in force excluding domain and payment transaction fees. Production credentials must never enter source, logs, client storage, or portable artifacts.
+Reuse mathematical primitives where appropriate, but do not mass-produce generic user experiences. Production analytics/SEO/security/cost hardening beyond what each calculator requires remains Phase 09 scope; launch certification/TestSprite remains Phase 10 scope.
 
 ## Change control
 
-If Phase 07 conflicts with approved Phase 01–06 contracts, capture reproducible evidence, identify the smallest compatible amendment, and obtain approval before changing an approved architecture or deterministic-truth boundary.
+If Phase 08 conflicts with approved Phase 01–07 contracts, capture reproducible evidence, identify the smallest compatible amendment, and obtain approval before changing an approved architecture, truth, persistence, security, or entitlement boundary.

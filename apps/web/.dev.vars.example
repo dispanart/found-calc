@@ -3,3 +3,10 @@ BETTER_AUTH_SECRET=replace-with-random-local-secret
 BETTER_AUTH_URL=http://127.0.0.1:3000
 # Optional comma-separated Better Auth user IDs for the Phase 05 admin bootstrap.
 BETTER_AUTH_ADMIN_USER_IDS=
+
+# Phase 07 billing. Keep provider secrets in .dev.vars / Cloudflare secrets only.
+# Production plan names, prices, and entitlement keys must come from approved server configuration.
+BILLING_PLANS_JSON=
+PUBLIC_APP_ORIGIN=
+XENDIT_SECRET_API_KEY=
+XENDIT_WEBHOOK_TOKEN=

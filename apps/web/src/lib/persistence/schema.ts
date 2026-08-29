@@ -233,6 +233,77 @@ export const workspaceCalculations = sqliteTable(
   ],
 );
 
+
+export const billingCustomers = sqliteTable("billing_customer", {
+  userId: text("user_id").primaryKey().references(() => authUsers.id, { onDelete: "cascade" }),
+  xenditCustomerId: text("xendit_customer_id").unique(),
+  createdAt: timestampMs("created_at"),
+  updatedAt: timestampMs("updated_at"),
+});
+
+export const billingCheckouts = sqliteTable(
+  "billing_checkout",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => authUsers.id, { onDelete: "cascade" }),
+    planId: text("plan_id").notNull(),
+    providerReferenceId: text("provider_reference_id").notNull().unique(),
+    providerSessionId: text("provider_session_id").unique(),
+    status: text("status", { enum: ["pending", "completed", "expired"] }).default("pending").notNull(),
+    createdAt: timestampMs("created_at"),
+    updatedAt: timestampMs("updated_at"),
+  },
+  (table) => [
+    index("billing_checkout_user_idx").on(table.userId, table.createdAt),
+    index("billing_checkout_plan_idx").on(table.planId, table.createdAt),
+  ],
+);
+
+export const billingSubscriptions = sqliteTable(
+  "billing_subscription",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => authUsers.id, { onDelete: "cascade" }),
+    planId: text("plan_id").notNull(),
+    providerPlanId: text("provider_plan_id").notNull().unique(),
+    referenceId: text("reference_id").notNull(),
+    status: text("status", { enum: ["pending", "active", "past_due", "inactive"] }).notNull(),
+    latestCycleStatus: text("latest_cycle_status"),
+    latestEventAt: integer("latest_event_at").notNull(),
+    latestEventRank: integer("latest_event_rank").default(0).notNull(),
+    currentCycleStartedAt: integer("current_cycle_started_at"),
+    nextCycleAt: integer("next_cycle_at"),
+    cancellationRequestedAt: integer("cancellation_requested_at"),
+    pendingPlanId: text("pending_plan_id"),
+    pendingPlanChangeRequestedAt: integer("pending_plan_change_requested_at"),
+    providerCreatedAt: integer("provider_created_at"),
+    providerUpdatedAt: integer("provider_updated_at"),
+    createdAt: timestampMs("created_at"),
+    updatedAt: timestampMs("updated_at"),
+  },
+  (table) => [
+    uniqueIndex("billing_subscription_user_provider_unique").on(table.userId, table.providerPlanId),
+    index("billing_subscription_user_idx").on(table.userId, table.updatedAt),
+    index("billing_subscription_reference_idx").on(table.referenceId),
+  ],
+);
+
+export const billingWebhookInbox = sqliteTable(
+  "billing_webhook_inbox",
+  {
+    dedupeKey: text("dedupe_key").primaryKey(),
+    claimToken: text("claim_token").notNull(),
+    eventName: text("event_name").notNull(),
+    providerPlanId: text("provider_plan_id"),
+    providerCycleId: text("provider_cycle_id"),
+    providerEventAt: integer("provider_event_at").notNull(),
+    receivedAt: integer("received_at").notNull(),
+    processedAt: integer("processed_at").notNull(),
+    result: text("result", { enum: ["applied", "ignored"] }).notNull(),
+  },
+  (table) => [index("billing_webhook_provider_idx").on(table.providerPlanId, table.providerEventAt)],
+);
+
 export const authUserRelations = relations(authUsers, ({ many }) => ({
   sessions: many(authSessions),
   accounts: many(authAccounts),

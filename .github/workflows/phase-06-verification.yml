@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - phase-06-goals-projects-profiles-workspace
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:

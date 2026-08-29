@@ -1,0 +1,129 @@
+name: Phase 07 Canonical Baseline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/verification/phase-07-verification.md
+      - .github/workflows/phase-07-baseline-artifact.yml
+      - tests/foundation/phase-07-verification-contract.test.mjs
+      - docs/superpowers/specs/2026-08-29-found-calc-phase-07-billing-entitlements-xendit-design.md
+      - docs/superpowers/plans/2026-08-29-found-calc-phase-07-billing-entitlements-xendit.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package exact Phase 07 merge baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create canonical archive and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARTIFACT="found-calc-phase-07-billing-entitlements-xendit.zip"
+          git archive --format=zip --output="$ARTIFACT" "$GITHUB_SHA"
+          sha256sum "$ARTIFACT" > SHA256SUMS
+
+      - name: Extract and verify portable baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARTIFACT="found-calc-phase-07-billing-entitlements-xendit.zip"
+          VERIFY_DIR="$RUNNER_TEMP/found-calc-phase07-baseline"
+          rm -rf "$VERIFY_DIR"
+          mkdir -p "$VERIFY_DIR"
+          unzip -tq "$ARTIFACT"
+          unzip -q "$ARTIFACT" -d "$VERIFY_DIR"
+
+          required=(
+            "BASELINE.md"
+            "PHASE_HANDOFF.md"
+            "PHASE_CHAT_TEMPLATE.md"
+            "package.json"
+            "pnpm-lock.yaml"
+            "pnpm-workspace.yaml"
+            "scripts/verify-phase-07.mjs"
+            "scripts/smoke-phase-07-worker.sh"
+            ".github/workflows/phase-07-verification.yml"
+            ".github/workflows/phase-07-baseline-artifact.yml"
+            "docs/verification/phase-07-verification.md"
+            "docs/superpowers/specs/2026-08-29-found-calc-phase-07-billing-entitlements-xendit-design.md"
+            "docs/superpowers/plans/2026-08-29-found-calc-phase-07-billing-entitlements-xendit.md"
+            "apps/web/.dev.vars.example"
+            "apps/web/migrations/0004_phase07_billing.sql"
+            "apps/web/src/lib/billing/contracts.ts"
+            "apps/web/src/lib/billing/plans.ts"
+            "apps/web/src/lib/billing/entitlements.ts"
+            "apps/web/src/lib/billing/repository.ts"
+            "apps/web/src/lib/billing/http.ts"
+            "apps/web/src/lib/billing/route-services.ts"
+            "apps/web/src/lib/billing/client.ts"
+            "apps/web/src/lib/billing/plan-change-ambiguity.test.ts"
+            "apps/web/src/lib/xendit/client.ts"
+            "apps/web/src/lib/xendit/client-ambiguity.test.ts"
+            "apps/web/src/lib/xendit/webhooks.ts"
+            "apps/web/src/app/api/billing/status/route.ts"
+            "apps/web/src/app/api/billing/checkout/route.ts"
+            "apps/web/src/app/api/billing/subscription/cancel/route.ts"
+            "apps/web/src/app/api/billing/subscription/change/route.ts"
+            "apps/web/src/app/api/billing/webhooks/xendit/route.ts"
+            "apps/web/src/components/billing/billing-panel.tsx"
+            "apps/web/src/app/[locale]/(workspace)/workspace/billing/page.tsx"
+            "apps/web/tests/cloudflare/phase-07-billing-api.test.ts"
+            "apps/web/tests/cloudflare/phase-07-billing-repository.test.ts"
+            "apps/web/tests/e2e/phase-07-billing.spec.ts"
+            "tests/foundation/phase-07-billing-contract.test.mjs"
+            "tests/foundation/phase-07-billing-http-contract.test.mts"
+            "tests/foundation/phase-07-billing-plan-contract.test.mts"
+            "tests/foundation/phase-07-billing-storage-contract.test.mjs"
+            "tests/foundation/phase-07-billing-ui-contract.test.mjs"
+            "tests/foundation/phase-07-commercial-lifecycle.test.mts"
+            "tests/foundation/phase-07-verification-contract.test.mjs"
+            "tests/foundation/phase-07-xendit-contract.test.mts"
+            "tests/foundation/phase-07-xendit-payload-behavior.test.mts"
+          )
+
+          for path in "${required[@]}"; do
+            test -f "$VERIFY_DIR/$path" || { echo "Missing required baseline file: $path" >&2; exit 1; }
+          done
+
+          leaked_dir="$(find "$VERIFY_DIR" -type d \( -name node_modules -o -name .next -o -name dist -o -name .wrangler -o -name test-results -o -name playwright-report \) -print -quit)"
+          if [[ -n "$leaked_dir" ]]; then
+            echo "Generated/dependency directory leaked into canonical baseline: $leaked_dir" >&2
+            exit 1
+          fi
+
+          source_tree="$(git rev-parse "$GITHUB_SHA^{tree}")"
+          archive_sha256="$(cut -d' ' -f1 SHA256SUMS)"
+
+          {
+            echo "artifact=$ARTIFACT"
+            echo "source_commit=$GITHUB_SHA"
+            echo "source_tree=$source_tree"
+            echo "archive_provenance=git-archive-exact-github-sha"
+            echo "archive_sha256=$archive_sha256"
+            echo "zip_integrity=PASS"
+            echo "required_files=${#required[@]}"
+            echo "extraction_verification=PASS"
+          } > ARTIFACT_VERIFICATION.txt
+
+      - name: Upload canonical Phase 07 baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: found-calc-phase-07-billing-entitlements-xendit
+          path: |
+            found-calc-phase-07-billing-entitlements-xendit.zip
+            SHA256SUMS
+            ARTIFACT_VERIFICATION.txt
+          if-no-files-found: error
+          retention-days: 90
