@@ -232,7 +232,11 @@ export const handleBillingChangeRequest = async (request: Request, services: Bil
     });
     return json({ planChange: { fromPlanId: subscription.planId, toPlanId: target.id, status: "pending_confirmation" } }, 202);
   } catch (caught) {
-    if (staged) {
+    // A provider transport/timeout/5xx outcome is ambiguous: the PATCH may already
+    // have been applied. Keep pendingPlanId so an authoritative Xendit webhook can
+    // reconcile the new commercial coordinates instead of rejecting them as stale.
+    const definitelyRejected = caught instanceof XenditClientError && !caught.requestMayHaveSucceeded;
+    if (staged && definitelyRejected) {
       try { await services.repository.clearPlanChange(staged.userId, staged.providerPlanId, staged.targetPlanId, (services.now?.() ?? new Date()).valueOf()); } catch { /* provider failure remains primary */ }
     }
     return handleFailure(caught);

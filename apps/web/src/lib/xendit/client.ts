@@ -17,7 +17,6 @@ export type XenditSubscriptionSessionInput = {
   readonly cancelReturnUrl: string;
 };
 
-
 export type XenditSubscriptionPlanUpdateInput = {
   readonly amount: number;
   readonly interval: "MONTH";
@@ -36,7 +35,12 @@ export type XenditSubscriptionSession = {
 
 export class XenditClientError extends Error {
   readonly code = "provider-unavailable" as const;
-  constructor() { super("provider-unavailable"); }
+  readonly requestMayHaveSucceeded: boolean;
+
+  constructor(requestMayHaveSucceeded = false) {
+    super("provider-unavailable");
+    this.requestMayHaveSucceeded = requestMayHaveSucceeded;
+  }
 }
 
 type FetchLike = typeof fetch;
@@ -74,11 +78,16 @@ export const createXenditClient = ({
           ...(init.headers ?? {}),
         },
       });
-      if (!response.ok) throw new XenditClientError();
-      try { return await response.json(); } catch { throw new XenditClientError(); }
+      if (!response.ok) {
+        const requestMayHaveSucceeded = response.status === 408 || response.status >= 500;
+        throw new XenditClientError(requestMayHaveSucceeded);
+      }
+      try { return await response.json(); } catch { throw new XenditClientError(true); }
     } catch (error) {
       if (error instanceof XenditClientError) throw error;
-      throw new XenditClientError();
+      // Once fetch has been invoked, a transport/timeout failure cannot prove that a
+      // provider-side mutation was not accepted. Preserve reconciliation state.
+      throw new XenditClientError(true);
     } finally {
       clearTimeout(timeout);
     }
