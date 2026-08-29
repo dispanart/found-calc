@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/locales";
@@ -74,6 +74,18 @@ const copy = {
 type ProjectStatus = "idle" | "loading" | "ready" | "error";
 type RecordStatus = "idle" | "loading" | "ready" | "error" | "mismatch";
 
+type ProjectResource = {
+  readonly requestKey: string;
+  readonly projects: WorkspaceProjectCollection;
+  readonly status: "ready" | "error";
+};
+
+type RecordResource = {
+  readonly requestKey: string;
+  readonly record: WorkspaceCalculationRecord | null;
+  readonly status: "ready" | "error" | "mismatch";
+};
+
 interface WorkspaceCalculationControlsProps {
   readonly locale: Locale;
   readonly calculatorId: SupportedCalculatorId;
@@ -94,85 +106,82 @@ export function WorkspaceCalculationControls({
   const text = copy[locale];
   const { data: session, isPending } = authClient.useSession();
   const userId = session?.user.id;
-  const [projects, setProjects] = useState<WorkspaceProjectCollection>({ owned: [], shared: [] });
-  const [projectStatus, setProjectStatus] = useState<ProjectStatus>("idle");
+  const projectRequestKey = userId ?? "";
+  const [projectResource, setProjectResource] = useState<ProjectResource | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [title, setTitle] = useState("");
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
-  const [record, setRecord] = useState<WorkspaceCalculationRecord | null>(null);
-  const [recordStatus, setRecordStatus] = useState<RecordStatus>("idle");
-  const [recordMessage, setRecordMessage] = useState("");
-  const writableProjects = useMemo(() => writableWorkspaceProjects(projects), [projects]);
+  const recordRequestKey = recordId && userId ? `${userId}:${calculatorId}:${recordId}` : "";
+  const [recordResource, setRecordResource] = useState<RecordResource | null>(null);
+  const [recordMessage, setRecordMessage] = useState<{ readonly requestKey: string; readonly message: string } | null>(null);
+
+  const activeProjectResource = projectRequestKey && projectResource?.requestKey === projectRequestKey ? projectResource : null;
+  const projects: WorkspaceProjectCollection = activeProjectResource?.projects ?? { owned: [], shared: [] };
+  const projectStatus: ProjectStatus = !userId ? "idle" : activeProjectResource?.status ?? "loading";
+  const writableProjects = writableWorkspaceProjects(projects);
+  const resolvedProjectId = writableProjects.some((project) => project.id === selectedProjectId)
+    ? selectedProjectId
+    : (writableProjects[0]?.id ?? "");
+
+  const activeRecordResource = recordRequestKey && recordResource?.requestKey === recordRequestKey ? recordResource : null;
+  const record = activeRecordResource?.record ?? null;
+  const recordStatus: RecordStatus = !recordRequestKey ? "idle" : activeRecordResource?.status ?? "loading";
+  const visibleRecordMessage = recordMessage?.requestKey === recordRequestKey ? recordMessage.message : "";
 
   const loadRecord = () => {
-    if (record === null || record.calculatorId !== calculatorId) return;
+    if (record === null || record.calculatorId !== calculatorId || !recordRequestKey) return;
     onLoad(record.state);
-    setRecordMessage(text.loadedRecord);
+    setRecordMessage({ requestKey: recordRequestKey, message: text.loadedRecord });
   };
 
   useEffect(() => {
-    if (!userId) {
-      setProjects({ owned: [], shared: [] });
-      setSelectedProjectId("");
-      setProjectStatus("idle");
-      return;
-    }
+    if (!userId) return;
+    const requestKey = projectRequestKey;
     const controller = new AbortController();
-    setProjectStatus("loading");
     fetchWorkspaceProjects(controller.signal)
       .then((next) => {
         if (controller.signal.aborted) return;
-        setProjects(next);
-        const writable = writableWorkspaceProjects(next);
-        setSelectedProjectId((current) => writable.some((project) => project.id === current) ? current : (writable[0]?.id ?? ""));
-        setProjectStatus("ready");
+        setProjectResource({ requestKey, projects: next, status: "ready" });
       })
       .catch(() => {
         if (controller.signal.aborted) return;
-        setProjects({ owned: [], shared: [] });
-        setSelectedProjectId("");
-        setProjectStatus("error");
+        setProjectResource({ requestKey, projects: { owned: [], shared: [] }, status: "error" });
       });
     return () => controller.abort();
-  }, [userId]);
+  }, [projectRequestKey, userId]);
 
   useEffect(() => {
-    if (!recordId || !userId) {
-      setRecord(null);
-      setRecordStatus("idle");
-      setRecordMessage("");
-      return;
-    }
+    if (!recordId || !userId || !recordRequestKey) return;
+    const requestKey = recordRequestKey;
     const controller = new AbortController();
-    setRecord(null);
-    setRecordMessage("");
-    setRecordStatus("loading");
     fetchWorkspaceCalculation(recordId, controller.signal)
       .then((next) => {
         if (controller.signal.aborted) return;
-        setRecord(next);
-        setRecordStatus(next.calculatorId === calculatorId ? "ready" : "mismatch");
+        setRecordResource({
+          requestKey,
+          record: next,
+          status: next.calculatorId === calculatorId ? "ready" : "mismatch",
+        });
       })
       .catch(() => {
         if (controller.signal.aborted) return;
-        setRecord(null);
-        setRecordStatus("error");
+        setRecordResource({ requestKey, record: null, status: "error" });
       });
     return () => controller.abort();
-  }, [calculatorId, recordId, userId]);
+  }, [calculatorId, recordId, recordRequestKey, userId]);
 
   const save = async () => {
     if (!state) {
       setSaveStatus(text.calculateFirst);
       return;
     }
-    if (!selectedProjectId || title.trim().length === 0) return;
+    if (!resolvedProjectId || title.trim().length === 0) return;
     setSaveBusy(true);
     setSaveStatus("");
     try {
       await saveWorkspaceCalculation({
-        projectId: selectedProjectId,
+        projectId: resolvedProjectId,
         title: title.trim(),
         state,
         ...(state.calculatorId === "reference.synthetic-rule" && ruleContext !== undefined ? { ruleContext } : {}),
@@ -224,7 +233,7 @@ export function WorkspaceCalculationControls({
               </Button>
             </div>
           ) : null}
-          <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">{recordMessage}</p>
+          <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">{visibleRecordMessage}</p>
         </div>
       ) : null}
 
@@ -239,7 +248,7 @@ export function WorkspaceCalculationControls({
             {text.project}
             <select
               id={`workspace-project-${calculatorId}`}
-              value={selectedProjectId}
+              value={resolvedProjectId}
               onChange={(event) => setSelectedProjectId(event.target.value)}
               className="min-h-11 min-w-0 rounded-[var(--radius-control)] border border-border bg-background px-3 font-normal outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
@@ -258,7 +267,7 @@ export function WorkspaceCalculationControls({
               className="min-h-11 min-w-0 rounded-[var(--radius-control)] border border-border bg-background px-3 font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
-          <Button type="button" onClick={save} disabled={saveBusy || state === null || title.trim().length === 0 || selectedProjectId.length === 0}>
+          <Button type="button" onClick={save} disabled={saveBusy || state === null || title.trim().length === 0 || resolvedProjectId.length === 0}>
             {saveBusy ? text.saving : text.save}
           </Button>
         </div>

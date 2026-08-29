@@ -17,7 +17,6 @@ import {
   redeemWorkspaceInvite,
   updateWorkspaceProfile,
   type WorkspaceGoalClient,
-  type WorkspaceProfileClient,
   type WorkspaceProjectCollection,
 } from "@/lib/workspace/client";
 import { PersistenceSummary } from "./persistence-summary";
@@ -109,14 +108,15 @@ export function WorkspaceDashboard({ locale }: { locale: Locale }) {
   const text = copy[locale];
   const { data: session, isPending } = authClient.useSession();
   const userId = session?.user.id;
-  const [profile, setProfile] = useState<WorkspaceProfileClient | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [preferredLocale, setPreferredLocale] = useState<"id" | "en">(locale);
   const [goals, setGoals] = useState<readonly WorkspaceGoalClient[]>([]);
   const [projects, setProjects] = useState<WorkspaceProjectCollection>(emptyProjects);
-  const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const workspaceRequestKey = userId ? `${userId}:${locale}:${refreshKey}` : "";
+  const [loadedWorkspaceKey, setLoadedWorkspaceKey] = useState("");
+  const loading = Boolean(userId && loadedWorkspaceKey !== workspaceRequestKey);
   const [goalTitle, setGoalTitle] = useState("");
   const [goalNote, setGoalNote] = useState("");
   const [goalDate, setGoalDate] = useState("");
@@ -127,29 +127,29 @@ export function WorkspaceDashboard({ locale }: { locale: Locale }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!userId) {
-      setProfile(null);
-      setGoals([]);
-      setProjects(emptyProjects);
-      setLoading(false);
-      return;
-    }
+    if (!userId || !workspaceRequestKey) return;
+    const requestKey = workspaceRequestKey;
     let active = true;
-    setLoading(true);
-    setStatus("");
     Promise.all([fetchWorkspaceProfile(), fetchWorkspaceGoals(), fetchWorkspaceProjects()])
       .then(([nextProfile, nextGoals, nextProjects]) => {
         if (!active) return;
-        setProfile(nextProfile);
         setDisplayName(nextProfile?.displayName ?? session?.user.name ?? "");
         setPreferredLocale(nextProfile?.preferredLocale ?? locale);
         setGoals(nextGoals);
         setProjects(nextProjects);
+        setLoadedWorkspaceKey(requestKey);
       })
-      .catch(() => { if (active) setStatus(text.failed); })
-      .finally(() => { if (active) setLoading(false); });
+      .catch(() => {
+        if (!active) return;
+        setDisplayName(session?.user.name ?? "");
+        setPreferredLocale(locale);
+        setGoals([]);
+        setProjects(emptyProjects);
+        setStatus(text.failed);
+        setLoadedWorkspaceKey(requestKey);
+      });
     return () => { active = false; };
-  }, [locale, refreshKey, session?.user.name, text.failed, userId]);
+  }, [locale, session?.user.name, text.failed, userId, workspaceRequestKey]);
 
   const refresh = () => setRefreshKey((value) => value + 1);
   const runMutation = async (action: () => Promise<void>, success = text.saved) => {
@@ -169,8 +169,7 @@ export function WorkspaceDashboard({ locale }: { locale: Locale }) {
   const saveProfile = async (event: FormEvent) => {
     event.preventDefault();
     await runMutation(async () => {
-      const next = await updateWorkspaceProfile({ displayName, preferredLocale });
-      setProfile(next);
+      await updateWorkspaceProfile({ displayName, preferredLocale });
     });
   };
 
@@ -220,9 +219,10 @@ export function WorkspaceDashboard({ locale }: { locale: Locale }) {
     );
   }
 
+  if (loading) return <p className="text-sm text-muted-foreground" role="status">{text.pending}</p>;
+
   return (
     <div className="space-y-12">
-      {loading ? <p className="text-sm text-muted-foreground" role="status">{text.pending}</p> : null}
       <p className="text-sm" role="status" aria-live="polite">{status}</p>
 
       <section className="border-t border-border pt-7" data-testid="workspace-profile">

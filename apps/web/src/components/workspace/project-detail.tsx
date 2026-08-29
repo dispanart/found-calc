@@ -102,9 +102,11 @@ export function ProjectDetail({ locale, projectId }: { locale: Locale; projectId
   const userId = session?.user.id;
   const [detail, setDetail] = useState<WorkspaceProjectDetailClient | null>(null);
   const [goals, setGoals] = useState<readonly WorkspaceGoalClient[]>([]);
-  const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const detailRequestKey = userId ? `${userId}:${projectId}:${refreshKey}` : "";
+  const [loadedDetailKey, setLoadedDetailKey] = useState("");
+  const loading = Boolean(userId && loadedDetailKey !== detailRequestKey);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [goalId, setGoalId] = useState("");
@@ -114,10 +116,9 @@ export function ProjectDetail({ locale, projectId }: { locale: Locale; projectId
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!userId) { setDetail(null); setLoading(false); return; }
+    if (!userId || !detailRequestKey) return;
+    const requestKey = detailRequestKey;
     let active = true;
-    setLoading(true);
-    setStatusMessage("");
     fetchWorkspaceProjectDetail(projectId)
       .then(async (next) => {
         if (!active) return;
@@ -127,14 +128,28 @@ export function ProjectDetail({ locale, projectId }: { locale: Locale; projectId
         setGoalId(next.project.goalId ?? "");
         setProjectStatus(next.project.status);
         if (next.project.access === "owner") {
-          try { const nextGoals = await fetchWorkspaceGoals(); if (active) setGoals(nextGoals); }
-          catch { if (active) setGoals([]); }
-        } else setGoals([]);
+          try {
+            const nextGoals = await fetchWorkspaceGoals();
+            if (active) setGoals(nextGoals);
+          } catch {
+            if (active) setGoals([]);
+          }
+        } else {
+          setGoals([]);
+        }
+        if (active) {
+          setStatusMessage("");
+          setLoadedDetailKey(requestKey);
+        }
       })
-      .catch(() => { if (active) { setDetail(null); setStatusMessage(text.failed); } })
-      .finally(() => { if (active) setLoading(false); });
+      .catch(() => {
+        if (!active) return;
+        setDetail(null);
+        setStatusMessage(text.failed);
+        setLoadedDetailKey(requestKey);
+      });
     return () => { active = false; };
-  }, [projectId, refreshKey, text.failed, userId]);
+  }, [detailRequestKey, projectId, text.failed, userId]);
 
   const refresh = () => setRefreshKey((value) => value + 1);
   const mutate = async (action: () => Promise<void>) => {
