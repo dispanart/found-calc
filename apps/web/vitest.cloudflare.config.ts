@@ -1,12 +1,26 @@
+import { fileURLToPath } from "node:url";
+
 import { cloudflareTest } from "@cloudflare/vitest-plugin";
+import { readD1Migrations } from "@cloudflare/vitest-plugin/config";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [
-    cloudflareTest({
-      wrangler: {
-        configPath: "./wrangler.jsonc",
-      },
+    cloudflareTest(async () => {
+      const migrations = await readD1Migrations(
+        fileURLToPath(new URL("./migrations", import.meta.url)),
+      );
+
+      return {
+        wrangler: {
+          configPath: "./wrangler.jsonc",
+        },
+        miniflare: {
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+          },
+        },
+      };
     }),
   ],
   resolve: {
