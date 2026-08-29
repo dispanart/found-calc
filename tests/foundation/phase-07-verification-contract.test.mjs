@@ -57,12 +57,21 @@ test("Phase 07 built Worker smoke exposes deterministic, sanitized runtime check
 test("Phase 07 Worker smoke retries only the known local Wrangler proxy connection-loss signature", () => {
   const smoke = read("scripts/smoke-phase-07-worker.sh");
   assert.match(smoke, /request_with_miniflare_retry/);
+  assert.match(smoke, /is_known_miniflare_connection_loss/);
   assert.match(smoke, /Error: Network connection lost\./);
   assert.match(smoke, /PHASE07_MINIFLARE_RETRY_LIMIT:-3/);
   assert.match(smoke, /PHASE07_MINIFLARE_RETRY_DELAY_SECONDS:-2/);
-  assert.match(smoke, /status" != "500"/);
+  assert.match(smoke, /\[\[ "\$status" == "500" \]\]/);
   assert.match(smoke, /grep -Fq 'Error: Network connection lost\.'/);
   assert.doesNotMatch(smoke, /if \[\[ "\$status" == "500" \]\]; then\s*sleep/s);
+});
+
+test("Phase 07 Worker smoke handles ambiguous signup transport loss without replaying one identity", () => {
+  const smoke = read("scripts/smoke-phase-07-worker.sh");
+  assert.match(smoke, /signup_with_miniflare_retry/);
+  assert.match(smoke, /email="phase07-worker-smoke-\$\{attempt\}@example\.test"/);
+  assert.match(smoke, /signup_with_miniflare_retry\s*\nif \[\[ "\$status" != "200" \]\]/);
+  assert.match(smoke, /rm -f "\$cookie_jar"/);
 });
 
 test("Phase 07 package and local env examples declare only placeholder billing configuration", () => {

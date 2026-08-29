@@ -80,15 +80,41 @@ verify_sanitizer() {
   done
 }
 
+is_known_miniflare_connection_loss() {
+  [[ "$status" == "500" ]] && grep -Fq 'Error: Network connection lost.' "$response_body"
+}
+
 request_with_miniflare_retry() {
   local attempt
   for attempt in $(seq 1 "$miniflare_retry_limit"); do
     status="$(curl -sS -o "$response_body" -w '%{http_code}' "$@" || true)"
-    if [[ "$status" != "500" ]] || ! grep -Fq 'Error: Network connection lost.' "$response_body"; then
+    if ! is_known_miniflare_connection_loss; then
       return 0
     fi
     if [[ "$attempt" -lt "$miniflare_retry_limit" ]]; then
       echo "::warning title=Phase 07 Worker smoke [miniflare-local-proxy]::known local Wrangler/Miniflare connection loss; retrying $attempt/$miniflare_retry_limit"
+      sleep "$miniflare_retry_delay_seconds"
+    fi
+  done
+}
+
+signup_with_miniflare_retry() {
+  local attempt email payload
+  for attempt in $(seq 1 "$miniflare_retry_limit"); do
+    email="phase07-worker-smoke-${attempt}@example.test"
+    payload="$(printf '{\"name\":\"Phase Seven Worker Smoke\",\"email\":\"%s\",\"password\":\"phase-seven-worker-password-123\"}' "$email")"
+    rm -f "$cookie_jar"
+    status="$(curl -sS -o "$response_body" -w '%{http_code}' \
+      --cookie-jar "$cookie_jar" \
+      --header 'content-type: application/json' \
+      --header "origin: $base_url" \
+      --data "$payload" \
+      "$base_url/api/auth/sign-up/email" || true)"
+    if ! is_known_miniflare_connection_loss; then
+      return 0
+    fi
+    if [[ "$attempt" -lt "$miniflare_retry_limit" ]]; then
+      echo "::warning title=Phase 07 Worker smoke [auth-signup]::known local Wrangler/Miniflare connection loss; retrying with isolated smoke identity $attempt/$miniflare_retry_limit"
       sleep "$miniflare_retry_delay_seconds"
     fi
   done
@@ -168,13 +194,7 @@ if [[ "$status" != "401" ]]; then
 fi
 pass_checkpoint "invalid-webhook"
 
-rm -f "$cookie_jar"
-status="$(curl -sS -o "$response_body" -w '%{http_code}' \
-  --cookie-jar "$cookie_jar" \
-  --header 'content-type: application/json' \
-  --header "origin: $base_url" \
-  --data '{"name":"Phase Seven Worker Smoke","email":"phase07-worker-smoke@example.test","password":"phase-seven-worker-password-123"}' \
-  "$base_url/api/auth/sign-up/email" || true)"
+signup_with_miniflare_retry
 if [[ "$status" != "200" ]]; then
   fail_checkpoint "auth-signup" "expected HTTP 200, got ${status:-curl-error}; body=$(one_line_file "$response_body")"
 fi
