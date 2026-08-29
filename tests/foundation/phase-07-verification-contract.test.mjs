@@ -23,6 +23,13 @@ test("Phase 07 has a fail-fast verification superset and dedicated CI migration/
   assert.match(workflow, /scripts\/smoke-phase-07-worker\.sh/);
 });
 
+test("Phase 07 supersedes the completed Phase 06 main-PR workflow without duplicate CI", () => {
+  const predecessor = read(".github/workflows/phase-06-verification.yml");
+  assert.doesNotMatch(predecessor, /\bpull_request\s*:/);
+  assert.match(predecessor, /phase-06-goals-projects-profiles-workspace/);
+  assert.match(predecessor, /workflow_dispatch\s*:/);
+});
+
 test("Phase 07 built Worker smoke exposes deterministic, sanitized runtime checkpoints", () => {
   const path = "scripts/smoke-phase-07-worker.sh";
   assert.equal(existsSync(url(path)), true, `${path} must exist`);
