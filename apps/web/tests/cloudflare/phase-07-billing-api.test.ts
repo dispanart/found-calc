@@ -33,6 +33,8 @@ const plans = { ok: true as const, plans: [{
   entitlements: ["fixture.export"],
 }] };
 
+type BillingStatusPayload = { billing: { entitlements: string[] } };
+
 const signUp = async (auth: ReturnType<typeof createFoundCalcAuth>, email: string) => {
   const response = await auth.handler(new Request(`${baseURL}/api/auth/sign-up/email`, {
     method: "POST",
@@ -111,13 +113,15 @@ describe("Phase 07 billing API with D1", () => {
     expect((await repository.getStatusForUser(user.id))).toMatchObject({ checkoutPending: true, subscription: null });
 
     const forgedReturnStatus = await handleBillingStatusRequest(request("/api/billing/status?checkout=success", "GET", user.cookie), services);
-    expect((await forgedReturnStatus.json()).billing.entitlements).toEqual([]);
+    const forgedReturnPayload = await forgedReturnStatus.json() as BillingStatusPayload;
+    expect(forgedReturnPayload.billing.entitlements).toEqual([]);
 
     const webhook = await handleBillingWebhookRequest(request("/api/billing/webhooks/xendit", "POST", undefined, activatedWebhook(capturedReference), { "x-callback-token": webhookToken }), services);
     expect(webhook.status).toBe(200);
     expect((await repository.getStatusForUser(user.id)).subscription).toMatchObject({ status: "active", planId: "fixture-pro", providerPlanId: "rp-1" });
     const status = await handleBillingStatusRequest(request("/api/billing/status", "GET", user.cookie), services);
-    expect((await status.json()).billing.entitlements).toEqual(["fixture.export"]);
+    const statusPayload = await status.json() as BillingStatusPayload;
+    expect(statusPayload.billing.entitlements).toEqual(["fixture.export"]);
   });
 
   it("rejects malformed, oversized, unauthenticated, and commercial-mismatch webhook input without mutation", async () => {
