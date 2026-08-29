@@ -2,7 +2,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { createRuleVersionRepository, RuleRepositoryError } from "../../src/lib/rules/repository";
+import { createRuleVersionRepository } from "../../src/lib/rules/repository";
 import { resetCurrentDatabase } from "./test-database";
 
 declare module "cloudflare:workers" {
@@ -44,13 +44,13 @@ describe("rule version repository", () => {
     expect((await repo.listAdminVersions("reference.synthetic-rate")).some((version) => version.id === created.id)).toBe(true);
     expect((await repo.listPublishedVersions("reference.synthetic-rate")).some((version) => version.id === created.id)).toBe(false);
 
-    await expect(repo.createDraft(draft(), actorId)).rejects.toMatchObject<Partial<RuleRepositoryError>>({ code: "duplicate-version" });
+    await expect(repo.createDraft(draft(), actorId)).rejects.toMatchObject({ code: "duplicate-version" });
   });
 
   it("rejects overlapping publication and persists immutable publication metadata", async () => {
     const repo = createRuleVersionRepository(env.DB);
     const overlapping = await repo.createDraft(draft({ versionId: "2026-overlap", effectiveFrom: "2026-06-01" }), actorId);
-    await expect(repo.publish(overlapping.id, actorId)).rejects.toMatchObject<Partial<RuleRepositoryError>>({ code: "publication-overlap" });
+    await expect(repo.publish(overlapping.id, actorId)).rejects.toMatchObject({ code: "publication-overlap" });
 
     const historical = await repo.createDraft(draft({
       versionId: "2024-a",
