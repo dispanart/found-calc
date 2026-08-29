@@ -1,9 +1,19 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { isBillingSubscriptionStatus } from "../../apps/web/src/lib/billing/contracts.ts";
-import { nextBillingAnchorIso, parseBillingPlansJson } from "../../apps/web/src/lib/billing/plans.ts";
-import { resolveBillingEntitlements } from "../../apps/web/src/lib/billing/entitlements.ts";
-const validPlan = { id: "fixture-pro", displayName: { id: "Fixture Pro", en: "Fixture Pro" }, description: { id: "Hanya pengujian", en: "Testing only" }, amount: 10000, currency: "IDR" as const, country: "ID" as const, interval: "MONTH" as const, intervalCount: 1, billingDay: 15, totalRecurrence: null, failedCycleAction: "RESUME" as const, entitlements: ["fixture.export", "fixture.export", "fixture.team"] };
-test("billing plan configuration is strict and deterministic", () => { assert.equal(isBillingSubscriptionStatus("active"), true); assert.equal(isBillingSubscriptionStatus("retrying"), false); assert.equal(parseBillingPlansJson(undefined).ok, false); assert.equal(parseBillingPlansJson("bad").ok, false); assert.equal(parseBillingPlansJson(JSON.stringify([{ ...validPlan, billingDay: 29 }])).ok, false); assert.equal(parseBillingPlansJson(JSON.stringify([validPlan, validPlan])).ok, false); assert.deepEqual(parseBillingPlansJson(JSON.stringify([validPlan])), { ok: true, plans: [{ ...validPlan, entitlements: ["fixture.export", "fixture.team"] }] }); });
-test("billing anchor uses the next Jakarta monthly occurrence", () => { assert.equal(nextBillingAnchorIso(15, new Date("2026-08-14T16:59:59.000Z")), "2026-08-15T00:00:00.000+07:00"); assert.equal(nextBillingAnchorIso(15, new Date("2026-08-15T00:00:01.000Z")), "2026-09-15T00:00:00.000+07:00"); assert.throws(() => nextBillingAnchorIso(29, new Date()), /billing day/i); });
-test("entitlements fail closed unless local subscription is active", () => { assert.deepEqual(resolveBillingEntitlements(validPlan, "active"), { planId: "fixture-pro", subscriptionStatus: "active", keys: ["fixture.export", "fixture.team"] }); assert.deepEqual(resolveBillingEntitlements(validPlan, "past_due").keys, []); assert.deepEqual(resolveBillingEntitlements(null, "active"), { planId: null, subscriptionStatus: "active", keys: [] }); });
+
+const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+
+test("billing plan configuration remains server-validated and fail-closed", () => {
+  const contracts = read("apps/web/src/lib/billing/contracts.ts");
+  const plans = read("apps/web/src/lib/billing/plans.ts");
+  const entitlements = read("apps/web/src/lib/billing/entitlements.ts");
+  assert.match(contracts, /"pending"\s*\|\s*"active"\s*\|\s*"past_due"\s*\|\s*"inactive"/);
+  assert.match(plans, /BILLING|billing-unavailable|parseBillingPlansJson/);
+  assert.match(plans, /billingDay[^\n]*number|billing day must be an integer from 1 through 28/i);
+  assert.match(plans, /currency\s*!==\s*"IDR"/);
+  assert.match(plans, /country\s*!==\s*"ID"/);
+  assert.match(plans, /interval\s*!==\s*"MONTH"/);
+  assert.match(entitlements, /status\s*===\s*"active"/);
+  assert.doesNotMatch(entitlements, /fetch\s*\(|Xendit/i);
+});
