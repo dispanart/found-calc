@@ -21,6 +21,9 @@ type AdminRuleVersion = {
   readonly publishedAt?: number;
 };
 
+type AccessState = "loading" | "ready" | "signed-out" | "forbidden" | "error";
+type LoadResult = { readonly access: Exclude<AccessState, "loading">; readonly versions: readonly AdminRuleVersion[] };
+
 const copy = {
   id: {
     title: "Platform aturan berversi",
@@ -95,11 +98,30 @@ const errorCode = async (response: Response): Promise<string | undefined> => {
   }
 };
 
+const requestRuleVersions = async (signal?: AbortSignal): Promise<LoadResult> => {
+  try {
+    const response = await fetch(`/api/admin/rule-versions?ruleId=${encodeURIComponent(RULE_ID)}`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal,
+    });
+    if (response.status === 401) return { access: "signed-out", versions: [] };
+    if (response.status === 403) return { access: "forbidden", versions: [] };
+    if (!response.ok) return { access: "error", versions: [] };
+    const body = await response.json() as { versions?: AdminRuleVersion[] };
+    if (!Array.isArray(body.versions)) return { access: "error", versions: [] };
+    return { access: "ready", versions: body.versions };
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return { access: "error", versions: [] };
+  }
+};
+
 export function RuleAdminPanel({ locale }: { locale: Locale }) {
   const text = copy[locale];
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const [versions, setVersions] = useState<readonly AdminRuleVersion[]>([]);
-  const [access, setAccess] = useState<"loading" | "ready" | "signed-out" | "forbidden" | "error">("loading");
+  const [access, setAccess] = useState<AccessState>("loading");
   const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
@@ -111,50 +133,24 @@ export function RuleAdminPanel({ locale }: { locale: Locale }) {
   const [sourceUrl, setSourceUrl] = useState("");
 
   const load = useCallback(async (userId: string) => {
-    try {
-      const response = await fetch(`/api/admin/rule-versions?ruleId=${encodeURIComponent(RULE_ID)}`, {
-        headers: { Accept: "application/json" },
-        cache: "no-store",
-      });
-      if (response.status === 401) {
-        setVersions([]);
-        setAccess("signed-out");
-        setLoadedUserId(userId);
-        return;
-      }
-      if (response.status === 403) {
-        setVersions([]);
-        setAccess("forbidden");
-        setLoadedUserId(userId);
-        return;
-      }
-      if (!response.ok) {
-        setVersions([]);
-        setAccess("error");
-        setLoadedUserId(userId);
-        return;
-      }
-      const body = await response.json() as { versions?: AdminRuleVersion[] };
-      if (!Array.isArray(body.versions)) {
-        setVersions([]);
-        setAccess("error");
-        setLoadedUserId(userId);
-        return;
-      }
-      setVersions(body.versions);
-      setAccess("ready");
-      setLoadedUserId(userId);
-    } catch {
-      setVersions([]);
-      setAccess("error");
-      setLoadedUserId(userId);
-    }
+    const result = await requestRuleVersions();
+    setVersions(result.versions);
+    setAccess(result.access);
+    setLoadedUserId(userId);
   }, []);
 
   useEffect(() => {
     if (sessionPending || !session?.user) return;
-    void load(session.user.id);
-  }, [load, session?.user, sessionPending]);
+    const userId = session.user.id;
+    const controller = new AbortController();
+    void requestRuleVersions(controller.signal).then((result) => {
+      if (controller.signal.aborted) return;
+      setVersions(result.versions);
+      setAccess(result.access);
+      setLoadedUserId(userId);
+    }).catch(() => undefined);
+    return () => controller.abort();
+  }, [session?.user, sessionPending]);
 
   const createDraft = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
