@@ -104,7 +104,13 @@ jobs:
             --cookie "$cookie_jar" \
             http://127.0.0.1:8787/api/workspace/profile \
             | grep -Fq '"preferredLocale":"en"'
-          curl --fail --silent --show-error \
+          projects_json="$(curl --fail --silent --show-error \
             --cookie "$cookie_jar" \
-            http://127.0.0.1:8787/api/workspace/projects \
-            | grep -Fq '"projects":[]'
+            http://127.0.0.1:8787/api/workspace/projects)"
+          PROJECTS_JSON="$projects_json" node -e '
+            const body = JSON.parse(process.env.PROJECTS_JSON ?? "null");
+            if (
+              !Array.isArray(body?.projects?.owned) || body.projects.owned.length !== 0 ||
+              !Array.isArray(body?.projects?.shared) || body.projects.shared.length !== 0
+            ) process.exit(1);
+          '
