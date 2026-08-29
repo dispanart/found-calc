@@ -30,3 +30,11 @@ test("Phase 05 CI applies both local migrations and owns main PR verification", 
   assert.match(workflow, /api\/rules\/reference\.synthetic-rate\/versions/);
   assert.match(workflow, /api\/admin\/rule-versions/);
 });
+
+test("Phase 05 built Worker smoke uses one fresh isolated D1 persistence state", () => {
+  const workflow = read(".github/workflows/phase-05-verification.yml");
+  assert.match(workflow, /smoke_state=.*RUNNER_TEMP/);
+  assert.match(workflow, /rm -rf \"\$smoke_state\"/);
+  assert.equal((workflow.match(/--persist-to \"\$smoke_state\"/g) ?? []).length, 3);
+  assert.doesNotMatch(workflow, /000[12][^\n]*\|\| true/);
+});
