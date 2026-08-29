@@ -19,7 +19,7 @@ import { WorkspaceCalculationControls } from "./workspace-calculation-controls";
 interface DiscountCalculatorProps {
   locale: Locale;
   entry: ReferenceCatalogEntry;
-  recordId?: string;
+  recordId?: string | undefined;
 }
 type DiscountDraft = Extract<LocalCalculatorDraft, { calculatorId: "reference.discount" }>;
 

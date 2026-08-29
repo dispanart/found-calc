@@ -17,7 +17,7 @@ import { TrustPanel } from "./trust-panel";
 import { ValidationSummary } from "./validation-summary";
 import { WorkspaceCalculationControls } from "./workspace-calculation-controls";
 
-interface BusinessMarginCalculatorProps { locale: Locale; entry: ReferenceCatalogEntry; recordId?: string; }
+interface BusinessMarginCalculatorProps { locale: Locale; entry: ReferenceCatalogEntry; recordId?: string | undefined; }
 type BusinessMarginDraft = Extract<LocalCalculatorDraft, { calculatorId: "reference.business-margin" }>;
 const textByLocale = {
   id: { summary: "Periksa input berikut.", invalid: "Masukkan angka yang valid.", required: "Kolom ini wajib diisi.", range: "Nilai berada di luar rentang yang diizinkan.", result: "Hasil margin", scenarioField: "Skenario biaya variabel per pesanan", scenarioRequired: "Masukkan biaya variabel untuk skenario." },

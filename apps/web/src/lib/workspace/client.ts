@@ -173,7 +173,7 @@ const requireOk = async (response: Response) => {
 };
 
 export const fetchWorkspaceProjects = async (signal?: AbortSignal): Promise<WorkspaceProjectCollection> => {
-  const response = await fetch("/api/workspace/projects", { cache: "no-store", signal });
+  const response = await fetch("/api/workspace/projects", { cache: "no-store", signal: signal ?? null });
   await requireOk(response);
   const parsed = parseWorkspaceProjectsPayload(await response.json());
   if (parsed === null) throw new WorkspaceClientError("invalid-workspace-response", 502);
@@ -185,7 +185,7 @@ export const fetchWorkspaceCalculation = async (
   signal?: AbortSignal,
 ): Promise<WorkspaceCalculationRecord> => {
   if (!isWorkspaceId(recordId)) throw new WorkspaceClientError("workspace-not-found", 404);
-  const response = await fetch(`/api/workspace/calculations/${encodeURIComponent(recordId)}`, { cache: "no-store", signal });
+  const response = await fetch(`/api/workspace/calculations/${encodeURIComponent(recordId)}`, { cache: "no-store", signal: signal ?? null });
   await requireOk(response);
   const parsed = parseWorkspaceCalculationPayload(await response.json());
   if (parsed === null) throw new WorkspaceClientError("invalid-workspace-response", 502);

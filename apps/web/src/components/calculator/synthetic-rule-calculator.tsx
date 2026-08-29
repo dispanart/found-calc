@@ -22,7 +22,7 @@ import { TrustPanel } from "./trust-panel";
 import { ValidationSummary } from "./validation-summary";
 import { WorkspaceCalculationControls } from "./workspace-calculation-controls";
 
-interface SyntheticRuleCalculatorProps { locale: Locale; entry: ReferenceCatalogEntry; recordId?: string; }
+interface SyntheticRuleCalculatorProps { locale: Locale; entry: ReferenceCatalogEntry; recordId?: string | undefined; }
 type SyntheticDraft = Extract<LocalCalculatorDraft, { calculatorId: "reference.synthetic-rule" }>;
 type RuleFeedStatus = "loading" | "ready" | "error";
 

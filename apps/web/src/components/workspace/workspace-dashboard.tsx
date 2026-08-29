@@ -152,7 +152,7 @@ export function WorkspaceDashboard({ locale }: { locale: Locale }) {
   }, [locale, session?.user.name, text.failed, userId, workspaceRequestKey]);
 
   const refresh = () => setRefreshKey((value) => value + 1);
-  const runMutation = async (action: () => Promise<void>, success = text.saved) => {
+  const runMutation = async (action: () => Promise<void>, success: string = text.saved) => {
     setBusy(true);
     setStatus("");
     try {

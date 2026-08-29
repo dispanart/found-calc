@@ -91,8 +91,8 @@ interface WorkspaceCalculationControlsProps {
   readonly calculatorId: SupportedCalculatorId;
   readonly state: PersistedCalculatorState | null;
   readonly onLoad: (state: PersistedCalculatorState) => void;
-  readonly recordId?: string;
-  readonly ruleContext?: SyntheticRuleContext;
+  readonly recordId?: string | undefined;
+  readonly ruleContext?: SyntheticRuleContext | undefined;
 }
 
 export function WorkspaceCalculationControls({
