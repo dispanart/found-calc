@@ -9,7 +9,10 @@ worker_log="${PHASE07_WORKER_LOG:-$runner_temp/found-calc-phase07-wrangler.log}"
 cookie_jar="${PHASE07_COOKIE_JAR:-$runner_temp/found-calc-phase07-cookies.txt}"
 response_body="${PHASE07_RESPONSE_BODY:-$runner_temp/found-calc-phase07-response.txt}"
 base_url="${PHASE07_SMOKE_BASE_URL:-http://127.0.0.1:8787}"
+miniflare_retry_limit="${PHASE07_MINIFLARE_RETRY_LIMIT:-3}"
+miniflare_retry_delay_seconds="${PHASE07_MINIFLARE_RETRY_DELAY_SECONDS:-2}"
 worker_pid=""
+status=""
 
 sanitize_stream() {
   node -e '
@@ -77,6 +80,20 @@ verify_sanitizer() {
   done
 }
 
+request_with_miniflare_retry() {
+  local attempt
+  for attempt in $(seq 1 "$miniflare_retry_limit"); do
+    status="$(curl -sS -o "$response_body" -w '%{http_code}' "$@" || true)"
+    if [[ "$status" != "500" ]] || ! grep -Fq 'Error: Network connection lost.' "$response_body"; then
+      return 0
+    fi
+    if [[ "$attempt" -lt "$miniflare_retry_limit" ]]; then
+      echo "::warning title=Phase 07 Worker smoke [miniflare-local-proxy]::known local Wrangler/Miniflare connection loss; retrying $attempt/$miniflare_retry_limit"
+      sleep "$miniflare_retry_delay_seconds"
+    fi
+  done
+}
+
 cleanup() {
   if [[ -n "$worker_pid" ]]; then
     kill "$worker_pid" 2>/dev/null || true
@@ -135,17 +152,17 @@ if [[ "$ready" -ne 1 ]]; then
 fi
 pass_checkpoint "worker-startup"
 
-status="$(curl -sS -o "$response_body" -w '%{http_code}' "$base_url/api/billing/status" || true)"
+request_with_miniflare_retry "$base_url/api/billing/status"
 if [[ "$status" != "401" ]]; then
   fail_checkpoint "anonymous-status" "expected HTTP 401, got ${status:-curl-error}; body=$(one_line_file "$response_body")"
 fi
 pass_checkpoint "anonymous-status"
 
-status="$(curl -sS -o "$response_body" -w '%{http_code}' \
+request_with_miniflare_retry \
   --header 'content-type: application/json' \
   --header 'x-callback-token: definitely-wrong-token' \
   --data '{}' \
-  "$base_url/api/billing/webhooks/xendit" || true)"
+  "$base_url/api/billing/webhooks/xendit"
 if [[ "$status" != "401" ]]; then
   fail_checkpoint "invalid-webhook" "expected HTTP 401, got ${status:-curl-error}; body=$(one_line_file "$response_body")"
 fi
@@ -169,7 +186,7 @@ if [[ ! -s "$cookie_jar" ]]; then
 fi
 pass_checkpoint "auth-signup"
 
-status="$(curl -sS -o "$response_body" -w '%{http_code}' --cookie "$cookie_jar" "$base_url/api/billing/status" || true)"
+request_with_miniflare_retry --cookie "$cookie_jar" "$base_url/api/billing/status"
 if [[ "$status" != "200" ]]; then
   fail_checkpoint "authenticated-status" "expected HTTP 200, got ${status:-curl-error}; body=$(one_line_file "$response_body")"
 fi

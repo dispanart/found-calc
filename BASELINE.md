@@ -16,14 +16,14 @@ Historical predecessor provenance: Phase 07 started from `found-calc-phase-06-go
 
 ## Canonical implementation evidence
 
-Verified implementation snapshot before continuity closure:
+A verified implementation milestone before final review hardening was:
 
 - source SHA: `4b0a50efbe8411bb16b35ab88fcab00fd7b1cfce`;
 - GitHub Actions run: `33263359788`;
 - full verification job: `99129009378` — **SUCCESS**;
 - built Worker smoke job: `99129009441` — **SUCCESS**.
 
-That exact source passed `pnpm verify:phase07`, the complete `0001` through `0004` D1 migration chain, Phase 07 billing/Xendit tests, lint/type checks, Playwright, Next/vinext checks/builds, all inherited Phase 06→01 regressions, and deterministic built-Worker smoke. The closure head receives a separate fresh Phase 07 verification before merge; the artifact workflow records the exact merged identity dynamically.
+Final review then added regression-proven hardening for ambiguous provider plan updates and the known local Wrangler/Miniflare `Network connection lost` proxy signature. Merge remains conditional on a fresh exact-head Phase 07 run passing both the full verifier and built-Worker smoke. The canonical artifact workflow records the exact merged identity dynamically.
 
 ## Completed deliverables
 
@@ -34,10 +34,11 @@ That exact source passed `pnpm verify:phase07`, the complete `0001` through `000
 - Webhook-authoritative activation/change semantics with duplicate, stale, delayed, retry, failure, and terminal-state protection.
 - Authenticated checkout, status, cancellation, and plan-change APIs that never trust provider identity from browser input.
 - Upgrade/downgrade staging with entitlement promotion only after matching authoritative successful-cycle reconciliation.
+- Ambiguous provider plan-update outcomes preserve staged first-party target state until authoritative reconciliation; definite provider rejection may clear it.
 - Localized ID/EN billing workspace UI, monthly/annual offers, lifecycle messaging, keyboard/focus/accessibility coverage, and 390px no-overflow coverage.
 - Free public calculators remain usable; Phase 01–06 calculator/rule/persistence/workspace truth is not retroactively paywalled or reinterpreted.
 - `verify:phase07` as a fail-fast Phase 06→01 regression superset plus Phase 07 foundation/unit/D1/browser/build checks.
-- Deterministic built vinext Worker smoke with named checkpoints and sanitized diagnostics.
+- Deterministic built vinext Worker smoke with named checkpoints, sanitized diagnostics, and a bounded retry only for the exact known local Miniflare connection-loss proxy signature.
 
 Detailed evidence: `docs/verification/phase-07-verification.md`.
 
@@ -61,13 +62,15 @@ First-party D1 state is the application authorization/entitlement truth. Xendit 
 
 ### Persistence and ordering
 
-Phase 07 uses the separate `0004_phase07_billing.sql` domain. Webhook inbox idempotency and event timestamp/rank ordering prevent duplicates, stale events, or older activation from reviving newer terminal state. Pending plan changes do not grant target capabilities before authoritative success.
+Phase 07 uses the separate `0004_phase07_billing.sql` domain. Webhook inbox idempotency and event timestamp/rank ordering prevent duplicates, stale events, or older activation from reviving newer terminal state. Pending plan changes do not grant target capabilities before authoritative success. Provider mutation ambiguity is fail-safe: transport/timeout/408/5xx uncertainty preserves the pending target instead of pretending the provider definitely rejected it.
 
 ## Deployment-like verification note
 
-An earlier Phase 07 Worker smoke produced a false-negative because a `curl ... | grep -q` assertion ran under `set -euo pipefail`: after `grep -q` found the match and closed the pipe, `curl` could exit with code 23 even though the request succeeded. The final smoke stores responses first, checks HTTP status/body separately, runs as a dedicated parallel job, and emits named sanitized checkpoints. Exact implementation head `4b0a50e...` passed this corrected built-Worker smoke.
+An earlier Phase 07 Worker smoke produced a false-negative because a `curl ... | grep -q` assertion ran under `set -euo pipefail`: after `grep -q` found the match and closed the pipe, `curl` could exit with code 23 even though the request succeeded. The smoke now stores responses first, checks HTTP status/body separately, runs as a dedicated parallel job, and emits named sanitized checkpoints.
 
-Current Wrangler documentation confirms `wrangler dev --persist-to <dir>` is the supported custom local persistence mechanism and that local `.dev.vars`/environment bindings can override configured vars for development; the smoke therefore keeps the supported local D1/runtime model rather than introducing a deployment-specific workaround.
+Subsequent GitHub-hosted runs repeatedly exposed the local Wrangler/Miniflare internal HTTP 500 body `Error: Network connection lost.` after successful startup/migrations and auth setup. The harness tolerates only that exact status/body signature with at most three attempts and a two-second delay; arbitrary application 500s still fail immediately. Signup remains non-retried because it mutates state.
+
+Current Wrangler documentation confirms `wrangler dev --persist-to <dir>` is the supported custom local persistence mechanism and that local development bindings can override configured vars; the smoke therefore keeps the supported local D1/runtime model rather than introducing a deployment-specific workaround.
 
 ## Preserved security and interaction contracts
 
