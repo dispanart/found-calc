@@ -58,10 +58,9 @@ const initialStatuses = (): Record<SupportedCalculatorId, StateStatus> => ({
 interface SignedInPersistenceSummaryProps {
   locale: Locale;
   userId: string;
-  email: string;
 }
 
-function SignedInPersistenceSummary({ locale, userId, email }: SignedInPersistenceSummaryProps) {
+function SignedInPersistenceSummary({ locale, userId }: SignedInPersistenceSummaryProps) {
   const text = labels[locale];
   const [statuses, setStatuses] = useState<Record<SupportedCalculatorId, StateStatus>>(initialStatuses);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -98,7 +97,6 @@ function SignedInPersistenceSummary({ locale, userId, email }: SignedInPersisten
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <h2 className="text-xl font-bold tracking-[-0.025em]">{text.heading}</h2>
-          <p className="mt-2 break-words text-sm text-muted-foreground">{email}</p>
         </div>
         <Button type="button" variant="outline" onClick={refresh}>{text.retry}</Button>
       </div>
@@ -141,7 +139,6 @@ export function PersistenceSummary({ locale }: { locale: Locale }) {
       key={session.user.id}
       locale={locale}
       userId={session.user.id}
-      email={session.user.email}
     />
   );
 }

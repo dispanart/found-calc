@@ -196,7 +196,7 @@ export function WorkspaceCalculationControls({
   };
 
   if (isPending) {
-    return <p className="mt-7 border-t border-border pt-6 text-sm text-muted-foreground" role="status">{text.loading}</p>;
+    return <p className="mt-7 border-t border-border pt-6 text-sm text-muted-foreground" aria-live="polite">{text.loading}</p>;
   }
 
   if (!session?.user) {
@@ -220,7 +220,7 @@ export function WorkspaceCalculationControls({
 
       {recordId ? (
         <div className="mt-5 border-l-2 border-primary/30 pl-4">
-          {recordStatus === "loading" ? <p className="text-sm text-muted-foreground" role="status">{text.recordLoading}</p> : null}
+          {recordStatus === "loading" ? <p className="text-sm text-muted-foreground" aria-live="polite">{text.recordLoading}</p> : null}
           {recordStatus === "error" ? <p className="text-sm text-destructive" role="alert">{text.recordUnavailable}</p> : null}
           {recordStatus === "mismatch" ? <p className="text-sm text-destructive" role="alert">{text.recordMismatch}</p> : null}
           {recordStatus === "ready" && record ? (
@@ -237,7 +237,7 @@ export function WorkspaceCalculationControls({
         </div>
       ) : null}
 
-      {projectStatus === "loading" ? <p className="mt-5 text-sm text-muted-foreground" role="status">{text.loading}</p> : null}
+      {projectStatus === "loading" ? <p className="mt-5 text-sm text-muted-foreground" aria-live="polite">{text.loading}</p> : null}
       {projectStatus === "error" ? <p className="mt-5 text-sm text-destructive" role="alert">{text.unavailable}</p> : null}
       {projectStatus === "ready" && writableProjects.length === 0 ? (
         <p className="mt-5 text-sm leading-6 text-muted-foreground">{text.noWritable}</p>
