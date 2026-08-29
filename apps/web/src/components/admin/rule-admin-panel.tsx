@@ -100,6 +100,7 @@ export function RuleAdminPanel({ locale }: { locale: Locale }) {
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const [versions, setVersions] = useState<readonly AdminRuleVersion[]>([]);
   const [access, setAccess] = useState<"loading" | "ready" | "signed-out" | "forbidden" | "error">("loading");
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [versionId, setVersionId] = useState("");
@@ -109,33 +110,51 @@ export function RuleAdminPanel({ locale }: { locale: Locale }) {
   const [sourceId, setSourceId] = useState("synthetic-admin-reference");
   const [sourceUrl, setSourceUrl] = useState("");
 
-  const load = useCallback(async () => {
-    if (!session?.user) {
-      setVersions([]);
-      setAccess("signed-out");
-      return;
-    }
-    setAccess("loading");
+  const load = useCallback(async (userId: string) => {
     try {
       const response = await fetch(`/api/admin/rule-versions?ruleId=${encodeURIComponent(RULE_ID)}`, {
         headers: { Accept: "application/json" },
         cache: "no-store",
       });
-      if (response.status === 401) { setAccess("signed-out"); return; }
-      if (response.status === 403) { setAccess("forbidden"); return; }
-      if (!response.ok) { setAccess("error"); return; }
+      if (response.status === 401) {
+        setVersions([]);
+        setAccess("signed-out");
+        setLoadedUserId(userId);
+        return;
+      }
+      if (response.status === 403) {
+        setVersions([]);
+        setAccess("forbidden");
+        setLoadedUserId(userId);
+        return;
+      }
+      if (!response.ok) {
+        setVersions([]);
+        setAccess("error");
+        setLoadedUserId(userId);
+        return;
+      }
       const body = await response.json() as { versions?: AdminRuleVersion[] };
-      if (!Array.isArray(body.versions)) { setAccess("error"); return; }
+      if (!Array.isArray(body.versions)) {
+        setVersions([]);
+        setAccess("error");
+        setLoadedUserId(userId);
+        return;
+      }
       setVersions(body.versions);
       setAccess("ready");
+      setLoadedUserId(userId);
     } catch {
+      setVersions([]);
       setAccess("error");
+      setLoadedUserId(userId);
     }
-  }, [session?.user]);
+  }, []);
 
   useEffect(() => {
-    if (!sessionPending) void load();
-  }, [load, sessionPending]);
+    if (sessionPending || !session?.user) return;
+    void load(session.user.id);
+  }, [load, session?.user, sessionPending]);
 
   const createDraft = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -164,7 +183,7 @@ export function RuleAdminPanel({ locale }: { locale: Locale }) {
       }
       setStatus(text.draftCreated);
       setVersionId(""); setEffectiveFrom(""); setEffectiveUntil(""); setRatePercent(""); setSourceUrl("");
-      await load();
+      if (session?.user) await load(session.user.id);
     } catch {
       setStatus(text.unavailable);
     } finally {
@@ -183,7 +202,7 @@ export function RuleAdminPanel({ locale }: { locale: Locale }) {
         return;
       }
       setStatus(text.published);
-      await load();
+      if (session?.user) await load(session.user.id);
     } catch {
       setStatus(text.unavailable);
     } finally {
@@ -191,7 +210,14 @@ export function RuleAdminPanel({ locale }: { locale: Locale }) {
     }
   };
 
-  const accessMessage = access === "signed-out" ? text.signedOut : access === "forbidden" ? text.forbidden : access === "error" ? text.unavailable : text.loading;
+  const effectiveAccess = sessionPending
+    ? "loading"
+    : !session?.user
+      ? "signed-out"
+      : loadedUserId !== session.user.id
+        ? "loading"
+        : access;
+  const accessMessage = effectiveAccess === "signed-out" ? text.signedOut : effectiveAccess === "forbidden" ? text.forbidden : effectiveAccess === "error" ? text.unavailable : text.loading;
 
   return (
     <section className="mt-10 min-w-0 space-y-6" aria-labelledby="rule-admin-title">
@@ -201,7 +227,7 @@ export function RuleAdminPanel({ locale }: { locale: Locale }) {
         <p className="mt-4 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm font-semibold" role="note">{text.warning}</p>
       </div>
 
-      {access !== "ready" ? (
+      {effectiveAccess !== "ready" ? (
         <p className="rounded-[var(--radius-card)] border border-border bg-card p-5 text-sm text-muted-foreground" role="status">{accessMessage}</p>
       ) : (
         <>
