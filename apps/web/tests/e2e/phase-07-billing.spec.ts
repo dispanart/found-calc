@@ -86,17 +86,17 @@ test("billing lifecycle keeps pending, past-due, and inactive states entitlement
 
   await page.goto("/id/workspace/billing");
   await expect(page.getByRole("heading", { name: "Menunggu konfirmasi" })).toBeVisible();
-  await expect(page.getByText("Tidak ada entitlement berbayar aktif.")).toBeVisible();
+  await expect(page.getByText("Tidak ada entitlement berbayar aktif.", { exact: true })).toBeVisible();
 
   current = billingState({ status: "past_due" });
   await page.goto("/en/workspace/billing");
   await expect(page.getByRole("heading", { name: "Payment needs attention" })).toBeVisible();
-  await expect(page.getByText("No paid entitlement is active.")).toBeVisible();
+  await expect(page.getByText("No paid entitlement is active.", { exact: true })).toBeVisible();
 
   current = billingState({ status: "inactive" });
   await page.reload();
   await expect(page.getByRole("heading", { name: "Subscription inactive" })).toBeVisible();
-  await expect(page.getByText("No paid entitlement is active.")).toBeVisible();
+  await expect(page.getByText("No paid entitlement is active.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue to Xendit" })).toBeEnabled();
 });
 
