@@ -1,11 +1,9 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import phase04MigrationSql from "../../migrations/0001_phase04_auth_and_calculator_state.sql?raw";
-import phase05MigrationSql from "../../migrations/0002_phase05_rule_platform_admin.sql?raw";
 
 import { createRuleVersionRepository, RuleRepositoryError } from "../../src/lib/rules/repository";
-import { resetPhase05Database } from "./test-database";
+import { resetCurrentDatabase } from "./test-database";
 
 declare module "cloudflare:workers" {
   interface ProvidedEnv { DB: D1Database; }
@@ -23,7 +21,7 @@ const draft = (overrides: Record<string, unknown> = {}) => ({
 });
 
 beforeEach(async () => {
-  await resetPhase05Database(env.DB, phase04MigrationSql, phase05MigrationSql);
+  await resetCurrentDatabase();
   await env.DB.prepare(
     "INSERT INTO user (id, name, email, email_verified, created_at, updated_at, role, banned) VALUES (?, ?, ?, 1, 0, 0, 'admin', 0)",
   ).bind(actorId, "Phase 05 Admin", "phase05-admin@example.test").run();
