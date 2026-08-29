@@ -10,114 +10,87 @@
 
 `found-calc-phase-06-goals-projects-profiles-workspace.zip`
 
-GitHub `main` remains the collaborative canonical repository. After the Phase 06 pull request is merged, `.github/workflows/phase-06-baseline-artifact.yml` packages the exact merged `GITHUB_SHA` with `git archive`, writes `SHA256SUMS`, verifies extraction and required Phase 06 files, and records the source commit/tree in `ARTIFACT_VERIFICATION.txt`. That exact post-merge ZIP is the portable recovery/handoff source for Phase 07.
+GitHub `main` is the collaborative canonical repository. After merge, `.github/workflows/phase-06-baseline-artifact.yml` archives the exact merged `GITHUB_SHA` with `git archive`, writes `SHA256SUMS`, verifies extraction/required files, and records commit/tree identity in `ARTIFACT_VERIFICATION.txt`. The resulting ZIP is the portable recovery/handoff source for Phase 07.
+
+Historical predecessor provenance is retained for regression continuity: Phase 06 started from the canonical Phase 05 artifact `found-calc-phase-05-versioned-rule-platform-admin-core.zip`.
 
 ## Canonical implementation evidence
 
-The verified Phase 06 implementation snapshot before continuity closure is:
+Verified implementation snapshot before continuity closure:
 
 - source SHA: `bb1eb7fc98de5673c271c22e6aa12563e78fc92d`;
 - GitHub Actions run: `33242970535`;
 - job: `99075355501`;
 - result: **SUCCESS**.
 
-That run passed `pnpm verify:phase06`, all inherited Phase 05/04/03/02/01 regressions, the full three-migration local D1 chain, browser coverage, source lint/type checks, Next/vinext compatibility/builds, and authenticated built-Worker workspace smoke. The closure tree receives a separate fresh full Phase 06 verification before merge; the canonical artifact workflow then records the exact merged source identity dynamically.
+That run passed `pnpm verify:phase06`, the complete Phase 04→06 local D1 migration chain, Phase 06 workspace tests/browser coverage, lint/type checks, Next/vinext checks/builds, all inherited Phase 05→01 regressions, and authenticated built-Worker smoke. The closure head receives a separate fresh Phase 06 verification before merge; the artifact workflow records the exact merged identity dynamically.
 
 ## Completed deliverables
 
-Phase 06 extends Found Calc with a narrow durable workspace domain while preserving the approved calculation, rule, persistence, auth, accessibility, privacy, and zero-fixed-infrastructure boundaries:
+- D1-backed user profiles and private owner-only Goals.
+- Projects with server-derived owner/editor/viewer authorization from Better Auth session identity plus D1 ownership/membership.
+- Random, hashed, expiring, one-time Project invites with atomic redemption.
+- Named Project calculation history storing validated canonical calculator state without server-side formula execution.
+- Creator attribution and role-aware history mutation behavior.
+- Privacy-safe Project JSON export.
+- Localized ID/EN workspace dashboard and Project detail UI.
+- Explicit Project save/reopen controls while preserving the separate Phase 04 latest-draft flow.
+- Separate `0003_phase06_workspace.sql` workspace domain; Phase 04 `calculator_state` is not reinterpreted.
+- `verify:phase06` as a fail-fast Phase 05→01 regression superset plus Phase 06 workspace/storage/API/browser/build checks.
+- Authenticated built-Worker smoke against one isolated D1 persistence state.
 
-- D1-backed user profiles with localized preference;
-- private owner-only Goals;
-- Projects with owner/editor/viewer collaboration roles;
-- server-derived authorization from Better Auth session identity plus D1 ownership/membership;
-- random, hashed, expiring, one-time Project invite codes with atomic redemption;
-- named Project calculation history storing validated canonical calculator state, not server-computed answers;
-- creator attribution and role-aware calculation mutation behavior;
-- privacy-safe Project JSON export;
-- localized ID/EN workspace dashboard and Project detail UI;
-- explicit calculator controls to save/reopen named Project calculations while preserving the separate Phase 04 latest-draft flow;
-- migration `0003_phase06_workspace.sql` as a separate workspace domain rather than a reinterpretation of Phase 04 `calculator_state`;
-- `verify:phase06` as a fail-fast regression superset of Phase 05 → Phase 01 plus Phase 06 workspace/storage/API/browser/build verification;
-- authenticated built-Worker smoke using one fresh dedicated D1 `--persist-to` state for all three migrations and `wrangler dev`.
-
-## Verification status
-
-Detailed evidence, RED→GREEN history, review results, and artifact rules are recorded in `docs/verification/phase-06-verification.md`.
-
-The successful implementation run verified the Phase 06 contract, D1/repository/API, workspace browser flows, accessibility regression, Next/vinext runtime boundaries, inherited regressions, and the built Worker. A stale Worker-smoke expectation for the new `{ projects: { owned, shared } }` collection shape was regression-locked first and then corrected without changing the production API.
+Detailed evidence and RED→GREEN history: `docs/verification/phase-06-verification.md`.
 
 ## Stable architecture boundaries
 
-### Engine truth
+### Deterministic truth
 
-`@found-calc/engine` remains the only owner of deterministic formula truth. Workspace storage, routes, auth, UI, locale handling, Project collaboration, and exports must not duplicate calculator arithmetic.
+`@found-calc/engine` remains the only owner of calculator arithmetic. Workspace storage, routes, exports, auth, UI, billing, and network code may store/transport validated state but must not duplicate formulas.
 
 ### Rule truth
 
-`@found-calc/rules` continues to own immutable version/effective-date/publication semantics. D1 repositories store/hydrate rule data but do not redefine rule truth or calculator formulas.
+`@found-calc/rules` continues to own immutable version/effective-date/publication semantics. Persistence and UI do not redefine them.
 
-### Catalog ownership
+### Catalog and runtime
 
-`@found-calc/catalog` continues to own stable calculator identity, canonical slugs, localized discovery/trust copy, category metadata, and relationships. It does not own formulas, auth, workspace persistence, billing, or production rule datasets.
+`@found-calc/catalog` owns calculator identity/discovery metadata. `apps/web` owns localized presentation, accessible interaction, first-party APIs, auth/admin/workspace UI, local draft preservation, and Project-history controls.
 
-### Product runtime
+### Persistence/auth/workspace
 
-`apps/web` owns localized presentation, accessible interaction, first-party API consumption, auth/admin/workspace UI, local draft preservation, and explicit Project history controls. Reference calculations remain local and deterministic.
+D1 stores Better Auth records, Phase 04 validated drafts, Phase 05 versioned rules, and the separate Phase 06 workspace domain. Better Auth owns credentials/session behavior. Project authorization is always re-derived server-side.
 
-### Persistence/auth/workspace boundary
+### Workspace privacy
 
-D1 stores Better Auth records, Phase 04 canonical calculator drafts, Phase 05 versioned rules, and the separate Phase 06 workspace domain. Better Auth owns credentials/session behavior. Project authorization is established server-side from authenticated identity plus D1 ownership/membership; browser role state is never authoritative.
+Goals remain owner-private. Shared Project surfaces expose only role-authorized Project/history data. Export excludes emails, invite secrets/hashes, and private Goal metadata. Invite plaintext is never persisted.
 
-### Workspace privacy boundary
+## Preserved interaction/security contracts
 
-Goals remain private to their owner. Project collaboration exposes only the shared Project/history data allowed by the member role. Project export excludes account email, invite secrets/hashes, and private Goal metadata. Invite plaintext is returned only when generated/redeemed by the intended flow and is not persisted as plaintext.
+- Public calculators remain usable without authentication.
+- Reference calculations remain local and deterministic.
+- Phase 04 local/guest/auth latest-draft semantics remain intact and separate from Phase 06 named Project history.
+- Published rule versions remain immutable; synthetic rule-feed failure remains explicit.
+- Admin and Project authorization are rechecked server-side.
+- Viewer/editor/owner boundaries are enforced server-side.
+- Project selector accessible names remain unique; wrapper regions do not reuse the select label through `aria-labelledby`.
+- No raw calculator input logging, fingerprinting, browser auth-token storage, production secrets, or production database identity was added.
+- No Xendit/payment/subscription/entitlement code exists in the Phase 06 baseline.
 
-## Interaction contracts preserved
+## Known non-blocking platform notes
 
-- public calculators remain usable without authentication;
-- reference calculator arithmetic remains local/deterministic;
-- unsaved Phase 04 local drafts survive locale navigation/reload without automatic network persistence;
-- guest claim remains idempotent and successful authentication is not rolled back by claim failure;
-- Phase 06 named Project history is explicit and separate from the Phase 04 latest-draft model;
-- published rule versions remain immutable and publication-period semantics stay in `@found-calc/rules`;
-- synthetic rule-feed failure remains explicit rather than silently falling back to hidden fixture truth;
-- admin and Project authorization are rechecked server-side;
-- no server endpoint calculates calculator answers;
-- no raw calculator input logging, browser auth-token storage, fingerprinting, or production secret was introduced.
-
-## Accessibility, trust, privacy, and security contract
-
-- launch locales remain Indonesian (`id`) and English (`en`);
-- inherited accessibility/responsive contracts remain regression-covered;
-- Phase 06 workspace and Project flows are keyboard-operable and browser-tested;
-- Project selector accessible names remain unique: wrapper regions do not reuse the select label through `aria-labelledby`;
-- synthetic-only rule data remains explicitly labeled;
-- viewer/editor/owner boundaries are enforced server-side;
-- one-time invite codes are random, hashed before persistence, expire, and are atomically claimed;
-- Project export does not leak private Goal metadata, email addresses, or invite secrets;
-- malformed/auth/storage errors remain stable and do not expose SQL/internal exception detail;
-- no Xendit/payment/subscription/entitlement code exists in the Phase 06 baseline.
-
-## Known platform notes
-
-- `apps/web/wrangler.jsonc` still uses the inherited all-zero local-only D1 UUID; it is not a remote production database identity.
-- Cloudflare/Vitest can emit inherited generated-entry static-analysis warnings while runtime tests pass.
+- The inherited all-zero D1 UUID is local/test-only.
+- Cloudflare/Vitest and generated Worker types can emit inherited non-blocking generated-code warnings.
 - vinext inherits earlier compatibility notes around `next/font/google` CDN loading and App Router `reactStrictMode` behavior.
-- generated Worker types can emit inherited non-blocking eslint-disable warnings.
-- current GitHub Actions can warn about Node 20-based action internals being forced onto Node 24 while the project job explicitly uses Node 22.
+- GitHub-hosted actions can warn about Node 20 action internals moving to Node 24 while the project job explicitly uses Node 22.
 
 ## Explicitly deferred beyond Phase 06
 
-Phase 06 does not authorize or implement:
-
-- Xendit/payment/subscription/entitlement/invoice/webhook flows;
-- production regulatory/tax/legal rule packs;
-- production analytics/telemetry or SEO hardening;
-- AI explanations or AI product features;
-- TestSprite launch certification;
-- remote D1 creation/migration, production Cloudflare deploy, DNS, or production secret mutation.
+- Xendit/payment/subscription/entitlement/invoice/webhook flows.
+- Production regulatory/tax/legal rule packs.
+- Production analytics/telemetry or SEO launch hardening.
+- AI product features.
+- TestSprite launch certification.
+- Remote D1 creation/migration, production Cloudflare deployment, DNS, or production secret mutation.
 
 ## Continuity rule
 
-Start **Phase 07 — Billing, Entitlements & Xendit** in a **new chat inside the same Found Calc project** and attach the exact post-merge `found-calc-phase-06-goals-projects-profiles-workspace.zip`. Read `PHASE_HANDOFF.md`, this baseline, the Phase 06 verification record/spec/plan, and the canonical Phase Workflow before creating the Phase 07 design/implementation plan. Treat Phase 01–06 architecture and regression boundaries as approved baseline and reopen them only for a verified implementation blocker under change control.
+Start **Phase 07 — Billing, Entitlements & Xendit** in a **new chat inside the same Found Calc project** using the exact post-merge `found-calc-phase-06-goals-projects-profiles-workspace.zip`. Read `PHASE_HANDOFF.md`, this baseline, the Phase 06 verification record/spec/plan, and the canonical Phase Workflow before planning. Treat Phase 01–06 architecture/regression boundaries as approved baseline unless a verified implementation blocker requires change control.
