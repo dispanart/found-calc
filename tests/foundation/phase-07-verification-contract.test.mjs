@@ -47,6 +47,17 @@ test("Phase 07 built Worker smoke exposes deterministic, sanitized runtime check
   assert.doesNotMatch(smoke, /set -x/);
 });
 
+test("Phase 07 Worker smoke retries only the known local Wrangler proxy connection-loss signature", () => {
+  const smoke = read("scripts/smoke-phase-07-worker.sh");
+  assert.match(smoke, /request_with_miniflare_retry/);
+  assert.match(smoke, /Error: Network connection lost\./);
+  assert.match(smoke, /PHASE07_MINIFLARE_RETRY_LIMIT:-3/);
+  assert.match(smoke, /PHASE07_MINIFLARE_RETRY_DELAY_SECONDS:-2/);
+  assert.match(smoke, /status" != "500"/);
+  assert.match(smoke, /grep -Fq 'Error: Network connection lost\.'/);
+  assert.doesNotMatch(smoke, /if \[\[ "\$status" == "500" \]\]; then\s*sleep/s);
+});
+
 test("Phase 07 package and local env examples declare only placeholder billing configuration", () => {
   const pkg = JSON.parse(read("package.json"));
   assert.equal(pkg.scripts["verify:phase07"], "node scripts/verify-phase-07.mjs");
