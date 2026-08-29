@@ -1,8 +1,6 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import phase04MigrationSql from "../../migrations/0001_phase04_auth_and_calculator_state.sql?raw";
-import phase05MigrationSql from "../../migrations/0002_phase05_rule_platform_admin.sql?raw";
 
 import { createFoundCalcAuth } from "../../src/lib/auth/server";
 import {
@@ -10,7 +8,7 @@ import {
   handleAdminRuleVersionsRequest,
   handlePublishedRuleVersionsRequest,
 } from "../../src/lib/rules/http";
-import { resetPhase05Database } from "./test-database";
+import { resetCurrentDatabase } from "./test-database";
 
 declare module "cloudflare:workers" { interface ProvidedEnv { DB: D1Database; } }
 
@@ -38,7 +36,7 @@ const signUp = async (auth: ReturnType<typeof createFoundCalcAuth>, email: strin
 };
 
 beforeEach(async () => {
-  await resetPhase05Database(env.DB, phase04MigrationSql, phase05MigrationSql);
+  await resetCurrentDatabase();
 });
 
 describe("rule HTTP boundary", () => {
