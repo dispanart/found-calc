@@ -103,7 +103,7 @@ const requestRuleVersions = async (signal?: AbortSignal): Promise<LoadResult> =>
     const response = await fetch(`/api/admin/rule-versions?ruleId=${encodeURIComponent(RULE_ID)}`, {
       headers: { Accept: "application/json" },
       cache: "no-store",
-      signal,
+      ...(signal === undefined ? {} : { signal }),
     });
     if (response.status === 401) return { access: "signed-out", versions: [] };
     if (response.status === 403) return { access: "forbidden", versions: [] };
