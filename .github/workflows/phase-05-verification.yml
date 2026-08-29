@@ -56,9 +56,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0001_phase04_auth_and_calculator_state.sql --yes || true
-          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0002_phase05_rule_platform_admin.sql --yes || true
-          pnpm exec wrangler dev --config dist/server/wrangler.json --port 8787 \
+          smoke_state="$RUNNER_TEMP/found-calc-phase05-smoke-state"
+          rm -rf "$smoke_state"
+          pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file migrations/0001_phase04_auth_and_calculator_state.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file migrations/0002_phase05_rule_platform_admin.sql --yes
+          pnpm exec wrangler dev --config dist/server/wrangler.json --port 8787 --persist-to "$smoke_state" \
             --var BETTER_AUTH_SECRET:"$BETTER_AUTH_SECRET" \
             --var BETTER_AUTH_URL:http://127.0.0.1:8787 \
             --var BETTER_AUTH_ADMIN_USER_IDS:"$BETTER_AUTH_ADMIN_USER_IDS" \
