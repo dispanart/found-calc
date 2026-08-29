@@ -1,12 +1,11 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import migrationSql from "../../migrations/0001_phase04_auth_and_calculator_state.sql?raw";
 
 import { createFoundCalcAuth } from "../../src/lib/auth/server";
 import { createCalculatorStateRepository } from "../../src/lib/persistence/repository";
 import { handleCalculatorStateRequest, handleGuestClaimRequest } from "../../src/lib/persistence/http";
-import { resetPhase04Database } from "./test-database";
+import { resetCurrentDatabase } from "./test-database";
 
 declare module "cloudflare:workers" { interface ProvidedEnv { DB: D1Database; } }
 
@@ -14,7 +13,7 @@ const state = { calculatorId: "reference.discount" as const, calculatorVersion: 
 const secret = "phase-04-state-api-test-secret-long-enough-12345";
 
 beforeEach(async () => {
-  await resetPhase04Database(env.DB, migrationSql);
+  await resetCurrentDatabase();
 });
 
 describe("calculator state HTTP boundary", () => {
