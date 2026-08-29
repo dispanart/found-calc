@@ -39,6 +39,9 @@ export function SiteHeader({ locale, messages }: SiteHeaderProps) {
             <Link className="rounded-sm text-muted-foreground hover:text-foreground" href={`/${locale}/workspace`}>
               {messages.navWorkspace}
             </Link>
+            <Link className="rounded-sm text-muted-foreground hover:text-foreground" href={`/${locale}/workspace/billing`}>
+              {messages.navBilling}
+            </Link>
             <Link className="rounded-sm text-muted-foreground hover:text-foreground" href={`/${locale}/admin`}>
               {messages.navAdmin}
             </Link>
