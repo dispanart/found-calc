@@ -66,6 +66,16 @@ test("Phase 07 Worker smoke retries only the known local Wrangler proxy connecti
   assert.doesNotMatch(smoke, /if \[\[ "\$status" == "500" \]\]; then\s*sleep/s);
 });
 
+test("Phase 07 Worker smoke restarts Wrangler after the exact fatal Miniflare signature", () => {
+  const smoke = read("scripts/smoke-phase-07-worker.sh");
+  assert.match(smoke, /start_worker\(\)/);
+  assert.match(smoke, /stop_worker\(\)/);
+  assert.match(smoke, /restart_worker_after_miniflare_loss\(\)/);
+  assert.match(smoke, /restart_worker_after_miniflare_loss/);
+  assert.match(smoke, /--persist-to "\$smoke_state"/);
+  assert.match(smoke, /restarting local Worker/);
+});
+
 test("Phase 07 Worker smoke handles ambiguous signup transport loss without replaying one identity", () => {
   const smoke = read("scripts/smoke-phase-07-worker.sh");
   assert.match(smoke, /signup_with_miniflare_retry/);

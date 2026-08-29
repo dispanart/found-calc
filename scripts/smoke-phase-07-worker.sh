@@ -48,7 +48,7 @@ annotation_escape() {
 show_worker_log() {
   if [[ -f "$worker_log" ]]; then
     echo '::group::Sanitized Phase 07 Worker log tail'
-    tail -n 120 "$worker_log" | sanitize_stream
+    tail -n 160 "$worker_log" | sanitize_stream
     echo
     echo '::endgroup::'
   fi
@@ -80,6 +80,48 @@ verify_sanitizer() {
   done
 }
 
+stop_worker() {
+  if [[ -n "$worker_pid" ]]; then
+    kill "$worker_pid" 2>/dev/null || true
+    wait "$worker_pid" 2>/dev/null || true
+    worker_pid=""
+  fi
+}
+
+start_worker() {
+  local attempt
+  pnpm exec wrangler dev --config dist/server/wrangler.json --port 8787 --persist-to "$smoke_state" \
+    --var BETTER_AUTH_SECRET:"$BETTER_AUTH_SECRET" \
+    --var BETTER_AUTH_URL:"$base_url" \
+    --var BETTER_AUTH_ADMIN_USER_IDS:"${BETTER_AUTH_ADMIN_USER_IDS:-}" \
+    --var BILLING_PLANS_JSON:"$BILLING_PLANS_JSON" \
+    --var PUBLIC_APP_ORIGIN:"$PUBLIC_APP_ORIGIN" \
+    --var XENDIT_SECRET_API_KEY:"$XENDIT_SECRET_API_KEY" \
+    --var XENDIT_WEBHOOK_TOKEN:"$XENDIT_WEBHOOK_TOKEN" \
+    >> "$worker_log" 2>&1 &
+  worker_pid=$!
+
+  for attempt in $(seq 1 30); do
+    if ! kill -0 "$worker_pid" 2>/dev/null; then
+      return 1
+    fi
+    status="$(curl -sS -o "$response_body" -w '%{http_code}' "$base_url/id" || true)"
+    if [[ "$status" =~ ^[23][0-9][0-9]$ ]]; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+restart_worker_after_miniflare_loss() {
+  stop_worker
+  sleep "$miniflare_retry_delay_seconds"
+  if ! start_worker; then
+    fail_checkpoint "worker-startup" "Wrangler did not recover after known local Miniflare connection loss; last status=${status:-none}; body=$(one_line_file "$response_body")"
+  fi
+}
+
 is_known_miniflare_connection_loss() {
   [[ "$status" == "500" ]] && grep -Fq 'Error: Network connection lost.' "$response_body"
 }
@@ -92,8 +134,8 @@ request_with_miniflare_retry() {
       return 0
     fi
     if [[ "$attempt" -lt "$miniflare_retry_limit" ]]; then
-      echo "::warning title=Phase 07 Worker smoke [miniflare-local-proxy]::known local Wrangler/Miniflare connection loss; retrying $attempt/$miniflare_retry_limit"
-      sleep "$miniflare_retry_delay_seconds"
+      echo "::warning title=Phase 07 Worker smoke [miniflare-local-proxy]::known local Wrangler/Miniflare connection loss; restarting local Worker before retry $attempt/$miniflare_retry_limit"
+      restart_worker_after_miniflare_loss
     fi
   done
 }
@@ -114,17 +156,14 @@ signup_with_miniflare_retry() {
       return 0
     fi
     if [[ "$attempt" -lt "$miniflare_retry_limit" ]]; then
-      echo "::warning title=Phase 07 Worker smoke [auth-signup]::known local Wrangler/Miniflare connection loss; retrying with isolated smoke identity $attempt/$miniflare_retry_limit"
-      sleep "$miniflare_retry_delay_seconds"
+      echo "::warning title=Phase 07 Worker smoke [auth-signup]::known local Wrangler/Miniflare connection loss; restarting local Worker and using isolated smoke identity $attempt/$miniflare_retry_limit"
+      restart_worker_after_miniflare_loss
     fi
   done
 }
 
 cleanup() {
-  if [[ -n "$worker_pid" ]]; then
-    kill "$worker_pid" 2>/dev/null || true
-    wait "$worker_pid" 2>/dev/null || true
-  fi
+  stop_worker
   rm -f "$cookie_jar" "$response_body"
 }
 trap cleanup EXIT
@@ -150,30 +189,7 @@ for migration in \
   fi
 done
 
-pnpm exec wrangler dev --config dist/server/wrangler.json --port 8787 --persist-to "$smoke_state" \
-  --var BETTER_AUTH_SECRET:"$BETTER_AUTH_SECRET" \
-  --var BETTER_AUTH_URL:"$base_url" \
-  --var BETTER_AUTH_ADMIN_USER_IDS:"${BETTER_AUTH_ADMIN_USER_IDS:-}" \
-  --var BILLING_PLANS_JSON:"$BILLING_PLANS_JSON" \
-  --var PUBLIC_APP_ORIGIN:"$PUBLIC_APP_ORIGIN" \
-  --var XENDIT_SECRET_API_KEY:"$XENDIT_SECRET_API_KEY" \
-  --var XENDIT_WEBHOOK_TOKEN:"$XENDIT_WEBHOOK_TOKEN" \
-  > "$worker_log" 2>&1 &
-worker_pid=$!
-
-ready=0
-for attempt in $(seq 1 30); do
-  if ! kill -0 "$worker_pid" 2>/dev/null; then
-    fail_checkpoint "worker-startup" "wrangler exited before the Worker became ready (attempt $attempt)"
-  fi
-  status="$(curl -sS -o "$response_body" -w '%{http_code}' "$base_url/id" || true)"
-  if [[ "$status" =~ ^[23][0-9][0-9]$ ]]; then
-    ready=1
-    break
-  fi
-  sleep 1
-done
-if [[ "$ready" -ne 1 ]]; then
+if ! start_worker; then
   fail_checkpoint "worker-startup" "Worker did not become ready within 30 attempts; last status=${status:-none}; body=$(one_line_file "$response_body")"
 fi
 pass_checkpoint "worker-startup"
