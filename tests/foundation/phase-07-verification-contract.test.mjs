@@ -18,6 +18,8 @@ test("Phase 07 has a fail-fast verification superset and dedicated CI migration/
   const workflow = read(".github/workflows/phase-07-verification.yml");
   assert.match(workflow, /0004_phase07_billing\.sql/);
   assert.match(workflow, /pnpm verify:phase07/);
+  assert.match(workflow, /worker-smoke:/);
+  assert.match(workflow, /pnpm --filter @found-calc\/web build:vinext/);
   assert.match(workflow, /scripts\/smoke-phase-07-worker\.sh/);
 });
 
