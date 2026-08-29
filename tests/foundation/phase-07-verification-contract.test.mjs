@@ -54,3 +54,32 @@ test("Phase 07 package and local env examples declare only placeholder billing c
   for (const key of ["BILLING_PLANS_JSON", "PUBLIC_APP_ORIGIN", "XENDIT_SECRET_API_KEY", "XENDIT_WEBHOOK_TOKEN"]) assert.match(vars, new RegExp(`^${key}=`, "m"));
   assert.doesNotMatch(vars, /xnd_[A-Za-z0-9]{8,}/i);
 });
+
+test("Phase 07 closure declares an exact canonical archive and Phase 08 handoff", () => {
+  const artifactPath = ".github/workflows/phase-07-baseline-artifact.yml";
+  assert.equal(existsSync(url(artifactPath)), true, `${artifactPath} must exist`);
+  const artifact = read(artifactPath);
+  assert.match(artifact, /found-calc-phase-07-billing-entitlements-xendit\.zip/);
+  assert.match(artifact, /git archive/);
+  assert.match(artifact, /SHA256SUMS/);
+  assert.match(artifact, /ARTIFACT_VERIFICATION\.txt/);
+  for (const required of [
+    "scripts/smoke-phase-07-worker.sh",
+    "apps/web/migrations/0004_phase07_billing.sql",
+    "apps/web/src/lib/billing/repository.ts",
+    "apps/web/src/lib/xendit/client.ts",
+    "apps/web/src/app/api/billing/subscription/change/route.ts",
+    "apps/web/tests/e2e/phase-07-billing.spec.ts",
+    "tests/foundation/phase-07-commercial-lifecycle.test.mts",
+  ]) assert.match(artifact, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+
+  const baseline = read("BASELINE.md");
+  assert.match(baseline, /Last canonical completed phase:\*\* Phase 07/);
+  assert.match(baseline, /found-calc-phase-07-billing-entitlements-xendit\.zip/);
+  const handoff = read("PHASE_HANDOFF.md");
+  assert.match(handoff, /Phase 08 — Frozen V1 Catalog Production/);
+  assert.match(handoff, /found-calc-phase-07-billing-entitlements-xendit\.zip/);
+  const template = read("PHASE_CHAT_TEMPLATE.md");
+  assert.match(template, /Phase 08 — Frozen V1 Catalog Production/);
+  assert.match(template, /found-calc-phase-07-billing-entitlements-xendit\.zip/);
+});
