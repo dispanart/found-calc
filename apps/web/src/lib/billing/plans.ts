@@ -1,18 +1,33 @@
+import type { InternalPaidTier } from "./contracts";
 import type { BillingPlanDefinition } from "./contracts";
 
 export type BillingPlansResult =
   | { readonly ok: true; readonly plans: readonly BillingPlanDefinition[] }
   | { readonly ok: false; readonly code: "billing-unavailable" };
 
+/** Historical Phase 07 offers. Their identity and commercial coordinates are immutable. */
 export const FOUND_CALC_V1_PAID_OFFERS = {
-  "pro-monthly": { amount: 25000, intervalCount: 1, displayName: "Pro" },
-  "pro-annual": { amount: 250000, intervalCount: 12, displayName: "Pro" },
-  "business-monthly": { amount: 75000, intervalCount: 1, displayName: "Business" },
-  "business-annual": { amount: 750000, intervalCount: 12, displayName: "Business" },
+  "pro-monthly": { amount: 25000, intervalCount: 1, displayName: "Pro", internalTier: "pro" },
+  "pro-annual": { amount: 250000, intervalCount: 12, displayName: "Pro", internalTier: "pro" },
+  "business-monthly": { amount: 75000, intervalCount: 1, displayName: "Business", internalTier: "business" },
+  "business-annual": { amount: 750000, intervalCount: 12, displayName: "Business", internalTier: "business" },
 } as const;
 
-export type FoundCalcPaidOfferId = keyof typeof FOUND_CALC_V1_PAID_OFFERS;
-const REQUIRED_OFFER_IDS = Object.keys(FOUND_CALC_V1_PAID_OFFERS) as FoundCalcPaidOfferId[];
+/** Phase 07A offers used for new checkout. Legacy IDs remain accepted for reconciliation. */
+export const FOUND_CALC_PHASE07A_CURRENT_OFFERS = {
+  "pro-monthly-2026a": { amount: 24900, intervalCount: 1, displayName: "Besties", internalTier: "pro" },
+  "pro-annual-2026a": { amount: 199000, intervalCount: 12, displayName: "Besties", internalTier: "pro" },
+  "business-monthly-2026a": { amount: 59000, intervalCount: 1, displayName: "Family", internalTier: "business" },
+  "business-annual-2026a": { amount: 499000, intervalCount: 12, displayName: "Family", internalTier: "business" },
+} as const;
+
+export type LegacyFoundCalcPaidOfferId = keyof typeof FOUND_CALC_V1_PAID_OFFERS;
+export type CurrentFoundCalcPaidOfferId = keyof typeof FOUND_CALC_PHASE07A_CURRENT_OFFERS;
+export type FoundCalcPaidOfferId = LegacyFoundCalcPaidOfferId | CurrentFoundCalcPaidOfferId;
+
+const LEGACY_OFFER_IDS = Object.keys(FOUND_CALC_V1_PAID_OFFERS) as LegacyFoundCalcPaidOfferId[];
+const CURRENT_OFFER_IDS = Object.keys(FOUND_CALC_PHASE07A_CURRENT_OFFERS) as CurrentFoundCalcPaidOfferId[];
+const ALL_OFFER_IDS = [...LEGACY_OFFER_IDS, ...CURRENT_OFFER_IDS] as const;
 
 const PLAN_KEYS = new Set([
   "id", "displayName", "description", "amount", "currency", "country", "interval",
@@ -41,9 +56,20 @@ const parseLocalized = (value: unknown, max: number): { id: string; en: string }
   return id && en ? { id, en } : null;
 };
 
-const canonicalOffer = (id: string) => Object.prototype.hasOwnProperty.call(FOUND_CALC_V1_PAID_OFFERS, id)
-  ? FOUND_CALC_V1_PAID_OFFERS[id as FoundCalcPaidOfferId]
-  : null;
+const isLegacyOfferId = (id: string): id is LegacyFoundCalcPaidOfferId =>
+  Object.prototype.hasOwnProperty.call(FOUND_CALC_V1_PAID_OFFERS, id);
+
+const isCurrentOfferId = (id: string): id is CurrentFoundCalcPaidOfferId =>
+  Object.prototype.hasOwnProperty.call(FOUND_CALC_PHASE07A_CURRENT_OFFERS, id);
+
+const canonicalOffer = (id: string) => {
+  if (isLegacyOfferId(id)) return FOUND_CALC_V1_PAID_OFFERS[id];
+  if (isCurrentOfferId(id)) return FOUND_CALC_PHASE07A_CURRENT_OFFERS[id];
+  return null;
+};
+
+export const offerInternalTier = (planId: string): InternalPaidTier | null =>
+  canonicalOffer(planId)?.internalTier ?? null;
 
 const parsePlan = (value: unknown): BillingPlanDefinition | null => {
   if (!isRecord(value) || !hasOnlyKeys(value, PLAN_KEYS)) return null;
@@ -82,11 +108,16 @@ const parsePlan = (value: unknown): BillingPlanDefinition | null => {
   };
 };
 
+const exactOfferSet = (ids: ReadonlySet<string>, required: readonly string[]): boolean =>
+  ids.size === required.length && required.every((id) => ids.has(id));
+
 export const parseBillingPlansJson = (raw: string | undefined): BillingPlansResult => {
   if (!raw || raw.length > 64 * 1024) return { ok: false, code: "billing-unavailable" };
   let parsed: unknown;
   try { parsed = JSON.parse(raw); } catch { return { ok: false, code: "billing-unavailable" }; }
-  if (!Array.isArray(parsed) || parsed.length !== REQUIRED_OFFER_IDS.length) return { ok: false, code: "billing-unavailable" };
+  if (!Array.isArray(parsed) || (parsed.length !== LEGACY_OFFER_IDS.length && parsed.length !== ALL_OFFER_IDS.length)) {
+    return { ok: false, code: "billing-unavailable" };
+  }
   const plans: BillingPlanDefinition[] = [];
   const ids = new Set<string>();
   for (const candidate of parsed) {
@@ -95,8 +126,13 @@ export const parseBillingPlansJson = (raw: string | undefined): BillingPlansResu
     ids.add(plan.id);
     plans.push(plan);
   }
-  if (!REQUIRED_OFFER_IDS.every((id) => ids.has(id))) return { ok: false, code: "billing-unavailable" };
-  plans.sort((a, b) => REQUIRED_OFFER_IDS.indexOf(a.id as FoundCalcPaidOfferId) - REQUIRED_OFFER_IDS.indexOf(b.id as FoundCalcPaidOfferId));
+
+  const legacyOnly = exactOfferSet(ids, LEGACY_OFFER_IDS);
+  const phase07a = exactOfferSet(ids, ALL_OFFER_IDS);
+  if (!legacyOnly && !phase07a) return { ok: false, code: "billing-unavailable" };
+
+  const order: readonly string[] = phase07a ? ALL_OFFER_IDS : LEGACY_OFFER_IDS;
+  plans.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
   return { ok: true, plans };
 };
 
@@ -104,6 +140,12 @@ export const getBillingPlan = (
   plans: readonly BillingPlanDefinition[],
   planId: string,
 ): BillingPlanDefinition | null => plans.find((plan) => plan.id === planId) ?? null;
+
+export const getCurrentCheckoutPlans = (
+  plans: readonly BillingPlanDefinition[],
+): readonly BillingPlanDefinition[] => CURRENT_OFFER_IDS
+  .map((planId) => getBillingPlan(plans, planId))
+  .filter((plan): plan is BillingPlanDefinition => plan !== null);
 
 export const nextBillingAnchorIso = (billingDay: number, now = new Date()): string => {
   if (!Number.isInteger(billingDay) || billingDay < 1 || billingDay > 28) throw new RangeError("billing day must be an integer from 1 through 28");
