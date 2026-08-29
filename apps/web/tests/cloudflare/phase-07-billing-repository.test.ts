@@ -126,4 +126,29 @@ describe("billing repository", () => {
     expect((await repo.getStatusForUser(ownerId)).subscription).toMatchObject({ planId: "business-annual", pendingPlanId: null, status: "active" });
   });
 
+  it("rejects a webhook whose provider plan and first-party reference belong to different records", async () => {
+    const repo = createBillingRepository(env.DB);
+    await repo.createCheckoutCorrelation({ id: "checkout-owner", userId: ownerId, planId: "fixture-pro", referenceId: "billing-ref-owner" });
+    await repo.applyWebhookTransition(event({
+      dedupeKey: "owner-activate",
+      providerPlanId: "provider-plan-owner",
+      referenceId: "billing-ref-owner",
+    }), 1_800_000_000_100);
+    await repo.createCheckoutCorrelation({ id: "checkout-other", userId: otherId, planId: "fixture-pro", referenceId: "billing-ref-other", now: 1_800_000_010_000 });
+
+    expect(await repo.getEventOwner("billing-ref-other", "provider-plan-owner")).toBeNull();
+    expect(await repo.applyWebhookTransition(event({
+      dedupeKey: "cross-wired",
+      eventName: "recurring.cycle.retrying",
+      providerPlanId: "provider-plan-owner",
+      providerCycleId: "cycle-cross-wired",
+      referenceId: "billing-ref-other",
+      providerEventAt: 1_800_000_020_000,
+      nextStatus: "past_due",
+      latestCycleStatus: "RETRYING",
+      rank: 30,
+    }), 1_800_000_020_100)).toEqual({ duplicate: false, applied: false, matched: false });
+    expect((await repo.getStatusForUser(ownerId)).subscription).toMatchObject({ status: "active", referenceId: "billing-ref-owner" });
+    expect((await repo.getStatusForUser(otherId)).subscription).toBeNull();
+  });
 });
