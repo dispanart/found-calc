@@ -8,6 +8,7 @@ import type { Locale } from "@/i18n/locales";
 import { authClient } from "@/lib/auth/client";
 import {
   cancelBillingSubscription,
+  changeBillingSubscription,
   fetchBillingStatus,
   startBillingCheckout,
   type BillingStatusClient,
@@ -36,6 +37,11 @@ const copy = {
     planTitle: "Plan yang tersedia",
     planIntro: "Harga dan kemampuan di bawah berasal dari konfigurasi server Found Calc, bukan dari kode browser.",
     choose: "Lanjut ke Xendit",
+    changePlan: "Ganti plan",
+    changing: "Menunggu konfirmasi perubahan plan…",
+    perYear: "per tahun",
+    freeLabel: "Free · Rp0",
+    freeBody: "Kalkulator publik tetap gratis. Billing hanya menambah capability berbayar; tidak mencabut akses calculator gratis.",
     current: "Plan saat ini",
     cancel: "Batalkan subscription",
     cancelling: "Mengirim permintaan pembatalan…",
@@ -69,6 +75,11 @@ const copy = {
     planTitle: "Available plans",
     planIntro: "Prices and capabilities below come from Found Calc server configuration, not browser code.",
     choose: "Continue to Xendit",
+    changePlan: "Change plan",
+    changing: "Waiting for plan-change confirmation…",
+    perYear: "per year",
+    freeLabel: "Free · Rp0",
+    freeBody: "Public calculators stay free. Billing only adds paid capabilities; it does not remove free calculator access.",
     current: "Current plan",
     cancel: "Cancel subscription",
     cancelling: "Sending cancellation request…",
@@ -142,14 +153,22 @@ export function BillingPanel({ locale }: { locale: Locale }) {
   );
 
   const current = stateCopy(locale, billing);
-  const subscriptionBlocksCheckout = Boolean(billing.checkoutPending || (billing.subscription && billing.subscription.status !== "inactive"));
+  const subscriptionBlocksCheckout = Boolean(billing.checkoutPending);
   const currentPlan = billing.subscription ? billing.plans.find((plan) => plan.id === billing.subscription?.planId) : undefined;
 
-  const beginCheckout = async (planId: string) => {
-    setBusyPlan(planId); setStatusMessage(text.opening);
+  const beginPlanAction = async (planId: string) => {
+    setBusyPlan(planId);
+    const changing = Boolean(billing.subscription && billing.subscription.status === "active" && billing.subscription.planId !== planId);
+    setStatusMessage(changing ? text.changing : text.opening);
     try {
-      const url = await startBillingCheckout(planId, locale);
-      window.location.assign(url);
+      if (changing) {
+        await changeBillingSubscription(planId);
+        setRefreshKey((value) => value + 1);
+        setBusyPlan(null);
+      } else {
+        const url = await startBillingCheckout(planId, locale);
+        window.location.assign(url);
+      }
     } catch {
       setStatusMessage(text.failed); setBusyPlan(null);
     }
@@ -171,6 +190,7 @@ export function BillingPanel({ locale }: { locale: Locale }) {
           <h2 className="mt-2 break-words text-3xl font-bold tracking-[-0.04em]">{current.title}</h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">{current.body}</p>
           {currentPlan ? <p className="mt-4 text-sm font-semibold">{currentPlan.displayName[locale]}</p> : null}
+          {billing.subscription?.pendingPlanId ? <p className="mt-2 text-sm text-muted-foreground">{text.changing}</p> : null}
           {billing.subscription?.cancellationPending ? <p className="mt-4 max-w-2xl border-l-2 border-primary pl-4 text-sm leading-6">{text.cancellationPending}</p> : null}
           {billing.subscription && billing.subscription.status !== "inactive" && !billing.subscription.cancellationPending ? (
             <Button className="mt-5" type="button" variant="outline" disabled={cancelling} onClick={cancel}>{text.cancel}</Button>
@@ -190,6 +210,12 @@ export function BillingPanel({ locale }: { locale: Locale }) {
         <h2 id="billing-plan-title" className="text-2xl font-bold tracking-[-0.03em]">{text.planTitle}</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{text.planIntro}</p>
         <div className="mt-5 divide-y divide-border border-y border-border">
+          <article className="grid min-w-0 gap-4 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <div className="min-w-0">
+              <h3 className="text-lg font-bold">{text.freeLabel}</h3>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">{text.freeBody}</p>
+            </div>
+          </article>
           {billing.plans.map((plan) => {
             const isCurrent = billing.subscription?.planId === plan.id && billing.subscription.status !== "inactive";
             return (
@@ -200,9 +226,9 @@ export function BillingPanel({ locale }: { locale: Locale }) {
                     {isCurrent ? <span className="text-xs font-semibold text-primary">{text.current}</span> : null}
                   </div>
                   <p className="mt-1 max-w-2xl break-words text-sm leading-6 text-muted-foreground">{plan.description[locale]}</p>
-                  <p className="mt-3 text-sm font-semibold">{money.format(plan.amount)} <span className="font-normal text-muted-foreground">{text.perMonth}</span></p>
+                  <p className="mt-3 text-sm font-semibold">{money.format(plan.amount)} <span className="font-normal text-muted-foreground">{plan.intervalCount === 12 ? text.perYear : text.perMonth}</span></p>
                 </div>
-                <Button type="button" disabled={subscriptionBlocksCheckout || busyPlan !== null} onClick={() => beginCheckout(plan.id)}>{text.choose}</Button>
+                <Button type="button" disabled={isCurrent || subscriptionBlocksCheckout || busyPlan !== null || Boolean(billing.subscription?.cancellationPending) || Boolean(billing.subscription?.pendingPlanId)} onClick={() => beginPlanAction(plan.id)}>{billing.subscription?.status === "active" ? text.changePlan : text.choose}</Button>
               </article>
             );
           })}

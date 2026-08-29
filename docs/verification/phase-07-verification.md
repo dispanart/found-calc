@@ -14,19 +14,20 @@ The Phase 07 merge gate is `.github/workflows/phase-07-verification.yml`. It app
 ## Security and trust contracts under verification
 
 - Xendit API credentials and webhook token remain server-only.
-- Production commercial terms are not committed; CI uses a clearly synthetic plan fixture.
+- The approved V1 commercial coordinates are pinned: Free Rp0; Pro Rp25.000/month and Rp250.000/year; Business Rp75.000/month and Rp750.000/year. CI uses canonical prices with non-production descriptions/capabilities.
 - Billing status and entitlement resolution read first-party state only and do not query Xendit.
 - Browser checkout return state cannot activate entitlement.
 - Webhooks authenticate with `x-callback-token` before body processing, validate amount/currency against the server plan, and apply through an idempotent D1 inbox.
 - Duplicate and stale provider events cannot regress newer or terminal first-party subscription state.
+- Upgrade/downgrade stages a first-party target, patches the existing provider plan server-side, and promotes the target only on a matching `recurring.cycle.succeeded`; retry/failed events do not grant target capabilities.
 - Cancellation selects the provider plan from authenticated D1 state, never from browser input, and preserves local access until provider inactivation is confirmed.
 - Public calculator arithmetic and Phase 04–06 persistence/rule/workspace boundaries remain unchanged.
 
 ## Coverage added in Phase 07
 
 - strict billing plan configuration and pure entitlement unit contracts;
-- D1 migration/repository tests for checkout correlation, user isolation, webhook dedupe, stale-event protection, and cancellation timestamps;
-- Xendit hosted subscription session/deactivation adapter tests and current recurring webhook normalization tests;
+- D1 migration/repository tests for checkout correlation, user isolation, webhook dedupe, stale-event protection, pending plan changes, authoritative promotion, and cancellation timestamps;
+- Xendit hosted subscription session/plan-update/deactivation adapter tests and current recurring webhook normalization tests;
 - HTTP boundary tests for authentication, body limits, first-party commercial validation, provider failure normalization, and no-store responses;
 - ID/EN billing client/UI contracts plus 390 px Playwright coverage;
 - built-Worker smoke for signed-out billing authorization, callback-token rejection, authenticated plan/status reads, and the full `0001` → `0004` migration chain.

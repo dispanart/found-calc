@@ -1,6 +1,6 @@
 # Found Calc Phase 07 — Billing, Entitlements & Xendit Design
 
-**Status:** Approved design, implementation pending  
+**Status:** Approved design with roadmap acceptance amendment; implementation in verification  
 **Date:** 2026-08-29  
 **Baseline:** Phase 06 — Goals, Projects, Profiles & Workspace  
 **Baseline SHA:** `9a8eaa7c14d3ab40a7de9dcd16e8c6fd65612319`
@@ -9,7 +9,7 @@
 
 Phase 07 adds a first-party billing and entitlement platform around the existing Found Calc product while preserving all Phase 01–06 truth boundaries. Xendit is the external payment processor, not the source of application authorization. Found Calc persists the billing state needed to make deterministic, low-latency entitlement decisions even when Xendit is unavailable.
 
-The phase must support a production-ready subscription lifecycle without inventing production pricing, plan names, or paid capabilities that are not present in the approved product baseline. Production plan definitions therefore arrive through validated server-side configuration. Existing public calculators, deterministic arithmetic, Phase 04 drafts, Phase 05 rules, and Phase 06 workspace capabilities are not retroactively paywalled by this phase.
+The phase must support a production-ready subscription lifecycle using the now-approved Found Calc V1 commercial baseline: Free Rp0; Pro Rp25.000/month or Rp250.000/year; Business Rp75.000/month or Rp750.000/year. Paid capability keys remain server-configured because the product source gives capability examples rather than an exhaustive tier mapping. `BILLING_PLANS_JSON` therefore supplies descriptions, billing anchors/retry policy, and capability keys, while the parser pins the approved IDs/prices/periods and fails closed on drift. Existing public calculators, deterministic arithmetic, Phase 04 drafts, Phase 05 rules, and Phase 06 workspace capabilities are not retroactively paywalled by this phase.
 
 ## 2. Success criteria
 
@@ -37,7 +37,7 @@ Phase 07 does **not**:
 - change Phase 05 rule publication/version semantics;
 - merge Phase 06 named Project history with drafts or billing;
 - expose or log raw calculator inputs through billing code;
-- invent production prices, plan marketing names, trial periods, coupons, taxes, discounts, proration, metered billing, invoices, refunds, or enterprise sales flows;
+- invent commercial terms beyond the approved Free/Pro/Business V1 prices, or add trial periods, coupons, taxes, discounts, proration, metered billing, invoices, refunds, or enterprise sales flows;
 - add Phase 08+ scope;
 - require a paid fixed infrastructure service beyond already-approved Cloudflare/Xendit transaction costs;
 - use client-side Xendit credentials or browser-stored bearer/auth tokens;
@@ -61,7 +61,7 @@ No billing module depends on `@found-calc/engine`, and the engine never depends 
 
 ### 4.2 Plan configuration
 
-Production pricing and plan semantics are not committed to source. The Worker reads a non-secret `BILLING_PLANS_JSON` configuration value and validates it before exposing a plan to the UI or accepting checkout.
+The approved V1 commercial offers are committed as a first-party product contract: `pro-monthly` Rp25.000, `pro-annual` Rp250.000, `business-monthly` Rp75.000, and `business-annual` Rp750.000. Free remains Rp0 and never requires Xendit. The Worker reads non-secret `BILLING_PLANS_JSON` and validates that all four paid offers match those canonical coordinates before exposing checkout; descriptions, billing-day/retry policy, and capability keys stay configuration-driven.
 
 Each configured plan has this server contract:
 
@@ -82,7 +82,7 @@ export type BillingPlanDefinition = {
 };
 ```
 
-`amount` is an integer and must be positive. `billingDay` must be an integer from 1 through 28 because Xendit currently restricts recurring anchors to those calendar days. Phase 07 deliberately supports monthly subscriptions only; additional intervals are deferred until an approved product requirement needs them. At checkout the server derives the next future occurrence of `billingDay` in Asia/Jakarta and serializes it as an ISO 8601 anchor timestamp. `totalRecurrence: null` means no configured recurrence cap. Unsupported/invalid configuration fails closed and returns a stable billing-unavailable response. Source-controlled tests use synthetic fixture plans that are explicitly non-production examples.
+`amount` is an integer and must match the approved offer. `billingDay` must be an integer from 1 through 28 because Xendit currently restricts recurring anchors to those calendar days. Xendit Payment Sessions expose DAY/WEEK/MONTH scheduling, so annual Found Calc offers are represented as `interval: "MONTH"` with `intervalCount: 12`; monthly offers use `intervalCount: 1`. At checkout the server derives the next future occurrence of `billingDay` in Asia/Jakarta and serializes it as an ISO 8601 anchor timestamp. `totalRecurrence: null` means no configured recurrence cap. Unsupported/invalid configuration fails closed and returns a stable billing-unavailable response. Source-controlled tests use synthetic fixture plans that are explicitly non-production examples.
 
 ### 4.3 Secrets and runtime configuration
 
@@ -234,7 +234,13 @@ Processing order is fixed:
 
 Never log the callback token or raw request body.
 
-### 8.3 Cancellation
+### 8.3 Upgrade and downgrade
+
+An authenticated user with an active, non-cancelling subscription may request another approved paid offer. The browser supplies only the target first-party `planId`; the server resolves the provider plan identifier from D1 and calls Xendit's current `PATCH /recurring/plans/{id}` API. Found Calc stages `pending_plan_id` before the provider call and never grants target capabilities from the synchronous PATCH response.
+
+Webhook authority remains intact: events matching the pending commercial amount are accepted for lifecycle state, but `pending_plan_id` becomes effective `plan_id` only on a validated `recurring.cycle.succeeded`. Retry/failed events do not grant the target capabilities. Provider failure clears the staged change. Inactivation clears any staged change. This same state machine covers upgrades, downgrades, and monthly/annual switches without creating a second simultaneous provider subscription.
+
+### 8.4 Cancellation
 
 Cancellation is an authenticated server action. The server finds the current local subscription and calls Xendit's `POST /recurring/plans/{id}/deactivate` with `api-version: 2026-01-01`.
 
@@ -242,7 +248,7 @@ A successful provider API response records `cancellation_requested_at`. The loca
 
 Repeated cancellation requests are idempotent from the user's perspective.
 
-### 8.4 Provider failures
+### 8.5 Provider failures
 
 Xendit timeout, network, 4xx, 5xx, or malformed-response details are normalized into stable application errors. Provider bodies, API keys, tokens, SQL, and stack traces are never returned to the client.
 

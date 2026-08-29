@@ -20,6 +20,7 @@ const plans = () => parseBillingPlansJson(workerEnv().BILLING_PLANS_JSON);
 
 const unavailableXendit: BillingXenditClient = {
   createSubscriptionSession: async () => { throw new XenditClientError(); },
+  updateSubscriptionPlan: async () => { throw new XenditClientError(); },
   deactivateSubscription: async () => { throw new XenditClientError(); },
 };
 const provider = (): BillingXenditClient => {
@@ -38,6 +39,11 @@ export const getBillingCheckoutRouteServices = () => ({
   xendit: provider(),
   ...(workerEnv().PUBLIC_APP_ORIGIN ? { publicAppOrigin: workerEnv().PUBLIC_APP_ORIGIN } : {}),
 }) satisfies Pick<BillingHttpServices, "auth" | "repository" | "plans" | "xendit" | "publicAppOrigin">;
+
+export const getBillingChangeRouteServices = () => ({
+  ...getBillingStatusRouteServices(),
+  xendit: provider(),
+}) satisfies Pick<BillingHttpServices, "auth" | "repository" | "plans" | "xendit">;
 
 export const getBillingCancelRouteServices = () => ({
   auth: getFoundCalcAuth(),

@@ -5,7 +5,7 @@ const payload = {
   billing: {
     available: true,
     plans: [{ id: "fixture-pro", displayName: { id: "Fixture Pro", en: "Fixture Pro" }, description: { id: "Uji", en: "Test" }, amount: 10000, currency: "IDR", interval: "MONTH", intervalCount: 1 }],
-    subscription: { planId: "fixture-pro", status: "active", latestCycleStatus: null, nextCycleAt: null, cancellationPending: false },
+    subscription: { planId: "fixture-pro", status: "active", latestCycleStatus: null, nextCycleAt: null, cancellationPending: false, pendingPlanId: null },
     checkoutPending: false,
     entitlements: ["fixture.export"],
   },

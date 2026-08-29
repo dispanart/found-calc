@@ -10,8 +10,10 @@ test("billing HTTP boundary protects auth, checkout, cancellation, and webhook i
   assert.match(http, /authentication-required/);
   assert.match(http, /x-callback-token/);
   assert.match(http, /webhook-authentication-failed/);
-  assert.match(http, /parsed\.event\.currency\s*!==\s*plan\.currency/);
-  assert.match(http, /parsed\.event\.amount\s*!==\s*plan\.amount/);
+  assert.match(http, /matchesCurrent/);
+  assert.match(http, /matchesPending/);
+  assert.match(http, /recurring\.cycle\.succeeded/);
+  assert.match(http, /updateSubscriptionPlan/);
   assert.match(http, /deactivateSubscription\(subscription\.providerPlanId\)/);
   assert.match(http, /cancellationPending:\s*true/);
   assert.match(http, /locale\s*!==\s*"id".*locale\s*!==\s*"en"/s);
@@ -24,10 +26,12 @@ test("billing route handlers stay thin and return no-store failures", () => {
     "apps/web/src/app/api/billing/status/route.ts",
     "apps/web/src/app/api/billing/checkout/route.ts",
     "apps/web/src/app/api/billing/subscription/cancel/route.ts",
+    "apps/web/src/app/api/billing/subscription/change/route.ts",
     "apps/web/src/app/api/billing/webhooks/xendit/route.ts",
   ]) assert.equal(existsSync(url(path)), true, `${path} must exist`);
   const services = read("apps/web/src/lib/billing/route-services.ts");
   assert.match(services, /getBillingStatusRouteServices/);
   assert.match(services, /getBillingWebhookRouteServices/);
+  assert.match(services, /getBillingChangeRouteServices/);
   assert.match(services, /Cache-Control":\s*"no-store"/);
 });

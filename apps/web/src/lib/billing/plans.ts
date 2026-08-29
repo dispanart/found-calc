@@ -4,6 +4,16 @@ export type BillingPlansResult =
   | { readonly ok: true; readonly plans: readonly BillingPlanDefinition[] }
   | { readonly ok: false; readonly code: "billing-unavailable" };
 
+export const FOUND_CALC_V1_PAID_OFFERS = {
+  "pro-monthly": { amount: 25000, intervalCount: 1, displayName: "Pro" },
+  "pro-annual": { amount: 250000, intervalCount: 12, displayName: "Pro" },
+  "business-monthly": { amount: 75000, intervalCount: 1, displayName: "Business" },
+  "business-annual": { amount: 750000, intervalCount: 12, displayName: "Business" },
+} as const;
+
+export type FoundCalcPaidOfferId = keyof typeof FOUND_CALC_V1_PAID_OFFERS;
+const REQUIRED_OFFER_IDS = Object.keys(FOUND_CALC_V1_PAID_OFFERS) as FoundCalcPaidOfferId[];
+
 const PLAN_KEYS = new Set([
   "id", "displayName", "description", "amount", "currency", "country", "interval",
   "intervalCount", "billingDay", "totalRecurrence", "failedCycleAction", "entitlements",
@@ -31,15 +41,21 @@ const parseLocalized = (value: unknown, max: number): { id: string; en: string }
   return id && en ? { id, en } : null;
 };
 
+const canonicalOffer = (id: string) => Object.prototype.hasOwnProperty.call(FOUND_CALC_V1_PAID_OFFERS, id)
+  ? FOUND_CALC_V1_PAID_OFFERS[id as FoundCalcPaidOfferId]
+  : null;
+
 const parsePlan = (value: unknown): BillingPlanDefinition | null => {
   if (!isRecord(value) || !hasOnlyKeys(value, PLAN_KEYS)) return null;
   const id = boundedText(value.id, 64);
   const displayName = parseLocalized(value.displayName, 80);
   const description = parseLocalized(value.description, 320);
   if (!id || !PLAN_ID.test(id) || !displayName || !description) return null;
-  if (!Number.isSafeInteger(value.amount) || Number(value.amount) <= 0) return null;
+  const offer = canonicalOffer(id);
+  if (!offer || displayName.id !== offer.displayName || displayName.en !== offer.displayName) return null;
+  if (!Number.isSafeInteger(value.amount) || Number(value.amount) !== offer.amount) return null;
   if (value.currency !== "IDR" || value.country !== "ID" || value.interval !== "MONTH") return null;
-  if (!Number.isSafeInteger(value.intervalCount) || Number(value.intervalCount) < 1 || Number(value.intervalCount) > 24) return null;
+  if (!Number.isSafeInteger(value.intervalCount) || Number(value.intervalCount) !== offer.intervalCount) return null;
   if (!Number.isSafeInteger(value.billingDay) || Number(value.billingDay) < 1 || Number(value.billingDay) > 28) return null;
   if (value.totalRecurrence !== null && (!Number.isSafeInteger(value.totalRecurrence) || Number(value.totalRecurrence) < 1)) return null;
   if (value.failedCycleAction !== "RESUME" && value.failedCycleAction !== "STOP") return null;
@@ -54,11 +70,11 @@ const parsePlan = (value: unknown): BillingPlanDefinition | null => {
     id,
     displayName,
     description,
-    amount: Number(value.amount),
+    amount: offer.amount,
     currency: "IDR",
     country: "ID",
     interval: "MONTH",
-    intervalCount: Number(value.intervalCount),
+    intervalCount: offer.intervalCount,
     billingDay: Number(value.billingDay),
     totalRecurrence: value.totalRecurrence === null ? null : Number(value.totalRecurrence),
     failedCycleAction: value.failedCycleAction,
@@ -70,7 +86,7 @@ export const parseBillingPlansJson = (raw: string | undefined): BillingPlansResu
   if (!raw || raw.length > 64 * 1024) return { ok: false, code: "billing-unavailable" };
   let parsed: unknown;
   try { parsed = JSON.parse(raw); } catch { return { ok: false, code: "billing-unavailable" }; }
-  if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > 32) return { ok: false, code: "billing-unavailable" };
+  if (!Array.isArray(parsed) || parsed.length !== REQUIRED_OFFER_IDS.length) return { ok: false, code: "billing-unavailable" };
   const plans: BillingPlanDefinition[] = [];
   const ids = new Set<string>();
   for (const candidate of parsed) {
@@ -79,6 +95,8 @@ export const parseBillingPlansJson = (raw: string | undefined): BillingPlansResu
     ids.add(plan.id);
     plans.push(plan);
   }
+  if (!REQUIRED_OFFER_IDS.every((id) => ids.has(id))) return { ok: false, code: "billing-unavailable" };
+  plans.sort((a, b) => REQUIRED_OFFER_IDS.indexOf(a.id as FoundCalcPaidOfferId) - REQUIRED_OFFER_IDS.indexOf(b.id as FoundCalcPaidOfferId));
   return { ok: true, plans };
 };
 

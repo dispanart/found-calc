@@ -274,6 +274,8 @@ export const billingSubscriptions = sqliteTable(
     currentCycleStartedAt: integer("current_cycle_started_at"),
     nextCycleAt: integer("next_cycle_at"),
     cancellationRequestedAt: integer("cancellation_requested_at"),
+    pendingPlanId: text("pending_plan_id"),
+    pendingPlanChangeRequestedAt: integer("pending_plan_change_requested_at"),
     providerCreatedAt: integer("provider_created_at"),
     providerUpdatedAt: integer("provider_updated_at"),
     createdAt: timestampMs("created_at"),

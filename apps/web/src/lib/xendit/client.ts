@@ -17,6 +17,16 @@ export type XenditSubscriptionSessionInput = {
   readonly cancelReturnUrl: string;
 };
 
+
+export type XenditSubscriptionPlanUpdateInput = {
+  readonly amount: number;
+  readonly interval: "MONTH";
+  readonly intervalCount: number;
+  readonly totalRecurrence: number | null;
+  readonly failedCycleAction: "RESUME" | "STOP";
+  readonly description: string;
+};
+
 export type XenditSubscriptionSession = {
   readonly paymentSessionId: string;
   readonly recurringPlanId: string;
@@ -120,6 +130,26 @@ export const createXenditClient = ({
     };
   };
 
+  const updateSubscriptionPlan = async (providerPlanId: string, input: XenditSubscriptionPlanUpdateInput): Promise<void> => {
+    if (!nonEmpty(providerPlanId, 255) || !Number.isSafeInteger(input.amount) || input.amount <= 0) throw new XenditClientError();
+    if (input.interval !== "MONTH" || !Number.isSafeInteger(input.intervalCount) || input.intervalCount < 1 || input.intervalCount > 24) throw new XenditClientError();
+    if (!nonEmpty(input.description, 1000)) throw new XenditClientError();
+    await request(`/recurring/plans/${encodeURIComponent(providerPlanId)}`, {
+      method: "PATCH",
+      headers: { "api-version": "2026-01-01" },
+      body: JSON.stringify({
+        amount: input.amount,
+        description: input.description,
+        schedule: {
+          interval: input.interval,
+          interval_count: input.intervalCount,
+          ...(input.totalRecurrence === null ? {} : { total_recurrence: input.totalRecurrence }),
+        },
+        failed_cycle_action: input.failedCycleAction,
+      }),
+    });
+  };
+
   const deactivateSubscription = async (providerPlanId: string): Promise<void> => {
     if (!nonEmpty(providerPlanId, 255)) throw new XenditClientError();
     await request(`/recurring/plans/${encodeURIComponent(providerPlanId)}/deactivate`, {
@@ -128,5 +158,5 @@ export const createXenditClient = ({
     });
   };
 
-  return { createSubscriptionSession, deactivateSubscription };
+  return { createSubscriptionSession, updateSubscriptionPlan, deactivateSubscription };
 };

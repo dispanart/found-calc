@@ -8,7 +8,7 @@ import type {
   BillingSubscriptionRecord,
   BillingWebhookTransition,
 } from "./repository";
-import { XenditClientError, type XenditSubscriptionSessionInput } from "../xendit/client";
+import { XenditClientError, type XenditSubscriptionPlanUpdateInput, type XenditSubscriptionSessionInput } from "../xendit/client";
 import { parseXenditWebhook } from "../xendit/webhooks";
 
 const MAX_BILLING_BODY_BYTES = 64 * 1024;
@@ -26,12 +26,15 @@ export interface BillingHttpRepository {
   expireCheckout(userId: string, checkoutId: string, now?: number): Promise<boolean>;
   getSubscriptionForCancellation(userId: string): Promise<BillingSubscriptionRecord | null>;
   markCancellationRequested(userId: string, providerPlanId: string, now?: number): Promise<boolean>;
+  stagePlanChange(userId: string, providerPlanId: string, targetPlanId: string, now?: number): Promise<boolean>;
+  clearPlanChange(userId: string, providerPlanId: string, targetPlanId: string, now?: number): Promise<boolean>;
   getEventOwner(referenceId: string, providerPlanId: string): Promise<BillingEventOwner | null>;
-  applyWebhookTransition(event: BillingWebhookTransition, receivedAt?: number): Promise<{ readonly duplicate: boolean; readonly applied: boolean; readonly matched: boolean }>;
+  applyWebhookTransition(event: BillingWebhookTransition, receivedAt?: number, confirmedPlanId?: string | null): Promise<{ readonly duplicate: boolean; readonly applied: boolean; readonly matched: boolean }>;
 }
 
 export interface BillingXenditClient {
   createSubscriptionSession(input: XenditSubscriptionSessionInput): Promise<{ readonly paymentSessionId: string; readonly recurringPlanId: string; readonly referenceId: string; readonly paymentLinkUrl: string }>;
+  updateSubscriptionPlan(providerPlanId: string, input: XenditSubscriptionPlanUpdateInput): Promise<void>;
   deactivateSubscription(providerPlanId: string): Promise<void>;
 }
 
@@ -49,6 +52,7 @@ export interface BillingHttpServices {
 type BillingStatusServices = Pick<BillingHttpServices, "auth" | "repository" | "plans">;
 type BillingCheckoutServices = Pick<BillingHttpServices, "auth" | "repository" | "plans" | "xendit" | "publicAppOrigin" | "now" | "randomUUID">;
 type BillingCancelServices = Pick<BillingHttpServices, "auth" | "repository" | "xendit" | "now">;
+type BillingChangeServices = Pick<BillingHttpServices, "auth" | "repository" | "plans" | "xendit" | "now">;
 type BillingWebhookServices = Pick<BillingHttpServices, "repository" | "plans" | "webhookToken" | "now">;
 
 const authenticate = async (request: Request, services: Pick<BillingHttpServices, "auth">) => {
@@ -74,6 +78,11 @@ const parseCheckoutBody = (value: unknown): { readonly planId: string; readonly 
   if (locale !== "id" && locale !== "en") return null;
   const planId = value.planId.trim();
   return planId.length >= 2 && planId.length <= 64 ? { planId, locale } : null;
+};
+const parsePlanChangeBody = (value: unknown): { readonly planId: string } | null => {
+  if (!isRecord(value) || Object.keys(value).length !== 1 || typeof value.planId !== "string") return null;
+  const planId = value.planId.trim();
+  return planId.length >= 2 && planId.length <= 64 ? { planId } : null;
 };
 const isEmptyObject = (value: unknown): boolean => isRecord(value) && Object.keys(value).length === 0;
 
@@ -107,6 +116,7 @@ const subscriptionResponse = (subscription: BillingSubscriptionRecord | null) =>
   latestCycleStatus: subscription.latestCycleStatus,
   nextCycleAt: subscription.nextCycleAt,
   cancellationPending: subscription.cancellationRequestedAt !== null,
+  pendingPlanId: subscription.pendingPlanId,
 } : null;
 
 const statusPayload = (plans: BillingPlansResult, state: BillingStatusRecord) => {
@@ -191,6 +201,44 @@ export const handleBillingCheckoutRequest = async (request: Request, services: B
   }
 };
 
+export const handleBillingChangeRequest = async (request: Request, services: BillingChangeServices): Promise<Response> => {
+  let staged: { userId: string; providerPlanId: string; targetPlanId: string } | null = null;
+  try {
+    const auth = await authenticate(request, services);
+    if (!auth.ok) return auth.response;
+    const body = await readJson(request);
+    if (!body.ok) return body.response;
+    const change = parsePlanChangeBody(body.value);
+    if (!change) return error("invalid-billing-input", 400);
+    if (!services.plans.ok) return error("billing-unavailable", 503);
+    const target = getBillingPlan(services.plans.plans, change.planId);
+    if (!target) return error("billing-plan-not-found", 404);
+    const state = await services.repository.getStatusForUser(auth.user.id);
+    const subscription = state.subscription;
+    if (state.checkoutPending || !subscription || subscription.status !== "active" || subscription.cancellationRequestedAt !== null || subscription.pendingPlanId !== null) {
+      return error("billing-conflict", 409);
+    }
+    if (subscription.planId === target.id) return error("billing-conflict", 409);
+    const now = (services.now?.() ?? new Date()).valueOf();
+    if (!await services.repository.stagePlanChange(auth.user.id, subscription.providerPlanId, target.id, now)) return error("billing-conflict", 409);
+    staged = { userId: auth.user.id, providerPlanId: subscription.providerPlanId, targetPlanId: target.id };
+    await services.xendit.updateSubscriptionPlan(subscription.providerPlanId, {
+      amount: target.amount,
+      interval: target.interval,
+      intervalCount: target.intervalCount,
+      totalRecurrence: target.totalRecurrence,
+      failedCycleAction: target.failedCycleAction,
+      description: target.displayName.en,
+    });
+    return json({ planChange: { fromPlanId: subscription.planId, toPlanId: target.id, status: "pending_confirmation" } }, 202);
+  } catch (caught) {
+    if (staged) {
+      try { await services.repository.clearPlanChange(staged.userId, staged.providerPlanId, staged.targetPlanId, (services.now?.() ?? new Date()).valueOf()); } catch { /* provider failure remains primary */ }
+    }
+    return handleFailure(caught);
+  }
+};
+
 export const handleBillingCancelRequest = async (request: Request, services: BillingCancelServices): Promise<Response> => {
   try {
     const auth = await authenticate(request, services);
@@ -228,11 +276,15 @@ export const handleBillingWebhookRequest = async (request: Request, services: Bi
     const owner = await services.repository.getEventOwner(parsed.event.referenceId, parsed.event.providerPlanId);
     if (!owner) return json({ accepted: true, applied: false });
     if (!services.plans.ok) return error("billing-unavailable", 503);
-    const plan = getBillingPlan(services.plans.plans, owner.planId);
-    if (!plan) return error("billing-unavailable", 503);
-    if (parsed.event.currency !== plan.currency || parsed.event.amount !== plan.amount) return error("invalid-webhook", 400);
+    const currentPlan = getBillingPlan(services.plans.plans, owner.planId);
+    const pendingPlan = owner.pendingPlanId ? getBillingPlan(services.plans.plans, owner.pendingPlanId) : null;
+    if (!currentPlan) return error("billing-unavailable", 503);
+    const matchesCurrent = parsed.event.currency === currentPlan.currency && parsed.event.amount === currentPlan.amount;
+    const matchesPending = Boolean(pendingPlan && parsed.event.currency === pendingPlan.currency && parsed.event.amount === pendingPlan.amount);
+    if (!matchesCurrent && !matchesPending) return error("invalid-webhook", 400);
+    const confirmedPlanId = matchesPending && parsed.event.eventName === "recurring.cycle.succeeded" ? pendingPlan?.id ?? null : null;
 
-    const result = await services.repository.applyWebhookTransition(parsed.event, (services.now?.() ?? new Date()).valueOf());
+    const result = await services.repository.applyWebhookTransition(parsed.event, (services.now?.() ?? new Date()).valueOf(), confirmedPlanId);
     return json({ accepted: true, applied: result.applied, duplicate: result.duplicate });
   } catch (caught) { return handleFailure(caught); }
 };

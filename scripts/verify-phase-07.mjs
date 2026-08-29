@@ -8,11 +8,12 @@ const cleanInheritedBuildArtifacts = () => {
   rmSync(path.join(root, "apps/web/.next"), { recursive: true, force: true });
 };
 
-const syntheticBillingPlans = JSON.stringify([{
-  id: "ci-fixture",
-  displayName: { id: "Fixture CI", en: "CI Fixture" },
-  description: { id: "Hanya untuk verifikasi CI", en: "CI verification only" },
-  amount: 10000,
+const syntheticBillingPlans = JSON.stringify([
+{
+  id: "pro-monthly",
+  displayName: { id: "Pro", en: "Pro" },
+  description: { id: "Konfigurasi verifikasi Pro", en: "Pro verification configuration" },
+  amount: 25000,
   currency: "IDR",
   country: "ID",
   interval: "MONTH",
@@ -20,8 +21,51 @@ const syntheticBillingPlans = JSON.stringify([{
   billingDay: 15,
   totalRecurrence: null,
   failedCycleAction: "RESUME",
-  entitlements: ["fixture.ci"],
-}]);
+  entitlements: ["advanced_scenarios", "history_depth"],
+},
+{
+  id: "pro-annual",
+  displayName: { id: "Pro", en: "Pro" },
+  description: { id: "Konfigurasi verifikasi Pro", en: "Pro verification configuration" },
+  amount: 250000,
+  currency: "IDR",
+  country: "ID",
+  interval: "MONTH",
+  intervalCount: 12,
+  billingDay: 15,
+  totalRecurrence: null,
+  failedCycleAction: "RESUME",
+  entitlements: ["advanced_scenarios", "history_depth"],
+},
+{
+  id: "business-monthly",
+  displayName: { id: "Business", en: "Business" },
+  description: { id: "Konfigurasi verifikasi Business", en: "Business verification configuration" },
+  amount: 75000,
+  currency: "IDR",
+  country: "ID",
+  interval: "MONTH",
+  intervalCount: 1,
+  billingDay: 15,
+  totalRecurrence: null,
+  failedCycleAction: "RESUME",
+  entitlements: ["advanced_scenarios", "history_depth", "bulk_sku", "export", "team_access"],
+},
+{
+  id: "business-annual",
+  displayName: { id: "Business", en: "Business" },
+  description: { id: "Konfigurasi verifikasi Business", en: "Business verification configuration" },
+  amount: 750000,
+  currency: "IDR",
+  country: "ID",
+  interval: "MONTH",
+  intervalCount: 12,
+  billingDay: 15,
+  totalRecurrence: null,
+  failedCycleAction: "RESUME",
+  entitlements: ["advanced_scenarios", "history_depth", "bulk_sku", "export", "team_access"],
+}
+]);
 
 const verificationEnv = {
   ...process.env,

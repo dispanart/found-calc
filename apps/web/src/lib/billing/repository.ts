@@ -12,6 +12,8 @@ export type BillingSubscriptionRecord = {
   readonly latestEventAt: number;
   readonly nextCycleAt: number | null;
   readonly cancellationRequestedAt: number | null;
+  readonly pendingPlanId: string | null;
+  readonly pendingPlanChangeRequestedAt: number | null;
 };
 
 export type BillingStatusRecord = {
@@ -47,10 +49,12 @@ type SubscriptionRow = {
   latestEventRank: number;
   nextCycleAt: number | null;
   cancellationRequestedAt: number | null;
+  pendingPlanId: string | null;
+  pendingPlanChangeRequestedAt: number | null;
 };
 
-export type BillingEventOwner = { readonly userId: string; readonly planId: string };
-type CheckoutOwnerRow = { userId: string; planId: string };
+export type BillingEventOwner = { readonly userId: string; readonly planId: string; readonly pendingPlanId: string | null };
+type CheckoutOwnerRow = { userId: string; planId: string; pendingPlanId?: string | null };
 
 const subscriptionFromRow = (row: SubscriptionRow): BillingSubscriptionRecord => ({
   id: row.id,
@@ -63,6 +67,8 @@ const subscriptionFromRow = (row: SubscriptionRow): BillingSubscriptionRecord =>
   latestEventAt: row.latestEventAt,
   nextCycleAt: row.nextCycleAt,
   cancellationRequestedAt: row.cancellationRequestedAt,
+  pendingPlanId: row.pendingPlanId,
+  pendingPlanChangeRequestedAt: row.pendingPlanChangeRequestedAt,
 });
 
 export const createBillingRepository = (binding: D1Database) => {
@@ -113,18 +119,19 @@ export const createBillingRepository = (binding: D1Database) => {
 
   const getEventOwner = async (referenceId: string, providerPlanId: string): Promise<BillingEventOwner | null> => {
     const subscription = await binding.prepare(`
-      SELECT user_id AS userId, plan_id AS planId
+      SELECT user_id AS userId, plan_id AS planId, pending_plan_id AS pendingPlanId
       FROM billing_subscription
       WHERE provider_plan_id = ? OR reference_id = ?
       ORDER BY updated_at DESC LIMIT 1
     `).bind(providerPlanId, referenceId).first<CheckoutOwnerRow>();
-    if (subscription) return subscription;
-    return await binding.prepare(`
+    if (subscription) return { ...subscription, pendingPlanId: subscription.pendingPlanId ?? null };
+    const checkout = await binding.prepare(`
       SELECT user_id AS userId, plan_id AS planId
       FROM billing_checkout
       WHERE provider_reference_id = ?
       ORDER BY created_at DESC LIMIT 1
     `).bind(referenceId).first<CheckoutOwnerRow>();
+    return checkout ? { userId: checkout.userId, planId: checkout.planId, pendingPlanId: null } : null;
   };
 
   const getStatusForUser = async (userId: string): Promise<BillingStatusRecord> => {
@@ -132,7 +139,8 @@ export const createBillingRepository = (binding: D1Database) => {
       SELECT id, user_id AS userId, plan_id AS planId, provider_plan_id AS providerPlanId,
              reference_id AS referenceId, status, latest_cycle_status AS latestCycleStatus,
              latest_event_at AS latestEventAt, latest_event_rank AS latestEventRank,
-             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt
+             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt,
+             pending_plan_id AS pendingPlanId, pending_plan_change_requested_at AS pendingPlanChangeRequestedAt
       FROM billing_subscription
       WHERE user_id = ?
       ORDER BY updated_at DESC
@@ -151,7 +159,8 @@ export const createBillingRepository = (binding: D1Database) => {
       SELECT id, user_id AS userId, plan_id AS planId, provider_plan_id AS providerPlanId,
              reference_id AS referenceId, status, latest_cycle_status AS latestCycleStatus,
              latest_event_at AS latestEventAt, latest_event_rank AS latestEventRank,
-             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt
+             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt,
+             pending_plan_id AS pendingPlanId, pending_plan_change_requested_at AS pendingPlanChangeRequestedAt
       FROM billing_subscription
       WHERE user_id = ? AND status <> 'inactive'
       ORDER BY updated_at DESC LIMIT 1
@@ -172,9 +181,39 @@ export const createBillingRepository = (binding: D1Database) => {
     return Boolean(result.meta.changes);
   };
 
+  const stagePlanChange = async (
+    userId: string,
+    providerPlanId: string,
+    targetPlanId: string,
+    now = Date.now(),
+  ): Promise<boolean> => {
+    const result = await binding.prepare(`
+      UPDATE billing_subscription
+      SET pending_plan_id = ?, pending_plan_change_requested_at = ?, updated_at = ?
+      WHERE user_id = ? AND provider_plan_id = ? AND status = 'active'
+        AND cancellation_requested_at IS NULL AND plan_id <> ? AND pending_plan_id IS NULL
+    `).bind(targetPlanId, now, now, userId, providerPlanId, targetPlanId).run();
+    return Boolean(result.meta.changes);
+  };
+
+  const clearPlanChange = async (
+    userId: string,
+    providerPlanId: string,
+    targetPlanId: string,
+    now = Date.now(),
+  ): Promise<boolean> => {
+    const result = await binding.prepare(`
+      UPDATE billing_subscription
+      SET pending_plan_id = NULL, pending_plan_change_requested_at = NULL, updated_at = ?
+      WHERE user_id = ? AND provider_plan_id = ? AND pending_plan_id = ?
+    `).bind(now, userId, providerPlanId, targetPlanId).run();
+    return Boolean(result.meta.changes);
+  };
+
   const applyWebhookTransition = async (
     event: BillingWebhookTransition,
     receivedAt = Date.now(),
+    confirmedPlanId: string | null = null,
   ): Promise<{ readonly duplicate: boolean; readonly applied: boolean; readonly matched: boolean }> => {
     const existingInbox = await binding.prepare(`SELECT dedupe_key FROM billing_webhook_inbox WHERE dedupe_key = ? LIMIT 1`)
       .bind(event.dedupeKey).first<{ dedupe_key: string }>();
@@ -184,7 +223,8 @@ export const createBillingRepository = (binding: D1Database) => {
       SELECT id, user_id AS userId, plan_id AS planId, provider_plan_id AS providerPlanId,
              reference_id AS referenceId, status, latest_cycle_status AS latestCycleStatus,
              latest_event_at AS latestEventAt, latest_event_rank AS latestEventRank,
-             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt
+             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt,
+             pending_plan_id AS pendingPlanId, pending_plan_change_requested_at AS pendingPlanChangeRequestedAt
       FROM billing_subscription
       WHERE provider_plan_id = ? OR reference_id = ?
       ORDER BY updated_at DESC LIMIT 1
@@ -230,12 +270,15 @@ export const createBillingRepository = (binding: D1Database) => {
       INSERT INTO billing_subscription (
         id, user_id, plan_id, provider_plan_id, reference_id, status, latest_cycle_status,
         latest_event_at, latest_event_rank, current_cycle_started_at, next_cycle_at,
-        provider_created_at, provider_updated_at, created_at, updated_at
+        pending_plan_id, pending_plan_change_requested_at, provider_created_at, provider_updated_at, created_at, updated_at
       )
-      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       WHERE ? = 0
         AND EXISTS (SELECT 1 FROM billing_webhook_inbox WHERE dedupe_key = ? AND claim_token = ?)
       ON CONFLICT(provider_plan_id) DO UPDATE SET
+        plan_id = CASE WHEN ? IS NOT NULL THEN ? ELSE billing_subscription.plan_id END,
+        pending_plan_id = CASE WHEN ? IS NOT NULL OR excluded.status = 'inactive' THEN NULL ELSE billing_subscription.pending_plan_id END,
+        pending_plan_change_requested_at = CASE WHEN ? IS NOT NULL OR excluded.status = 'inactive' THEN NULL ELSE billing_subscription.pending_plan_change_requested_at END,
         status = excluded.status,
         latest_cycle_status = excluded.latest_cycle_status,
         latest_event_at = excluded.latest_event_at,
@@ -265,6 +308,8 @@ export const createBillingRepository = (binding: D1Database) => {
       event.rank,
       event.currentCycleStartedAt,
       event.nextCycleAt,
+      null,
+      null,
       event.providerCreatedAt,
       event.providerUpdatedAt,
       receivedAt,
@@ -272,6 +317,10 @@ export const createBillingRepository = (binding: D1Database) => {
       stale ? 1 : 0,
       event.dedupeKey,
       claimToken,
+      confirmedPlanId,
+      confirmedPlanId,
+      confirmedPlanId,
+      confirmedPlanId,
     );
 
     const checkoutStatement = binding.prepare(`
@@ -295,6 +344,8 @@ export const createBillingRepository = (binding: D1Database) => {
     getStatusForUser,
     getSubscriptionForCancellation,
     markCancellationRequested,
+    stagePlanChange,
+    clearPlanChange,
     applyWebhookTransition,
   };
 };

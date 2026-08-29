@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS billing_subscription (
   current_cycle_started_at INTEGER,
   next_cycle_at INTEGER,
   cancellation_requested_at INTEGER,
+  pending_plan_id TEXT,
+  pending_plan_change_requested_at INTEGER,
   provider_created_at INTEGER,
   provider_updated_at INTEGER,
   created_at INTEGER NOT NULL DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)),

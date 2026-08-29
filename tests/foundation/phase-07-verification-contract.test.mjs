@@ -21,6 +21,8 @@ test("Phase 07 has a fail-fast verification superset and dedicated CI migration/
   assert.match(workflow, /api\/billing\/status/);
   assert.match(workflow, /api\/billing\/webhooks\/xendit/);
   assert.match(workflow, /dist\/server\/wrangler\.json/);
+  assert.doesNotMatch(workflow, /--write-out/);
+  assert.match(workflow, /-w ['"]%\{http_code\}['"]/);
 });
 
 test("Phase 07 package and local env examples declare only placeholder billing configuration", () => {

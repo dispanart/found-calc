@@ -17,6 +17,7 @@ test("Phase 07 adds a separate billing domain and protected route tree", () => {
     "apps/web/src/app/api/billing/status/route.ts",
     "apps/web/src/app/api/billing/checkout/route.ts",
     "apps/web/src/app/api/billing/subscription/cancel/route.ts",
+    "apps/web/src/app/api/billing/subscription/change/route.ts",
     "apps/web/src/app/api/billing/webhooks/xendit/route.ts",
   ];
   for (const path of required) assert.equal(existsSync(url(path)), true, `${path} must exist`);

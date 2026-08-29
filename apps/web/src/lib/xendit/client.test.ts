@@ -61,6 +61,22 @@ describe("Xendit client", () => {
     expect(new Headers(init?.headers).get("api-version")).toBe("2026-01-01");
   });
 
+
+  it("updates an existing subscription for annual upgrade/downgrade without creating a second session", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ id: "rp-1", status: "ACTIVE" }), { status: 200, headers: { "content-type": "application/json" } }));
+    const client = createXenditClient({ secretApiKey: "secret", fetchImpl });
+    await client.updateSubscriptionPlan("rp-1", {
+      amount: 250_000, interval: "MONTH", intervalCount: 12, totalRecurrence: null, failedCycleAction: "RESUME", description: "Pro",
+    });
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    expect(url).toBe("https://api.xendit.co/recurring/plans/rp-1");
+    expect(init?.method).toBe("PATCH");
+    expect(new Headers(init?.headers).get("api-version")).toBe("2026-01-01");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      amount: 250000, description: "Pro", schedule: { interval: "MONTH", interval_count: 12 }, failed_cycle_action: "RESUME",
+    });
+  });
+
   it("rejects unsafe return URLs and normalizes provider failures", async () => {
     const client = createXenditClient({ secretApiKey: "secret", fetchImpl: vi.fn<typeof fetch>().mockResolvedValue(new Response("bad", { status: 502 })) });
     await expect(client.createSubscriptionSession({ ...sessionInput, successReturnUrl: "http://found.example/ok" })).rejects.toBeInstanceOf(XenditClientError);

@@ -14,6 +14,7 @@ export type BillingSubscriptionClient = {
   readonly latestCycleStatus: string | null;
   readonly nextCycleAt: number | null;
   readonly cancellationPending: boolean;
+  readonly pendingPlanId: string | null;
 };
 
 export type BillingStatusClient = {
@@ -60,17 +61,19 @@ const parsePlan = (value: unknown): BillingPlanClient | null => {
 
 const parseSubscription = (value: unknown): BillingSubscriptionClient | null | undefined => {
   if (value === null) return null;
-  if (!isRecord(value) || !hasOnlyKeys(value, ["planId", "status", "latestCycleStatus", "nextCycleAt", "cancellationPending"])) return undefined;
+  if (!isRecord(value) || !hasOnlyKeys(value, ["planId", "status", "latestCycleStatus", "nextCycleAt", "cancellationPending", "pendingPlanId"])) return undefined;
   if (!nonEmpty(value.planId, 64)) return undefined;
   if (value.status !== "pending" && value.status !== "active" && value.status !== "past_due" && value.status !== "inactive") return undefined;
   if (value.latestCycleStatus !== null && !nonEmpty(value.latestCycleStatus, 64)) return undefined;
   if (!nullableTimestamp(value.nextCycleAt) || typeof value.cancellationPending !== "boolean") return undefined;
+  if (value.pendingPlanId !== null && !nonEmpty(value.pendingPlanId, 64)) return undefined;
   return {
     planId: value.planId.trim(),
     status: value.status,
     latestCycleStatus: value.latestCycleStatus === null ? null : value.latestCycleStatus.trim(),
     nextCycleAt: value.nextCycleAt,
     cancellationPending: value.cancellationPending,
+    pendingPlanId: value.pendingPlanId === null ? null : value.pendingPlanId.trim(),
   };
 };
 
@@ -131,6 +134,16 @@ export const cancelBillingSubscription = async (): Promise<void> => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: "{}",
+  });
+  await requireOk(response);
+};
+
+
+export const changeBillingSubscription = async (planId: string): Promise<void> => {
+  const response = await fetch("/api/billing/subscription/change", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ planId }),
   });
   await requireOk(response);
 };

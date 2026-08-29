@@ -57,28 +57,6 @@ describe("billing repository", () => {
     expect(count?.count).toBe(1);
   });
 
-  it("uses event rank to break equal provider timestamps without regressing state", async () => {
-    const repo = createBillingRepository(env.DB);
-    await repo.createCheckoutCorrelation({ id: "checkout-1", userId: ownerId, planId: "fixture-pro", referenceId: "billing-ref-1" });
-    expect(await repo.applyWebhookTransition(event(), 1_800_000_000_100)).toMatchObject({ applied: true });
-
-    expect(await repo.applyWebhookTransition(event({
-      dedupeKey: "same-time-lower-rank",
-      eventName: "recurring.cycle.failed",
-      nextStatus: "past_due",
-      rank: 10,
-    }), 1_800_000_000_200)).toMatchObject({ applied: false, matched: true });
-    expect((await repo.getStatusForUser(ownerId)).subscription?.status).toBe("active");
-
-    expect(await repo.applyWebhookTransition(event({
-      dedupeKey: "same-time-higher-rank",
-      eventName: "recurring.cycle.failed",
-      nextStatus: "past_due",
-      rank: 30,
-    }), 1_800_000_000_300)).toMatchObject({ applied: true, matched: true });
-    expect((await repo.getStatusForUser(ownerId)).subscription?.status).toBe("past_due");
-  });
-
   it("does not let stale or post-terminal events regress subscription state", async () => {
     const repo = createBillingRepository(env.DB);
     await repo.createCheckoutCorrelation({ id: "checkout-1", userId: ownerId, planId: "fixture-pro", referenceId: "billing-ref-1" });
@@ -91,6 +69,32 @@ describe("billing repository", () => {
     expect((await repo.getStatusForUser(ownerId)).subscription?.status).toBe("inactive");
   });
 
+  it("uses event rank as the deterministic tie-breaker at the same provider timestamp", async () => {
+    const repo = createBillingRepository(env.DB);
+    await repo.createCheckoutCorrelation({ id: "checkout-1", userId: ownerId, planId: "fixture-pro", referenceId: "billing-ref-1" });
+    await repo.applyWebhookTransition(event(), 1_800_000_000_100);
+
+    expect(await repo.applyWebhookTransition(event({
+      dedupeKey: "same-time-past-due",
+      eventName: "recurring.cycle.retrying",
+      providerEventAt: 1_800_000_000_000,
+      nextStatus: "past_due",
+      latestCycleStatus: "RETRYING",
+      rank: 30,
+    }), 1_800_000_000_200)).toMatchObject({ applied: true, matched: true });
+    expect((await repo.getStatusForUser(ownerId)).subscription).toMatchObject({ status: "past_due", latestCycleStatus: "RETRYING" });
+
+    expect(await repo.applyWebhookTransition(event({
+      dedupeKey: "same-time-lower-rank",
+      eventName: "recurring.cycle.succeeded",
+      providerEventAt: 1_800_000_000_000,
+      nextStatus: "active",
+      latestCycleStatus: "SUCCEEDED",
+      rank: 20,
+    }), 1_800_000_000_300)).toMatchObject({ applied: false, matched: true });
+    expect((await repo.getStatusForUser(ownerId)).subscription).toMatchObject({ status: "past_due", latestCycleStatus: "RETRYING" });
+  });
+
   it("records cancellation once without changing the local status", async () => {
     const repo = createBillingRepository(env.DB);
     await repo.createCheckoutCorrelation({ id: "checkout-1", userId: ownerId, planId: "fixture-pro", referenceId: "billing-ref-1" });
@@ -99,4 +103,27 @@ describe("billing repository", () => {
     expect(await repo.markCancellationRequested(otherId, "provider-plan-1", 1_800_000_020_000)).toBe(false);
     expect((await repo.getStatusForUser(ownerId)).subscription).toMatchObject({ status: "active", cancellationRequestedAt: 1_800_000_010_000 });
   });
+
+  it("promotes a staged upgrade or downgrade only when a confirmed provider event is applied", async () => {
+    const repo = createBillingRepository(env.DB);
+    await repo.createCheckoutCorrelation({ id: "checkout-switch", userId: ownerId, planId: "pro-monthly", referenceId: "billing-ref-switch" });
+    await repo.applyWebhookTransition(event({ referenceId: "billing-ref-switch", providerPlanId: "provider-plan-switch", dedupeKey: "switch-activate" }), 1_800_000_000_100);
+    expect(await repo.stagePlanChange(ownerId, "provider-plan-switch", "business-annual", 1_800_000_010_000)).toBe(true);
+    expect((await repo.getStatusForUser(ownerId)).subscription).toMatchObject({ planId: "pro-monthly", pendingPlanId: "business-annual" });
+
+    const succeeded = event({
+      dedupeKey: "switch-succeeded",
+      eventName: "recurring.cycle.succeeded",
+      providerPlanId: "provider-plan-switch",
+      providerCycleId: "cycle-switch",
+      referenceId: "billing-ref-switch",
+      providerEventAt: 1_800_000_020_000,
+      nextStatus: "active",
+      latestCycleStatus: "SUCCEEDED",
+      rank: 20,
+    });
+    expect(await repo.applyWebhookTransition(succeeded, 1_800_000_020_100, "business-annual")).toMatchObject({ applied: true, matched: true });
+    expect((await repo.getStatusForUser(ownerId)).subscription).toMatchObject({ planId: "business-annual", pendingPlanId: null, status: "active" });
+  });
+
 });
