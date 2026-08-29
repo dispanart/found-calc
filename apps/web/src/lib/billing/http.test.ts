@@ -40,7 +40,8 @@ describe("billing HTTP boundary", () => {
     let providerCalls = 0;
     const svc = services({ repository: { ...baseRepo(), getStatusForUser: async () => ({ checkoutPending: false, subscription: { id: "sub-1", userId: "user-1", planId: "fixture-pro", providerPlanId: "rp-1", referenceId: "ref", status: "active", latestCycleStatus: null, latestEventAt: 1, nextCycleAt: null, cancellationRequestedAt: null } }) }, xendit: { createSubscriptionSession: async () => { providerCalls++; throw new Error(); }, deactivateSubscription: async () => { providerCalls++; } } });
     const response = await handleBillingStatusRequest(new Request("https://found.example/api/billing/status"), svc);
-    expect(response.status).toBe(200); expect((await response.json()).billing.entitlements).toEqual(["fixture.export"]); expect(providerCalls).toBe(0); expect(response.headers.get("cache-control")).toBe("no-store");
+    const payload = await response.json() as { billing: { entitlements: string[] } };
+    expect(response.status).toBe(200); expect(payload.billing.entitlements).toEqual(["fixture.export"]); expect(providerCalls).toBe(0); expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
   it("fails closed for bad checkout input/config/conflicts and exposes only hosted URL", async () => {
@@ -78,7 +79,9 @@ describe("billing HTTP boundary", () => {
     let deactivated = "";
     const svc = services({ repository: { ...baseRepo(), getSubscriptionForCancellation: async () => sub }, xendit: { createSubscriptionSession: async () => { throw new Error(); }, deactivateSubscription: async (id) => { deactivated = id; } } });
     expect((await handleBillingCancelRequest(request("/api/billing/subscription/cancel", { providerPlanId: "attacker" }), svc)).status).toBe(400); expect(deactivated).toBe("");
-    const response = await handleBillingCancelRequest(request("/api/billing/subscription/cancel", {}), svc); expect(response.status).toBe(200); expect(deactivated).toBe("rp-secret"); expect((await response.json()).subscription).toMatchObject({ status: "active", cancellationPending: true });
+    const response = await handleBillingCancelRequest(request("/api/billing/subscription/cancel", {}), svc);
+    const payload = await response.json() as { subscription: { status: string; cancellationPending: boolean } };
+    expect(response.status).toBe(200); expect(deactivated).toBe("rp-secret"); expect(payload.subscription).toMatchObject({ status: "active", cancellationPending: true });
   });
 
   it("authenticates webhook before parsing and validates amount/currency against local plan", async () => {
