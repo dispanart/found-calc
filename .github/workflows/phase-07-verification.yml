@@ -25,7 +25,7 @@ jobs:
       BETTER_AUTH_SECRET: phase-07-ci-test-secret-not-for-production-000000000000000000000000
       BETTER_AUTH_URL: http://127.0.0.1:3000
       BETTER_AUTH_ADMIN_USER_IDS: phase-07-ci-admin-bootstrap
-      BILLING_PLANS_JSON: '[{"id":"ci-fixture","displayName":{"id":"Fixture CI","en":"CI Fixture"},"description":{"id":"Hanya untuk verifikasi CI","en":"CI verification only"},"amount":10000,"currency":"IDR","country":"ID","interval":"MONTH","intervalCount":1,"billingDay":15,"totalRecurrence":null,"failedCycleAction":"RESUME","entitlements":["fixture.ci"]}]'
+      BILLING_PLANS_JSON: '[{"id":"pro-monthly","displayName":{"id":"Pro","en":"Pro"},"description":{"id":"Konfigurasi verifikasi Pro","en":"Pro verification configuration"},"amount":25000,"currency":"IDR","country":"ID","interval":"MONTH","intervalCount":1,"billingDay":15,"totalRecurrence":null,"failedCycleAction":"RESUME","entitlements":["advanced_scenarios","history_depth"]},{"id":"pro-annual","displayName":{"id":"Pro","en":"Pro"},"description":{"id":"Konfigurasi verifikasi Pro","en":"Pro verification configuration"},"amount":250000,"currency":"IDR","country":"ID","interval":"MONTH","intervalCount":12,"billingDay":15,"totalRecurrence":null,"failedCycleAction":"RESUME","entitlements":["advanced_scenarios","history_depth"]},{"id":"business-monthly","displayName":{"id":"Business","en":"Business"},"description":{"id":"Konfigurasi verifikasi Business","en":"Business verification configuration"},"amount":75000,"currency":"IDR","country":"ID","interval":"MONTH","intervalCount":1,"billingDay":15,"totalRecurrence":null,"failedCycleAction":"RESUME","entitlements":["advanced_scenarios","history_depth","bulk_sku","export","team_access"]},{"id":"business-annual","displayName":{"id":"Business","en":"Business"},"description":{"id":"Konfigurasi verifikasi Business","en":"Business verification configuration"},"amount":750000,"currency":"IDR","country":"ID","interval":"MONTH","intervalCount":12,"billingDay":15,"totalRecurrence":null,"failedCycleAction":"RESUME","entitlements":["advanced_scenarios","history_depth","bulk_sku","export","team_access"]}]'
       PUBLIC_APP_ORIGIN: https://found.example
       XENDIT_SECRET_API_KEY: phase-07-provider-secret-test-only
       XENDIT_WEBHOOK_TOKEN: phase-07-webhook-token-test-only-000000
@@ -86,9 +86,9 @@ jobs:
           done
           if [ "$ready" -ne 1 ]; then cat "$RUNNER_TEMP/found-calc-phase07-wrangler.log"; exit 1; fi
 
-          signed_out_billing="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8787/api/billing/status)"
+          signed_out_billing="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/api/billing/status)"
           test "$signed_out_billing" = "401"
-          bad_webhook="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+          bad_webhook="$(curl -sS -o /dev/null -w '%{http_code}' \
             --header 'content-type: application/json' \
             --header 'x-callback-token: definitely-wrong-token' \
             --data '{}' \
@@ -111,8 +111,11 @@ jobs:
             const body = JSON.parse(process.env.BILLING_JSON ?? "null");
             if (
               body?.billing?.available !== true ||
-              !Array.isArray(body.billing.plans) || body.billing.plans.length !== 1 ||
-              body.billing.plans[0]?.id !== "ci-fixture" ||
+              !Array.isArray(body.billing.plans) || body.billing.plans.length !== 4 ||
+              body.billing.plans[0]?.id !== "pro-monthly" ||
+              body.billing.plans[1]?.id !== "pro-annual" ||
+              body.billing.plans[2]?.id !== "business-monthly" ||
+              body.billing.plans[3]?.id !== "business-annual" ||
               body.billing.subscription !== null ||
               !Array.isArray(body.billing.entitlements) || body.billing.entitlements.length !== 0
             ) process.exit(1);
