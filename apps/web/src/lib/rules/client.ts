@@ -47,7 +47,7 @@ export const fetchPublishedRuleVersions = async (
     method: "GET",
     headers: { Accept: "application/json" },
     cache: "no-store",
-    signal,
+    ...(signal === undefined ? {} : { signal }),
   });
   if (!response.ok) throw new Error("rule-feed-unavailable");
   const parsed = parsePublishedRuleFeed(await response.json());
