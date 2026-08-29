@@ -1,4 +1,6 @@
 import type { D1Database } from "@cloudflare/workers-types";
+import { env } from "cloudflare:workers";
+import { applyD1Migrations, reset } from "cloudflare:test";
 
 const phase04TablesInDropOrder = [
   "calculator_state",
@@ -14,6 +16,20 @@ const splitMigrationStatements = (sql: string): string[] =>
     .map((statement) => statement.trim())
     .filter((statement) => statement.length > 0);
 
+type D1Migrations = Parameters<typeof applyD1Migrations>[1];
+
+declare module "cloudflare:workers" {
+  interface ProvidedEnv {
+    DB: D1Database;
+    TEST_MIGRATIONS: D1Migrations;
+  }
+}
+
+export const resetCurrentDatabase = async () => {
+  await reset();
+  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+};
+
 export const resetPhase04Database = async (db: D1Database, migrationSql: string) => {
   const dropStatements = phase04TablesInDropOrder.map((table) =>
     db.prepare(`DROP TABLE IF EXISTS ${table}`),
@@ -23,15 +39,4 @@ export const resetPhase04Database = async (db: D1Database, migrationSql: string)
   );
 
   await db.batch([...dropStatements, ...migrationStatements]);
-};
-
-export const resetPhase05Database = async (
-  db: D1Database,
-  phase04MigrationSql: string,
-  phase05MigrationSql: string,
-) => {
-  await db.exec("DROP TRIGGER IF EXISTS rule_version_publication_overlap; DROP TRIGGER IF EXISTS rule_version_published_immutable; DROP TRIGGER IF EXISTS rule_version_published_delete_forbidden;");
-  await db.exec("DROP TABLE IF EXISTS rule_version; DROP TABLE IF EXISTS calculator_state; DROP TABLE IF EXISTS verification; DROP TABLE IF EXISTS account; DROP TABLE IF EXISTS session; DROP TABLE IF EXISTS user;");
-  await db.exec(phase04MigrationSql);
-  await db.exec(phase05MigrationSql);
 };
