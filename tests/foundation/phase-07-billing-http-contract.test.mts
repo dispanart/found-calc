@@ -14,6 +14,8 @@ test("billing HTTP boundary protects auth, checkout, cancellation, and webhook i
   assert.match(http, /parsed\.event\.amount\s*!==\s*plan\.amount/);
   assert.match(http, /deactivateSubscription\(subscription\.providerPlanId\)/);
   assert.match(http, /cancellationPending:\s*true/);
+  assert.match(http, /locale\s*!==\s*"id".*locale\s*!==\s*"en"/s);
+  assert.match(http, /`\/\$\{locale\}\/workspace\/billing\?checkout=success`/);
   assert.doesNotMatch(http, /request[^\n]*providerPlanId|body\.providerPlanId/);
 });
 

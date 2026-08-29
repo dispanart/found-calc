@@ -68,10 +68,12 @@ const readJson = async (request: Request) => {
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
-const parseCheckoutBody = (value: unknown): string | null => {
-  if (!isRecord(value) || Object.keys(value).length !== 1 || typeof value.planId !== "string") return null;
+const parseCheckoutBody = (value: unknown): { readonly planId: string; readonly locale: "id" | "en" } | null => {
+  if (!isRecord(value) || Object.keys(value).length !== 2 || typeof value.planId !== "string") return null;
+  const locale = value.locale;
+  if (locale !== "id" && locale !== "en") return null;
   const planId = value.planId.trim();
-  return planId.length >= 2 && planId.length <= 64 ? planId : null;
+  return planId.length >= 2 && planId.length <= 64 ? { planId, locale } : null;
 };
 const isEmptyObject = (value: unknown): boolean => isRecord(value) && Object.keys(value).length === 0;
 
@@ -142,8 +144,9 @@ export const handleBillingCheckoutRequest = async (request: Request, services: B
     userId = auth.user.id;
     const body = await readJson(request);
     if (!body.ok) return body.response;
-    const planId = parseCheckoutBody(body.value);
-    if (!planId) return error("invalid-billing-input", 400);
+    const checkout = parseCheckoutBody(body.value);
+    if (!checkout) return error("invalid-billing-input", 400);
+    const { planId, locale } = checkout;
     if (!services.plans.ok) return error("billing-unavailable", 503);
     const plan = getBillingPlan(services.plans.plans, planId);
     if (!plan) return error("billing-plan-not-found", 404);
@@ -167,15 +170,15 @@ export const handleBillingCheckoutRequest = async (request: Request, services: B
       amount: plan.amount,
       currency: plan.currency,
       country: plan.country,
-      locale: "id",
+      locale,
       description: plan.displayName.en,
       interval: plan.interval,
       intervalCount: plan.intervalCount,
       anchorDate: nextBillingAnchorIso(plan.billingDay, now),
       totalRecurrence: plan.totalRecurrence,
       failedCycleAction: plan.failedCycleAction,
-      successReturnUrl: new URL("/workspace/billing?checkout=success", origin).toString(),
-      cancelReturnUrl: new URL("/workspace/billing?checkout=cancelled", origin).toString(),
+      successReturnUrl: new URL(`/${locale}/workspace/billing?checkout=success`, origin).toString(),
+      cancelReturnUrl: new URL(`/${locale}/workspace/billing?checkout=cancelled`, origin).toString(),
     });
     if (providerSession.referenceId !== referenceId) throw new XenditClientError();
     if (!await services.repository.attachProviderSession(auth.user.id, checkoutId, providerSession.paymentSessionId, now.valueOf())) throw new Error("checkout-correlation-missing");

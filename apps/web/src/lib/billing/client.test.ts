@@ -27,9 +27,12 @@ describe("billing client", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/billing/status", expect.objectContaining({ cache: "no-store" }));
   });
 
-  it("starts checkout only from an HTTPS provider URL", async () => {
-    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ checkout: { url: "https://payments.xendit.co/session/1" } }), { status: 201 })));
-    await expect(startBillingCheckout("fixture-pro")).resolves.toBe("https://payments.xendit.co/session/1");
+  it("starts localized checkout only from an HTTPS provider URL", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ checkout: { url: "https://payments.xendit.co/session/1" } }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(startBillingCheckout("fixture-pro", "en")).resolves.toBe("https://payments.xendit.co/session/1");
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(JSON.parse(String(init?.body))).toEqual({ planId: "fixture-pro", locale: "en" });
   });
 
   it("cancels without sending provider identity", async () => {

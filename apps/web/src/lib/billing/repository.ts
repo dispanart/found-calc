@@ -245,7 +245,14 @@ export const createBillingRepository = (binding: D1Database) => {
         provider_created_at = COALESCE(excluded.provider_created_at, billing_subscription.provider_created_at),
         provider_updated_at = COALESCE(excluded.provider_updated_at, billing_subscription.provider_updated_at),
         updated_at = excluded.updated_at
-      WHERE billing_subscription.status <> 'inactive' OR excluded.status = 'inactive'
+      WHERE (billing_subscription.status <> 'inactive' OR excluded.status = 'inactive')
+        AND (
+          excluded.latest_event_at > billing_subscription.latest_event_at
+          OR (
+            excluded.latest_event_at = billing_subscription.latest_event_at
+            AND excluded.latest_event_rank >= billing_subscription.latest_event_rank
+          )
+        )
     `).bind(
       subscriptionId,
       owner.userId,
@@ -275,7 +282,8 @@ export const createBillingRepository = (binding: D1Database) => {
 
     const results = await binding.batch([inboxStatement, subscriptionStatement, checkoutStatement]);
     const inserted = Boolean(results[0]?.meta.changes);
-    return { duplicate: !inserted, applied: inserted && !stale, matched: true };
+    const subscriptionChanged = Boolean(results[1]?.meta.changes);
+    return { duplicate: !inserted, applied: inserted && !stale && subscriptionChanged, matched: true };
   };
 
   return {

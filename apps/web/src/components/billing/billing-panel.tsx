@@ -106,9 +106,12 @@ export function BillingPanel({ locale }: { locale: Locale }) {
   useEffect(() => {
     if (!session?.user.id) return;
     const controller = new AbortController();
-    setStatusMessage("");
     fetchBillingStatus(controller.signal)
-      .then(setBilling)
+      .then((next) => {
+        if (controller.signal.aborted) return;
+        setBilling(next);
+        setStatusMessage("");
+      })
       .catch(() => { if (!controller.signal.aborted) setStatusMessage(text.failed); });
     return () => controller.abort();
   }, [session?.user.id, refreshKey, text.failed]);
@@ -145,7 +148,7 @@ export function BillingPanel({ locale }: { locale: Locale }) {
   const beginCheckout = async (planId: string) => {
     setBusyPlan(planId); setStatusMessage(text.opening);
     try {
-      const url = await startBillingCheckout(planId);
+      const url = await startBillingCheckout(planId, locale);
       window.location.assign(url);
     } catch {
       setStatusMessage(text.failed); setBusyPlan(null);

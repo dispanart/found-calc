@@ -22,5 +22,7 @@ test("Phase 07 billing storage is a separate D1 domain with webhook dedupe", () 
   const repository = read(repositoryPath);
   assert.match(repository, /binding\.batch\s*\(/);
   assert.match(repository, /INSERT OR IGNORE INTO billing_webhook_inbox/i);
+  assert.match(repository, /excluded\.latest_event_at\s*>\s*billing_subscription\.latest_event_at/i);
+  assert.match(repository, /excluded\.latest_event_at\s*=\s*billing_subscription\.latest_event_at[\s\S]*excluded\.latest_event_rank\s*>=\s*billing_subscription\.latest_event_rank/i);
   assert.doesNotMatch(repository, /@found-calc\/engine|@found-calc\/rules/);
 });

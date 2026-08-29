@@ -57,6 +57,28 @@ describe("billing repository", () => {
     expect(count?.count).toBe(1);
   });
 
+  it("uses event rank to break equal provider timestamps without regressing state", async () => {
+    const repo = createBillingRepository(env.DB);
+    await repo.createCheckoutCorrelation({ id: "checkout-1", userId: ownerId, planId: "fixture-pro", referenceId: "billing-ref-1" });
+    expect(await repo.applyWebhookTransition(event(), 1_800_000_000_100)).toMatchObject({ applied: true });
+
+    expect(await repo.applyWebhookTransition(event({
+      dedupeKey: "same-time-lower-rank",
+      eventName: "recurring.cycle.failed",
+      nextStatus: "past_due",
+      rank: 10,
+    }), 1_800_000_000_200)).toMatchObject({ applied: false, matched: true });
+    expect((await repo.getStatusForUser(ownerId)).subscription?.status).toBe("active");
+
+    expect(await repo.applyWebhookTransition(event({
+      dedupeKey: "same-time-higher-rank",
+      eventName: "recurring.cycle.failed",
+      nextStatus: "past_due",
+      rank: 30,
+    }), 1_800_000_000_300)).toMatchObject({ applied: true, matched: true });
+    expect((await repo.getStatusForUser(ownerId)).subscription?.status).toBe("past_due");
+  });
+
   it("does not let stale or post-terminal events regress subscription state", async () => {
     const repo = createBillingRepository(env.DB);
     await repo.createCheckoutCorrelation({ id: "checkout-1", userId: ownerId, planId: "fixture-pro", referenceId: "billing-ref-1" });

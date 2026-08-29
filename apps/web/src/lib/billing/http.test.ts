@@ -32,7 +32,7 @@ describe("billing HTTP boundary", () => {
   it("requires authentication for browser billing APIs", async () => {
     const signedOut = services({ auth: { api: { getSession: async () => null } } as BillingHttpServices["auth"] });
     expect((await handleBillingStatusRequest(new Request("https://found.example/api/billing/status"), signedOut)).status).toBe(401);
-    expect((await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro" }), signedOut)).status).toBe(401);
+    expect((await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro", locale: "id" }), signedOut)).status).toBe(401);
     expect((await handleBillingCancelRequest(request("/api/billing/subscription/cancel", {}), signedOut)).status).toBe(401);
   });
 
@@ -44,12 +44,33 @@ describe("billing HTTP boundary", () => {
   });
 
   it("fails closed for bad checkout input/config/conflicts and exposes only hosted URL", async () => {
-    expect((await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "missing" }), services())).status).toBe(404);
-    expect((await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro", providerPlanId: "forged" }), services())).status).toBe(400);
-    expect((await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro" }), services({ plans: { ok: false, code: "billing-unavailable" } }))).status).toBe(503);
-    expect((await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro" }), services({ repository: { ...baseRepo(), getStatusForUser: async () => ({ subscription: null, checkoutPending: true }) } }))).status).toBe(409);
-    const response = await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro" }), services());
+    expect((await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "missing", locale: "id" }), services())).status).toBe(404);
+    expect((await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro", locale: "id", providerPlanId: "forged" }), services())).status).toBe(400);
+    expect((await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro" }), services())).status).toBe(400);
+    expect((await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro", locale: "id" }), services({ plans: { ok: false, code: "billing-unavailable" } }))).status).toBe(503);
+    expect((await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro", locale: "id" }), services({ repository: { ...baseRepo(), getStatusForUser: async () => ({ subscription: null, checkoutPending: true }) } }))).status).toBe(409);
+    const response = await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro", locale: "id" }), services());
     expect(await response.json()).toEqual({ checkout: { url: "https://payments.xendit.co/session/ps-1" } });
+  });
+
+  it("passes locale to Xendit and keeps both return URLs inside the localized billing workspace", async () => {
+    let captured: Parameters<BillingHttpServices["xendit"]["createSubscriptionSession"]>[0] | null = null;
+    const svc = services({
+      xendit: {
+        createSubscriptionSession: async (input) => {
+          captured = input;
+          return { paymentSessionId: "ps-1", recurringPlanId: "rp-1", referenceId: input.referenceId, paymentLinkUrl: "https://payments.xendit.co/session/ps-1" };
+        },
+        deactivateSubscription: async () => undefined,
+      },
+    });
+    const response = await handleBillingCheckoutRequest(request("/api/billing/checkout", { planId: "fixture-pro", locale: "en" }), svc);
+    expect(response.status).toBe(201);
+    expect(captured).toMatchObject({
+      locale: "en",
+      successReturnUrl: "https://found.example/en/workspace/billing?checkout=success",
+      cancelReturnUrl: "https://found.example/en/workspace/billing?checkout=cancelled",
+    });
   });
 
   it("does not let cancellation input select provider identity", async () => {

@@ -108,11 +108,11 @@ export const fetchBillingStatus = async (signal?: AbortSignal): Promise<BillingS
   return parsed;
 };
 
-export const startBillingCheckout = async (planId: string): Promise<string> => {
+export const startBillingCheckout = async (planId: string, locale: "id" | "en"): Promise<string> => {
   const response = await fetch("/api/billing/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ planId }),
+    body: JSON.stringify({ planId, locale }),
   });
   await requireOk(response);
   const value = await response.json() as unknown;
