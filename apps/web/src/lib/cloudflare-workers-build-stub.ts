@@ -8,4 +8,5 @@ export const env = {
   DB: new Proxy({}, { get: () => unavailable }) as D1Database,
   BETTER_AUTH_SECRET: "build-only-placeholder-secret-32chars",
   BETTER_AUTH_URL: "http://127.0.0.1:3000",
+  BETTER_AUTH_ADMIN_USER_IDS: "",
 };

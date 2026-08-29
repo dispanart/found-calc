@@ -1,3 +1,5 @@
 # Local-only Better Auth settings. Copy to .dev.vars and replace the secret.
 BETTER_AUTH_SECRET=replace-with-random-local-secret
 BETTER_AUTH_URL=http://127.0.0.1:3000
+# Optional comma-separated Better Auth user IDs for the Phase 05 admin bootstrap.
+BETTER_AUTH_ADMIN_USER_IDS=

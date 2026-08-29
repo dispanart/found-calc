@@ -1,3 +1,4 @@
+import { syntheticRateRuleVersions } from "@found-calc/rules";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -48,13 +49,13 @@ describe("Phase 03 calculator runtime adapters", () => {
   });
 
   it("resolves synthetic rule versions explicitly from effective date", () => {
-    const in2025 = runSyntheticRule({ baseAmount: "100.00", effectiveDate: "2025-06-01" });
+    const in2025 = runSyntheticRule({ baseAmount: "100.00", effectiveDate: "2025-06-01" }, syntheticRateRuleVersions);
     expect(in2025.ok).toBe(true);
     if (!in2025.ok) throw new Error("expected 2025 synthetic success");
     expect(in2025.result.primaryAnswer.value).toBe("5.00");
     expect(in2025.result.ruleDependencies?.[0]?.versionId).toBe("2025-a");
 
-    const in2026 = runSyntheticRule({ baseAmount: "100.00", effectiveDate: "2026-06-01" });
+    const in2026 = runSyntheticRule({ baseAmount: "100.00", effectiveDate: "2026-06-01" }, syntheticRateRuleVersions);
     expect(in2026.ok).toBe(true);
     if (!in2026.ok) throw new Error("expected 2026 synthetic success");
     expect(in2026.result.primaryAnswer.value).toBe("7.50");
@@ -62,11 +63,11 @@ describe("Phase 03 calculator runtime adapters", () => {
   });
 
   it("maps invalid and unavailable effective dates to typed calculation failures", () => {
-    expect(runSyntheticRule({ baseAmount: "100.00", effectiveDate: "2026-02-30" })).toEqual({
+    expect(runSyntheticRule({ baseAmount: "100.00", effectiveDate: "2026-02-30" }, syntheticRateRuleVersions)).toEqual({
       ok: false,
       issues: [{ path: "effectiveDate", code: "invalid-effective-date" }],
     });
-    expect(runSyntheticRule({ baseAmount: "100.00", effectiveDate: "2024-06-01" })).toEqual({
+    expect(runSyntheticRule({ baseAmount: "100.00", effectiveDate: "2024-06-01" }, syntheticRateRuleVersions)).toEqual({
       ok: false,
       issues: [{ path: "effectiveDate", code: "rule-unavailable" }],
     });

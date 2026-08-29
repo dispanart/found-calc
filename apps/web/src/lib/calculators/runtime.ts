@@ -12,7 +12,7 @@ import {
   type DiscountInput,
   type Scenario,
 } from "@found-calc/engine";
-import { resolveRuleVersion, syntheticRateRuleVersions } from "@found-calc/rules";
+import { resolveRuleVersion, type RuleVersion } from "@found-calc/rules";
 
 const PHASE_03_REFERENCE_EFFECTIVE_DATE = "2026-08-28";
 
@@ -42,8 +42,8 @@ export interface SyntheticRuleRuntimeInput {
   readonly effectiveDate: string;
 }
 
-export const runSyntheticRule = (input: SyntheticRuleRuntimeInput) => {
-  const resolution = resolveRuleVersion(syntheticRateRuleVersions, {
+export const runSyntheticRule = (input: SyntheticRuleRuntimeInput, versions: readonly RuleVersion<{ ratePercent: string }>[]) => {
+  const resolution = resolveRuleVersion(versions, {
     ruleId: "reference.synthetic-rate",
     effectiveDate: input.effectiveDate,
   });

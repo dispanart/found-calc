@@ -1,0 +1,79 @@
+name: Phase 05 Verification
+
+on:
+  push:
+    branches:
+      - phase-05-versioned-rule-platform-admin-core
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-05-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify Phase 05 rule platform and admin core
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    env:
+      BETTER_AUTH_SECRET: phase-05-ci-test-secret-not-for-production-000000000000000000000000
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+      BETTER_AUTH_ADMIN_USER_IDS: phase-05-ci-admin-bootstrap
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Confirm pnpm
+        run: pnpm --version
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
+      - name: Reset and apply local D1 migrations
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .wrangler/state
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0001_phase04_auth_and_calculator_state.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0002_phase05_rule_platform_admin.sql --yes
+      - name: Run Phase 05 verification gate
+        run: pnpm verify:phase05
+      - name: Smoke-test built vinext Worker rule routes
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          smoke_state="$RUNNER_TEMP/found-calc-phase05-smoke-state"
+          rm -rf "$smoke_state"
+          pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file migrations/0001_phase04_auth_and_calculator_state.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file migrations/0002_phase05_rule_platform_admin.sql --yes
+          pnpm exec wrangler dev --config dist/server/wrangler.json --port 8787 --persist-to "$smoke_state" \
+            --var BETTER_AUTH_SECRET:"$BETTER_AUTH_SECRET" \
+            --var BETTER_AUTH_URL:http://127.0.0.1:8787 \
+            --var BETTER_AUTH_ADMIN_USER_IDS:"$BETTER_AUTH_ADMIN_USER_IDS" \
+            > "$RUNNER_TEMP/found-calc-phase05-wrangler.log" 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:8787/id > /dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat "$RUNNER_TEMP/found-calc-phase05-wrangler.log"; exit 1; fi
+          curl --fail --silent --show-error http://127.0.0.1:8787/api/rules/reference.synthetic-rate/versions \
+            | grep -Fq '"2026-a"'
+          admin_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8787/api/admin/rule-versions)"
+          test "$admin_status" = "401"
