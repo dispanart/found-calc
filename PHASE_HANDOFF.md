@@ -1,7 +1,7 @@
 # Found Calc — Phase Handoff
 
 **Project:** Found Calc  
-**Last canonical completed phase is **Phase 05 — Versioned Rule Platform + Admin Core**  
+Last canonical completed phase is **Phase 05 — Versioned Rule Platform + Admin Core**  
 **Current status:** COMPLETE  
 **Next phase:** **Phase 06 — Goals, Projects, Profiles & Workspace**
 
