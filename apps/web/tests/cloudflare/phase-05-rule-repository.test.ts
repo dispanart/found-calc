@@ -52,19 +52,23 @@ describe("rule version repository", () => {
     const overlapping = await repo.createDraft(draft({ versionId: "2026-overlap", effectiveFrom: "2026-06-01" }), actorId);
     await expect(repo.publish(overlapping.id, actorId)).rejects.toMatchObject<Partial<RuleRepositoryError>>({ code: "publication-overlap" });
 
-    const future = await repo.createDraft(draft(), actorId);
-    const published = await repo.publish(future.id, actorId);
+    const historical = await repo.createDraft(draft({
+      versionId: "2024-a",
+      effectiveFrom: "2024-01-01",
+      effectiveUntil: "2024-12-31",
+    }), actorId);
+    const published = await repo.publish(historical.id, actorId);
     expect(published.status).toBe("published");
     expect(published.publishedByUserId).toBe(actorId);
     expect(published.publishedAt).toBeTypeOf("number");
-    await expect(repo.publish(future.id, actorId)).resolves.toMatchObject({
-      id: future.id,
+    await expect(repo.publish(historical.id, actorId)).resolves.toMatchObject({
+      id: historical.id,
       status: "published",
       publishedByUserId: actorId,
       publishedAt: published.publishedAt,
     });
 
     await expect(env.DB.prepare("UPDATE rule_version SET payload_json = ? WHERE id = ?")
-      .bind('{"ratePercent":"9"}', future.id).run()).rejects.toThrow(/rule_version_published_immutable/);
+      .bind('{"ratePercent":"9"}', historical.id).run()).rejects.toThrow(/rule_version_published_immutable/);
   });
 });
