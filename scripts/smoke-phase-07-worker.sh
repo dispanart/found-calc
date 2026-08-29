@@ -20,11 +20,11 @@ sanitize_stream() {
       if (value) text = text.split(value).join("[REDACTED]");
     }
     text = text
-      .replace(/(authorization\\s*[:=]\\s*)([^\\s,;]+)/gi, "$1[REDACTED]")
-      .replace(/(x-callback-token\\s*[:=]\\s*)([^\\s,;]+)/gi, "$1[REDACTED]")
-      .replace(/(set-cookie\\s*:\\s*)([^\\r\\n]+)/gi, "$1[REDACTED]")
-      .replace(/(cookie\\s*:\\s*)([^\\r\\n]+)/gi, "$1[REDACTED]")
-      .replace(/("(?:token|secret|password|cookie)"\\s*:\\s*")[^"]*(")/gi, "$1[REDACTED]$2");
+      .replace(/(authorization\s*[:=]\s*)([^\s,;]+)/gi, "$1[REDACTED]")
+      .replace(/(x-callback-token\s*[:=]\s*)([^\s,;]+)/gi, "$1[REDACTED]")
+      .replace(/(set-cookie\s*:\s*)([^\r\n]+)/gi, "$1[REDACTED]")
+      .replace(/(cookie\s*:\s*)([^\r\n]+)/gi, "$1[REDACTED]")
+      .replace(/("(?:token|secret|password|cookie)"\s*:\s*")[^"]*(")/gi, "$1[REDACTED]$2");
     process.stdout.write(text);
   '
 }
@@ -66,6 +66,17 @@ pass_checkpoint() {
   echo "::notice title=Phase 07 Worker smoke [$checkpoint]::passed"
 }
 
+verify_sanitizer() {
+  local sample sanitized forbidden
+  sample=$'authorization: bearer-smoke-secret\nx-callback-token: callback-smoke-secret\nset-cookie: session=smoke-cookie-secret\ncookie: session=smoke-cookie-request\n{"password":"smoke-password-secret","token":"smoke-token-secret"}'
+  sanitized="$(printf '%s' "$sample" | sanitize_stream)"
+  for forbidden in bearer-smoke-secret callback-smoke-secret smoke-cookie-secret smoke-cookie-request smoke-password-secret smoke-token-secret; do
+    if [[ "$sanitized" == *"$forbidden"* ]]; then
+      fail_checkpoint "worker-startup" "diagnostic sanitizer self-check failed"
+    fi
+  done
+}
+
 cleanup() {
   if [[ -n "$worker_pid" ]]; then
     kill "$worker_pid" 2>/dev/null || true
@@ -80,6 +91,7 @@ for key in BETTER_AUTH_SECRET BILLING_PLANS_JSON PUBLIC_APP_ORIGIN XENDIT_SECRET
     fail_checkpoint "worker-startup" "required environment variable $key is missing"
   fi
 done
+verify_sanitizer
 
 cd "$web_dir"
 rm -rf "$smoke_state"
