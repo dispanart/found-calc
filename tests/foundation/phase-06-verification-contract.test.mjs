@@ -18,12 +18,13 @@ test("Phase 06 verification is a Phase 05 regression superset", () => {
   assert.match(script, /verify:phase05/);
 });
 
-test("Phase 06 owns main PR verification and applies the full D1 migration chain", () => {
+test("Phase 06 retains branch/manual verification and applies the full D1 migration chain after successor handoff", () => {
   const workflowPath = ".github/workflows/phase-06-verification.yml";
   assert.equal(existsSync(url(workflowPath)), true, `${workflowPath} must exist`);
   const workflow = read(workflowPath);
-  assert.match(workflow, /pull_request:\s*\n\s*branches:\s*\n\s*- main/);
+  assert.doesNotMatch(workflow, /pull_request:\s*\n\s*branches:\s*\n\s*- main/);
   assert.match(workflow, /phase-06-goals-projects-profiles-workspace/);
+  assert.match(workflow, /workflow_dispatch\s*:/);
   for (const migration of [
     "0001_phase04_auth_and_calculator_state.sql",
     "0002_phase05_rule_platform_admin.sql",
