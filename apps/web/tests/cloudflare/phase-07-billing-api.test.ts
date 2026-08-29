@@ -112,7 +112,7 @@ describe("Phase 07 billing API with D1", () => {
       auth, repository, plans, xendit, publicAppOrigin: "https://found.example", webhookToken,
       randomUUID: () => "00000000-0000-4000-8000-000000000001", now: () => new Date("2026-08-14T10:00:00.000Z"),
     };
-    const checkout = await handleBillingCheckoutRequest(request("/api/billing/checkout", "POST", user.cookie, { planId: "fixture-pro" }), services);
+    const checkout = await handleBillingCheckoutRequest(request("/api/billing/checkout", "POST", user.cookie, { planId: "fixture-pro", locale: "en" }), services);
     expect(checkout.status).toBe(201);
     expect(capturedReference).toMatch(/^fcbilling/);
     expect((await repository.getStatusForUser(user.id))).toMatchObject({ checkoutPending: true, subscription: null });
