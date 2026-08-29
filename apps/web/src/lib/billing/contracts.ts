@@ -2,6 +2,29 @@ export type BillingLocale = "id" | "en";
 export type BillingSubscriptionStatus = "pending" | "active" | "past_due" | "inactive";
 export type BillingFailedCycleAction = "RESUME" | "STOP";
 
+export type CommercialTier = "friends" | "besties" | "family";
+export type InternalPaidTier = "pro" | "business";
+
+export type CommercialLimits = {
+  readonly savedCalculations: number | null;
+  readonly historyDays: number | null;
+  readonly activeGoals: number | null;
+  readonly activeProjects: number | null;
+  readonly widgetDomains: number;
+  readonly teamSeats: number;
+  readonly removeWidgetBranding: boolean;
+  readonly widgetCustomization: boolean;
+  readonly standardWidgetAnalytics: boolean;
+  readonly whiteLabelWidgets: boolean;
+  readonly advancedWidgetAnalytics: boolean;
+  readonly portfolioEnabled: boolean;
+  readonly bulkSku: boolean;
+  readonly csvImport: boolean;
+  readonly multiMarketplace: boolean;
+  readonly multiStoreBusiness: boolean;
+  readonly campaignPortfolio: boolean;
+};
+
 export type BillingPlanDefinition = {
   readonly id: string;
   readonly displayName: { readonly id: string; readonly en: string };
