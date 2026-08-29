@@ -55,6 +55,7 @@ type SubscriptionRow = {
 
 export type BillingEventOwner = { readonly userId: string; readonly planId: string; readonly pendingPlanId: string | null };
 type CheckoutOwnerRow = { userId: string; planId: string; pendingPlanId?: string | null };
+type EventOwnerSubscriptionRow = BillingEventOwner & { providerPlanId: string; referenceId: string };
 
 const subscriptionFromRow = (row: SubscriptionRow): BillingSubscriptionRecord => ({
   id: row.id,
@@ -118,13 +119,21 @@ export const createBillingRepository = (binding: D1Database) => {
   };
 
   const getEventOwner = async (referenceId: string, providerPlanId: string): Promise<BillingEventOwner | null> => {
-    const subscription = await binding.prepare(`
-      SELECT user_id AS userId, plan_id AS planId, pending_plan_id AS pendingPlanId
+    const subscriptions = await binding.prepare(`
+      SELECT user_id AS userId, plan_id AS planId, pending_plan_id AS pendingPlanId,
+             provider_plan_id AS providerPlanId, reference_id AS referenceId
       FROM billing_subscription
       WHERE provider_plan_id = ? OR reference_id = ?
-      ORDER BY updated_at DESC LIMIT 1
-    `).bind(providerPlanId, referenceId).first<CheckoutOwnerRow>();
-    if (subscription) return { ...subscription, pendingPlanId: subscription.pendingPlanId ?? null };
+      ORDER BY updated_at DESC LIMIT 2
+    `).bind(providerPlanId, referenceId).all<EventOwnerSubscriptionRow>();
+    const exactSubscription = subscriptions.results.find(
+      (candidate) => candidate.providerPlanId === providerPlanId && candidate.referenceId === referenceId,
+    );
+    if (subscriptions.results.length > 0) {
+      return exactSubscription
+        ? { userId: exactSubscription.userId, planId: exactSubscription.planId, pendingPlanId: exactSubscription.pendingPlanId }
+        : null;
+    }
     const checkout = await binding.prepare(`
       SELECT user_id AS userId, plan_id AS planId
       FROM billing_checkout
@@ -219,7 +228,7 @@ export const createBillingRepository = (binding: D1Database) => {
       .bind(event.dedupeKey).first<{ dedupe_key: string }>();
     if (existingInbox) return { duplicate: true, applied: false, matched: true };
 
-    const existingSubscription = await binding.prepare(`
+    const subscriptionCandidates = await binding.prepare(`
       SELECT id, user_id AS userId, plan_id AS planId, provider_plan_id AS providerPlanId,
              reference_id AS referenceId, status, latest_cycle_status AS latestCycleStatus,
              latest_event_at AS latestEventAt, latest_event_rank AS latestEventRank,
@@ -227,8 +236,14 @@ export const createBillingRepository = (binding: D1Database) => {
              pending_plan_id AS pendingPlanId, pending_plan_change_requested_at AS pendingPlanChangeRequestedAt
       FROM billing_subscription
       WHERE provider_plan_id = ? OR reference_id = ?
-      ORDER BY updated_at DESC LIMIT 1
-    `).bind(event.providerPlanId, event.referenceId).first<SubscriptionRow>();
+      ORDER BY updated_at DESC LIMIT 2
+    `).bind(event.providerPlanId, event.referenceId).all<SubscriptionRow>();
+    const existingSubscription = subscriptionCandidates.results.find(
+      (candidate) => candidate.providerPlanId === event.providerPlanId && candidate.referenceId === event.referenceId,
+    ) ?? null;
+    if (subscriptionCandidates.results.length > 0 && !existingSubscription) {
+      return { duplicate: false, applied: false, matched: false };
+    }
 
     const checkout = existingSubscription ? null : await binding.prepare(`
       SELECT user_id AS userId, plan_id AS planId
