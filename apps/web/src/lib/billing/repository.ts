@@ -21,6 +21,39 @@ export type BillingStatusRecord = {
   readonly checkoutPending: boolean;
 };
 
+export const BESTIES_TRIAL_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
+
+export type BillingTrialRecord = {
+  readonly userId: string;
+  readonly trialTier: "besties";
+  readonly startedAt: number;
+  readonly endsAt: number;
+  readonly convertedAt: number | null;
+};
+
+export class BillingTrialNotEligibleError extends Error {
+  constructor() {
+    super("Besties introductory trial is not eligible for this account");
+    this.name = "BillingTrialNotEligibleError";
+  }
+}
+
+type BillingTrialRow = {
+  userId: string;
+  trialTier: "besties";
+  startedAt: number;
+  endsAt: number;
+  convertedAt: number | null;
+};
+
+const trialFromRow = (row: BillingTrialRow): BillingTrialRecord => ({
+  userId: row.userId,
+  trialTier: row.trialTier,
+  startedAt: row.startedAt,
+  endsAt: row.endsAt,
+  convertedAt: row.convertedAt,
+});
+
 export type BillingWebhookTransition = {
   readonly dedupeKey: string;
   readonly eventName: string;
@@ -78,6 +111,55 @@ export const createBillingRepository = (binding: D1Database) => {
       INSERT OR IGNORE INTO billing_customer (user_id, created_at, updated_at)
       VALUES (?, ?, ?)
     `).bind(userId, now, now).run();
+  };
+
+  const getTrialForUser = async (userId: string): Promise<BillingTrialRecord | null> => {
+    const row = await binding.prepare(`
+      SELECT user_id AS userId, trial_tier AS trialTier, started_at AS startedAt,
+             ends_at AS endsAt, converted_at AS convertedAt
+      FROM billing_trial
+      WHERE user_id = ?
+      LIMIT 1
+    `).bind(userId).first<BillingTrialRow>();
+    return row ? trialFromRow(row) : null;
+  };
+
+  const hasHistoricalPaidSubscription = async (userId: string): Promise<boolean> => {
+    const row = await binding.prepare(
+      "SELECT id FROM billing_subscription WHERE user_id = ? LIMIT 1",
+    ).bind(userId).first<{ id: string }>();
+    return Boolean(row);
+  };
+
+  const startBestiesTrial = async (
+    userId: string,
+    nowMs: number,
+  ): Promise<{ readonly started: boolean; readonly trial: BillingTrialRecord }> => {
+    if (!Number.isSafeInteger(nowMs)) throw new RangeError("nowMs must be an integer timestamp in milliseconds");
+    const endsAt = nowMs + BESTIES_TRIAL_DURATION_MS;
+    if (!Number.isSafeInteger(endsAt)) throw new RangeError("trial end timestamp is outside the safe integer range");
+
+    const inserted = await binding.prepare(`
+      INSERT OR IGNORE INTO billing_trial
+        (user_id, trial_tier, started_at, ends_at, converted_at, created_at, updated_at)
+      SELECT ?, 'besties', ?, ?, NULL, ?, ?
+      WHERE NOT EXISTS (
+        SELECT 1 FROM billing_subscription WHERE user_id = ? LIMIT 1
+      )
+    `).bind(userId, nowMs, endsAt, nowMs, nowMs, userId).run();
+
+    const trial = await getTrialForUser(userId);
+    if (!trial) throw new BillingTrialNotEligibleError();
+    return { started: Boolean(inserted.meta.changes), trial };
+  };
+
+  const markTrialConverted = async (userId: string, nowMs: number): Promise<void> => {
+    if (!Number.isSafeInteger(nowMs)) throw new RangeError("nowMs must be an integer timestamp in milliseconds");
+    await binding.prepare(`
+      UPDATE billing_trial
+      SET converted_at = COALESCE(converted_at, ?), updated_at = ?
+      WHERE user_id = ?
+    `).bind(nowMs, nowMs, userId).run();
   };
 
   const createCheckoutCorrelation = async (input: {
@@ -352,6 +434,10 @@ export const createBillingRepository = (binding: D1Database) => {
 
   return {
     ensureCustomer,
+    getTrialForUser,
+    hasHistoricalPaidSubscription,
+    startBestiesTrial,
+    markTrialConverted,
     createCheckoutCorrelation,
     attachProviderSession,
     expireCheckout,
