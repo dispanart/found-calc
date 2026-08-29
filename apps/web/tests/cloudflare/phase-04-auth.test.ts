@@ -1,10 +1,9 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import migrationSql from "../../migrations/0001_phase04_auth_and_calculator_state.sql?raw";
 
 import { createFoundCalcAuth } from "../../src/lib/auth/server";
-import { resetPhase04Database } from "./test-database";
+import { resetCurrentDatabase } from "./test-database";
 
 declare module "cloudflare:workers" {
   interface ProvidedEnv {
@@ -13,7 +12,7 @@ declare module "cloudflare:workers" {
 }
 
 beforeEach(async () => {
-  await resetPhase04Database(env.DB, migrationSql);
+  await resetCurrentDatabase();
 });
 
 describe("Better Auth D1 integration", () => {
