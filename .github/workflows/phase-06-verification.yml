@@ -1,0 +1,116 @@
+name: Phase 06 Verification
+
+on:
+  push:
+    branches:
+      - phase-06-goals-projects-profiles-workspace
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-06-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify Phase 06 goals, projects, profiles and workspace
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      BETTER_AUTH_SECRET: phase-06-ci-test-secret-not-for-production-000000000000000000000000
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+      BETTER_AUTH_ADMIN_USER_IDS: phase-06-ci-admin-bootstrap
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Confirm pnpm
+        run: pnpm --version
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
+      - name: Reset and apply local D1 migrations
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .wrangler/state
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0001_phase04_auth_and_calculator_state.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0002_phase05_rule_platform_admin.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0003_phase06_workspace.sql --yes
+      - name: Run Phase 06 verification gate
+        run: pnpm verify:phase06
+      - name: Smoke-test built vinext Worker boundaries
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          smoke_state="$RUNNER_TEMP/found-calc-phase06-smoke-state"
+          rm -rf "$smoke_state"
+          pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file migrations/0001_phase04_auth_and_calculator_state.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file migrations/0002_phase05_rule_platform_admin.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file migrations/0003_phase06_workspace.sql --yes
+          pnpm exec wrangler dev --config dist/server/wrangler.json --port 8787 --persist-to "$smoke_state" \
+            --var BETTER_AUTH_SECRET:"$BETTER_AUTH_SECRET" \
+            --var BETTER_AUTH_URL:http://127.0.0.1:8787 \
+            --var BETTER_AUTH_ADMIN_USER_IDS:"$BETTER_AUTH_ADMIN_USER_IDS" \
+            > "$RUNNER_TEMP/found-calc-phase06-wrangler.log" 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:8787/id > /dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat "$RUNNER_TEMP/found-calc-phase06-wrangler.log"; exit 1; fi
+          curl --fail --silent --show-error http://127.0.0.1:8787/api/rules/reference.synthetic-rate/versions \
+            | grep -Fq '"2026-a"'
+          admin_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8787/api/admin/rule-versions)"
+          test "$admin_status" = "401"
+          workspace_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8787/api/workspace/projects)"
+          test "$workspace_status" = "401"
+
+          cookie_jar="$RUNNER_TEMP/found-calc-phase06-cookies.txt"
+          rm -f "$cookie_jar"
+          curl --fail --silent --show-error \
+            --cookie-jar "$cookie_jar" \
+            --header 'content-type: application/json' \
+            --header 'origin: http://127.0.0.1:8787' \
+            --data '{"name":"Phase Six Worker Smoke","email":"phase06-worker-smoke@example.test","password":"phase-six-worker-password-123"}' \
+            http://127.0.0.1:8787/api/auth/sign-up/email \
+            | grep -Fq '"user"'
+          test -s "$cookie_jar"
+
+          curl --fail --silent --show-error \
+            --cookie "$cookie_jar" \
+            --header 'content-type: application/json' \
+            --request PUT \
+            --data '{"displayName":"Worker Smoke","preferredLocale":"en"}' \
+            http://127.0.0.1:8787/api/workspace/profile \
+            | grep -Fq '"displayName":"Worker Smoke"'
+          curl --fail --silent --show-error \
+            --cookie "$cookie_jar" \
+            http://127.0.0.1:8787/api/workspace/profile \
+            | grep -Fq '"preferredLocale":"en"'
+          projects_json="$(curl --fail --silent --show-error \
+            --cookie "$cookie_jar" \
+            http://127.0.0.1:8787/api/workspace/projects)"
+          PROJECTS_JSON="$projects_json" node -e '
+            const body = JSON.parse(process.env.PROJECTS_JSON ?? "null");
+            if (
+              !Array.isArray(body?.projects?.owned) || body.projects.owned.length !== 0 ||
+              !Array.isArray(body?.projects?.shared) || body.projects.shared.length !== 0
+            ) process.exit(1);
+          '

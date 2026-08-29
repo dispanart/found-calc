@@ -26,7 +26,8 @@
     "test:catalog": "pnpm --filter @found-calc/catalog test",
     "verify:phase03": "node scripts/verify-phase-03.mjs",
     "verify:phase04": "node scripts/verify-phase-04.mjs",
-    "verify:phase05": "node scripts/verify-phase-05.mjs"
+    "verify:phase05": "node scripts/verify-phase-05.mjs",
+    "verify:phase06": "node scripts/verify-phase-06.mjs"
   },
   "engines": {
     "node": ">=22.0.0"

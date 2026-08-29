@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - phase-05-versioned-rule-platform-admin-core
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
