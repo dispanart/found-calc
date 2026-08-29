@@ -18,7 +18,6 @@ test("Phase 07 has a fail-fast verification superset and dedicated CI migration/
   const workflow = read(".github/workflows/phase-07-verification.yml");
   assert.match(workflow, /0004_phase07_billing\.sql/);
   assert.match(workflow, /pnpm verify:phase07/);
-  assert.match(workflow, /dist\/server\/wrangler\.json/);
   assert.match(workflow, /scripts\/smoke-phase-07-worker\.sh/);
 });
 
@@ -27,6 +26,8 @@ test("Phase 07 built Worker smoke exposes deterministic, sanitized runtime check
   assert.equal(existsSync(url(path)), true, `${path} must exist`);
 
   const smoke = read(path);
+  assert.match(smoke, /dist\/server\/wrangler\.json/);
+  assert.match(smoke, /--persist-to/);
   for (const checkpoint of ["worker-startup", "anonymous-status", "invalid-webhook", "auth-signup", "authenticated-status"]) {
     assert.match(smoke, new RegExp(checkpoint));
   }
