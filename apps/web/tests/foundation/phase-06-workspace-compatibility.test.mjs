@@ -19,3 +19,11 @@ test("Phase 06 workspace renders the signed-in account email only once", () => {
   assert.doesNotMatch(persistence, /\{email\}/);
   assert.doesNotMatch(persistence, /email=\{session\.user\.email\}/);
 });
+
+test("Phase 06 Project selector keeps its form label unique instead of naming wrapper regions", () => {
+  const controls = read("src/components/calculator/workspace-calculation-controls.tsx");
+
+  assert.doesNotMatch(controls, /<section[^>]*aria-labelledby=\{`workspace-save-\$\{calculatorId\}`\}/);
+  assert.match(controls, /htmlFor=\{`workspace-project-\$\{calculatorId\}`\}/);
+  assert.match(controls, /id=\{`workspace-project-\$\{calculatorId\}`\}/);
+});
