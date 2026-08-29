@@ -57,7 +57,7 @@ test("Phase 05 closure records a portable canonical handoff", () => {
 
   assert.equal(existsSync(url(verificationPath)), true, `${verificationPath} must exist`);
   const verification = read(verificationPath);
-  assert.match(verification, /Phase 05 — Versioned Rule Platform \+ Admin Core/);
+  assert.match(verification, /\*\*Phase:\*\* 05 — Versioned Rule Platform \+ Admin Core/);
   assert.match(verification, /33232447867/);
   assert.match(verification, /eb67641aeb47222f44258251c2caea93b6809b7f/);
 
