@@ -1,119 +1,118 @@
-# Found Calc Phase 05 — Versioned Rule Platform + Admin Core
+# Found Calc Phase 06 — Goals, Projects, Profiles & Workspace
 
 **Project:** Found Calc  
 **Phase state:** COMPLETE  
-**Last canonical completed phase:** Phase 05 — Versioned Rule Platform + Admin Core  
-**Next phase:** Phase 06 — Goals, Projects, Profiles & Workspace  
+**Last canonical completed phase:** Phase 06 — Goals, Projects, Profiles & Workspace  
+**Next phase:** Phase 07 — Billing, Entitlements & Xendit  
 **Completion date:** 2026-08-29
 
 ## Canonical artifact
 
-`found-calc-phase-05-versioned-rule-platform-admin-core.zip`
+`found-calc-phase-06-goals-projects-profiles-workspace.zip`
 
-GitHub `main` remains the collaborative canonical repository. After the Phase 05 pull request is merged, `.github/workflows/phase-05-baseline-artifact.yml` packages the exact merged `GITHUB_SHA` with `git archive`, writes `SHA256SUMS`, verifies extraction and required Phase 05 files, and records the source commit/tree in `ARTIFACT_VERIFICATION.txt`. That exact post-merge ZIP is the portable recovery/handoff source for Phase 06.
+GitHub `main` remains the collaborative canonical repository. After the Phase 06 pull request is merged, `.github/workflows/phase-06-baseline-artifact.yml` packages the exact merged `GITHUB_SHA` with `git archive`, writes `SHA256SUMS`, verifies extraction and required Phase 06 files, and records the source commit/tree in `ARTIFACT_VERIFICATION.txt`. That exact post-merge ZIP is the portable recovery/handoff source for Phase 07.
 
 ## Canonical implementation evidence
 
-The verified Phase 05 implementation snapshot before continuity closure is:
+The verified Phase 06 implementation snapshot before continuity closure is:
 
-- source SHA: `eb67641aeb47222f44258251c2caea93b6809b7f`;
-- GitHub Actions run: `33232447867`;
-- job: `99047494137`;
+- source SHA: `bb1eb7fc98de5673c271c22e6aa12563e78fc92d`;
+- GitHub Actions run: `33242970535`;
+- job: `99075355501`;
 - result: **SUCCESS**.
 
-That run passed `pnpm verify:phase05`, all inherited Phase 04/03/02/01 regressions, Next.js production build, vinext compatibility/build, browser coverage, both D1 migrations, and the final built-Worker rule-route smoke against a fresh isolated persistence state. The closure tree receives a separate fresh full Phase 05 verification before merge; the canonical artifact workflow then records the exact merged source identity dynamically.
+That run passed `pnpm verify:phase06`, all inherited Phase 05/04/03/02/01 regressions, the full three-migration local D1 chain, browser coverage, source lint/type checks, Next/vinext compatibility/builds, and authenticated built-Worker workspace smoke. The closure tree receives a separate fresh full Phase 06 verification before merge; the canonical artifact workflow then records the exact merged source identity dynamically.
 
 ## Completed deliverables
 
-Phase 05 adds a narrow, durable rule platform and admin core without moving deterministic calculation truth out of its approved local boundaries:
+Phase 06 extends Found Calc with a narrow durable workspace domain while preserving the approved calculation, rule, persistence, auth, accessibility, privacy, and zero-fixed-infrastructure boundaries:
 
-- D1 now contains versioned rule records with immutable `(rule_id, version_id)` identity and draft/published lifecycle metadata;
-- published rule records are immutable, while strict effective-period validation and overlap protection prevent conflicting publication windows;
-- checked-in seed data remains synthetic/reference-only (`2025-a` and `2026-a`), not production legal/tax/regulatory guidance;
-- `@found-calc/rules` owns version/effective-period/publication semantics and remains independent from persistence/UI/runtime bindings;
-- Better Auth admin bootstrap uses `BETTER_AUTH_ADMIN_USER_IDS`; admin authorization is rechecked server-side and no production admin identity is hard-coded;
-- the public rule API returns published versions only and excludes draft/audit actor data;
-- protected admin APIs provide rule-version list, draft creation, and idempotent publication with stable generic error responses;
-- the synthetic reference calculator consumes the first-party published rule feed, while effective-date resolution and arithmetic remain local through `@found-calc/rules` and `@found-calc/engine`;
-- `/{locale}/admin` mounts a localized ID/EN rule-management core with explicit synthetic-only trust copy and responsive/accessibility coverage;
-- Phase 04 local unsaved drafts, guest ownership/claim, Better Auth sessions, persisted calculator state, and workspace summary remain regression-covered;
-- `verify:phase05` is a fail-fast regression superset of Phase 04 → Phase 01 plus Phase 05 rule/storage/API/admin/browser/build verification;
-- final built-Worker smoke uses one fresh dedicated D1 `--persist-to` state for both migrations and `wrangler dev`, and migration failures are no longer swallowed.
+- D1-backed user profiles with localized preference;
+- private owner-only Goals;
+- Projects with owner/editor/viewer collaboration roles;
+- server-derived authorization from Better Auth session identity plus D1 ownership/membership;
+- random, hashed, expiring, one-time Project invite codes with atomic redemption;
+- named Project calculation history storing validated canonical calculator state, not server-computed answers;
+- creator attribution and role-aware calculation mutation behavior;
+- privacy-safe Project JSON export;
+- localized ID/EN workspace dashboard and Project detail UI;
+- explicit calculator controls to save/reopen named Project calculations while preserving the separate Phase 04 latest-draft flow;
+- migration `0003_phase06_workspace.sql` as a separate workspace domain rather than a reinterpretation of Phase 04 `calculator_state`;
+- `verify:phase06` as a fail-fast regression superset of Phase 05 → Phase 01 plus Phase 06 workspace/storage/API/browser/build verification;
+- authenticated built-Worker smoke using one fresh dedicated D1 `--persist-to` state for all three migrations and `wrangler dev`.
 
 ## Verification status
 
-Detailed evidence is recorded in `docs/verification/phase-05-verification.md`.
+Detailed evidence, RED→GREEN history, review results, and artifact rules are recorded in `docs/verification/phase-06-verification.md`.
 
-The successful implementation run verified:
-
-- Phase 04 migration: 9 commands successfully applied;
-- Phase 05 migration: 12 commands successfully applied;
-- dependency-free foundation/Phase 05 contracts: 44/44 passed;
-- `@found-calc/rules`: 11/11 tests passed;
-- web unit tests: 18/18 passed;
-- Cloudflare D1/auth/rule tests: 13/13 passed;
-- source lint and TypeScript checks passed;
-- browser gate passed, including admin localization/narrow viewport and synthetic rule-feed behavior;
-- Next.js 16.2.9 build passed;
-- `vinext check` reported 90% compatibility and 0 issues;
-- `vinext build` passed;
-- all inherited Phase 04/03/02/01 gates passed;
-- built Worker public rule feed and signed-out admin 401 smoke passed.
+The successful implementation run verified the Phase 06 contract, D1/repository/API, workspace browser flows, accessibility regression, Next/vinext runtime boundaries, inherited regressions, and the built Worker. A stale Worker-smoke expectation for the new `{ projects: { owned, shared } }` collection shape was regression-locked first and then corrected without changing the production API.
 
 ## Stable architecture boundaries
 
 ### Engine truth
 
-`@found-calc/engine` remains the only owner of deterministic formula truth. D1, admin, auth, routes, UI, locale handling, and rule persistence must not duplicate calculator arithmetic.
+`@found-calc/engine` remains the only owner of deterministic formula truth. Workspace storage, routes, auth, UI, locale handling, Project collaboration, and exports must not duplicate calculator arithmetic.
 
 ### Rule truth
 
-`@found-calc/rules` owns immutable version/effective-date/publication semantics outside the engine. Persistence stores/hydrates rule records; it does not become formula truth.
+`@found-calc/rules` continues to own immutable version/effective-date/publication semantics. D1 repositories store/hydrate rule data but do not redefine rule truth or calculator formulas.
 
 ### Catalog ownership
 
-`@found-calc/catalog` continues to own stable calculator identity, canonical slugs, localized discovery/trust copy, category metadata, and relationships. It does not own formulas, auth, persistence, billing, or authoritative production rule datasets.
+`@found-calc/catalog` continues to own stable calculator identity, canonical slugs, localized discovery/trust copy, category metadata, and relationships. It does not own formulas, auth, workspace persistence, billing, or production rule datasets.
 
 ### Product runtime
 
-`apps/web` owns localized presentation, first-party API consumption, accessible interaction, auth/admin UI, local unsaved draft preservation, and explicit persistence controls. Reference calculations remain local and deterministic.
+`apps/web` owns localized presentation, accessible interaction, first-party API consumption, auth/admin/workspace UI, local draft preservation, and explicit Project history controls. Reference calculations remain local and deterministic.
 
-### Persistence/auth/admin boundary
+### Persistence/auth/workspace boundary
 
-D1 stores Better Auth records, canonical calculator drafts, and Phase 05 versioned rule records. Better Auth owns credentials/session behavior. Guest ownership remains opaque and first-party. Admin authority is established and enforced server-side; browser state is never the authorization source of truth.
+D1 stores Better Auth records, Phase 04 canonical calculator drafts, Phase 05 versioned rules, and the separate Phase 06 workspace domain. Better Auth owns credentials/session behavior. Project authorization is established server-side from authenticated identity plus D1 ownership/membership; browser role state is never authoritative.
 
-### Public rule boundary
+### Workspace privacy boundary
 
-Public rule responses contain published versions needed by the synthetic reference runtime only. Draft rows, internal database details, and audit actor identifiers are not public API data.
+Goals remain private to their owner. Project collaboration exposes only the shared Project/history data allowed by the member role. Project export excludes account email, invite secrets/hashes, and private Goal metadata. Invite plaintext is returned only when generated/redeemed by the intended flow and is not persisted as plaintext.
+
+## Interaction contracts preserved
+
+- public calculators remain usable without authentication;
+- reference calculator arithmetic remains local/deterministic;
+- unsaved Phase 04 local drafts survive locale navigation/reload without automatic network persistence;
+- guest claim remains idempotent and successful authentication is not rolled back by claim failure;
+- Phase 06 named Project history is explicit and separate from the Phase 04 latest-draft model;
+- published rule versions remain immutable and publication-period semantics stay in `@found-calc/rules`;
+- synthetic rule-feed failure remains explicit rather than silently falling back to hidden fixture truth;
+- admin and Project authorization are rechecked server-side;
+- no server endpoint calculates calculator answers;
+- no raw calculator input logging, browser auth-token storage, fingerprinting, or production secret was introduced.
 
 ## Accessibility, trust, privacy, and security contract
 
 - launch locales remain Indonesian (`id`) and English (`en`);
-- Phase 01–04 accessibility contracts remain regression-covered;
-- admin UI is keyboard-operable and covered at a 390 px viewport without horizontal overflow;
-- synthetic-only rule data is explicitly labeled so it cannot be mistaken for production guidance;
-- no raw calculator input logging, fingerprinting, third-party identifier, or telemetry was introduced;
-- no Better Auth/session token is stored in localStorage;
-- no production secret, production admin identity, production regulatory dataset, or authoritative legal/tax rate is committed;
-- malformed/public/storage errors remain stable and do not expose SQL/internal exception detail.
+- inherited accessibility/responsive contracts remain regression-covered;
+- Phase 06 workspace and Project flows are keyboard-operable and browser-tested;
+- Project selector accessible names remain unique: wrapper regions do not reuse the select label through `aria-labelledby`;
+- synthetic-only rule data remains explicitly labeled;
+- viewer/editor/owner boundaries are enforced server-side;
+- one-time invite codes are random, hashed before persistence, expire, and are atomically claimed;
+- Project export does not leak private Goal metadata, email addresses, or invite secrets;
+- malformed/auth/storage errors remain stable and do not expose SQL/internal exception detail;
+- no Xendit/payment/subscription/entitlement code exists in the Phase 06 baseline.
 
 ## Known platform notes
 
 - `apps/web/wrangler.jsonc` still uses the inherited all-zero local-only D1 UUID; it is not a remote production database identity.
-- Cloudflare Vitest can emit a pre-build static-analysis warning for the generated vinext entry while the runtime suites pass.
-- vinext intentionally receives an explicit `nextConfig` so the Node-only `cloudflare:workers` build stub cannot leak into workerd.
-- `vinext check` reports 90% compatibility with 0 issues; partial notes remain `next/font/google` CDN loading and App Router `reactStrictMode` behavior.
-- generated Worker types can emit two non-blocking unused eslint-disable warnings during inherited lint; source lint has no errors.
-- one inherited signed-out 390 px workspace browser scenario can transiently fail during vinext dev-server network churn and passed on retry in the successful implementation run; the critical guest claim flow passed normally.
-- GitHub runner output can warn about Node 20-based action internals being forced onto Node 24 while the project job itself explicitly uses Node 22.
+- Cloudflare/Vitest can emit inherited generated-entry static-analysis warnings while runtime tests pass.
+- vinext inherits earlier compatibility notes around `next/font/google` CDN loading and App Router `reactStrictMode` behavior.
+- generated Worker types can emit inherited non-blocking eslint-disable warnings.
+- current GitHub Actions can warn about Node 20-based action internals being forced onto Node 24 while the project job explicitly uses Node 22.
 
-## Explicitly deferred beyond Phase 05
+## Explicitly deferred beyond Phase 06
 
-Phase 05 does not authorize or implement:
+Phase 06 does not authorize or implement:
 
-- production regulatory/tax/legal rule packs;
-- Goals, Projects, Profiles, named calculation history, collaboration, sharing, or export workspace expansion;
 - Xendit/payment/subscription/entitlement/invoice/webhook flows;
+- production regulatory/tax/legal rule packs;
 - production analytics/telemetry or SEO hardening;
 - AI explanations or AI product features;
 - TestSprite launch certification;
@@ -121,4 +120,4 @@ Phase 05 does not authorize or implement:
 
 ## Continuity rule
 
-Start **Phase 06 — Goals, Projects, Profiles & Workspace** in a **new chat inside the same Found Calc project** and attach the exact post-merge `found-calc-phase-05-versioned-rule-platform-admin-core.zip`. Read `PHASE_HANDOFF.md`, this baseline, the Phase 05 verification record/spec/plan, and the canonical Phase Workflow before creating the Phase 06 design/implementation plan. Treat Phase 01–05 architecture and regression boundaries as approved baseline and reopen them only for a verified implementation blocker under change control.
+Start **Phase 07 — Billing, Entitlements & Xendit** in a **new chat inside the same Found Calc project** and attach the exact post-merge `found-calc-phase-06-goals-projects-profiles-workspace.zip`. Read `PHASE_HANDOFF.md`, this baseline, the Phase 06 verification record/spec/plan, and the canonical Phase Workflow before creating the Phase 07 design/implementation plan. Treat Phase 01–06 architecture and regression boundaries as approved baseline and reopen them only for a verified implementation blocker under change control.

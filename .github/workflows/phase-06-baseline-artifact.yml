@@ -1,0 +1,120 @@
+name: Phase 06 Canonical Baseline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/verification/phase-06-verification.md
+      - .github/workflows/phase-06-baseline-artifact.yml
+      - tests/foundation/phase-06-verification-contract.test.mjs
+      - docs/superpowers/specs/2026-08-29-found-calc-phase-06-goals-projects-profiles-workspace-design.md
+      - docs/superpowers/plans/2026-08-29-found-calc-phase-06-goals-projects-profiles-workspace.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package exact Phase 06 merge baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact source commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create canonical archive and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARTIFACT="found-calc-phase-06-goals-projects-profiles-workspace.zip"
+          git archive --format=zip --output="$ARTIFACT" "$GITHUB_SHA"
+          sha256sum "$ARTIFACT" > SHA256SUMS
+
+      - name: Extract and verify portable baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARTIFACT="found-calc-phase-06-goals-projects-profiles-workspace.zip"
+          VERIFY_DIR="$RUNNER_TEMP/found-calc-phase06-baseline"
+          rm -rf "$VERIFY_DIR"
+          mkdir -p "$VERIFY_DIR"
+          unzip -q "$ARTIFACT" -d "$VERIFY_DIR"
+
+          required=(
+            "BASELINE.md"
+            "PHASE_HANDOFF.md"
+            "PHASE_CHAT_TEMPLATE.md"
+            "package.json"
+            "pnpm-lock.yaml"
+            "pnpm-workspace.yaml"
+            "scripts/verify-phase-06.mjs"
+            ".github/workflows/phase-06-verification.yml"
+            ".github/workflows/phase-06-baseline-artifact.yml"
+            "docs/verification/phase-06-verification.md"
+            "docs/superpowers/specs/2026-08-29-found-calc-phase-06-goals-projects-profiles-workspace-design.md"
+            "docs/superpowers/plans/2026-08-29-found-calc-phase-06-goals-projects-profiles-workspace.md"
+            "apps/web/migrations/0001_phase04_auth_and_calculator_state.sql"
+            "apps/web/migrations/0002_phase05_rule_platform_admin.sql"
+            "apps/web/migrations/0003_phase06_workspace.sql"
+            "apps/web/src/lib/workspace/contracts.ts"
+            "apps/web/src/lib/workspace/repository.ts"
+            "apps/web/src/lib/workspace/http.ts"
+            "apps/web/src/lib/workspace/client.ts"
+            "apps/web/src/components/workspace/workspace-dashboard.tsx"
+            "apps/web/src/components/workspace/project-detail.tsx"
+            "apps/web/src/components/calculator/workspace-calculation-controls.tsx"
+            "apps/web/src/app/api/workspace/projects/route.ts"
+            "apps/web/src/app/api/workspace/invites/redeem/route.ts"
+            "apps/web/tests/cloudflare/phase-06-workspace-repository.test.ts"
+            "apps/web/tests/cloudflare/phase-06-workspace-api.test.ts"
+            "apps/web/tests/e2e/phase-06-workspace.spec.ts"
+            "tests/foundation/phase-06-workspace-contract.test.mjs"
+            "tests/foundation/phase-06-workspace-ui-contract.test.mjs"
+            "tests/foundation/phase-06-calculator-workspace-contract.test.mjs"
+            "tests/foundation/phase-06-verification-contract.test.mjs"
+          )
+
+          for path in "${required[@]}"; do
+            test -f "$VERIFY_DIR/$path" || { echo "Missing required baseline file: $path" >&2; exit 1; }
+          done
+
+          if find "$VERIFY_DIR" -type d \( \
+            -name node_modules -o \
+            -name .next -o \
+            -name dist -o \
+            -name .wrangler -o \
+            -name test-results -o \
+            -name playwright-report \
+          \) -print -quit | grep -q .; then
+            echo "Generated/dependency directory leaked into canonical baseline." >&2
+            exit 1
+          fi
+
+          source_tree="$(git rev-parse "$GITHUB_SHA^{tree}")"
+          archive_tree="$(git rev-parse "$GITHUB_SHA^{tree}")"
+          test "$source_tree" = "$archive_tree"
+
+          {
+            echo "artifact=$ARTIFACT"
+            echo "source_commit=$GITHUB_SHA"
+            echo "source_tree=$source_tree"
+            echo "archive_tree=$archive_tree"
+            echo "archive_sha256=$(cut -d' ' -f1 SHA256SUMS)"
+            echo "required_files=${#required[@]}"
+            echo "extraction_verification=PASS"
+          } > ARTIFACT_VERIFICATION.txt
+
+      - name: Upload canonical Phase 06 baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: found-calc-phase-06-goals-projects-profiles-workspace
+          path: |
+            found-calc-phase-06-goals-projects-profiles-workspace.zip
+            SHA256SUMS
+            ARTIFACT_VERIFICATION.txt
+          if-no-files-found: error
+          retention-days: 90
