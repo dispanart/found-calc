@@ -12,21 +12,21 @@ base_url="${PHASE07_SMOKE_BASE_URL:-http://127.0.0.1:8787}"
 worker_pid=""
 
 sanitize_stream() {
-  node <<'NODE'
-const fs = require("node:fs");
-let text = fs.readFileSync(0, "utf8");
-for (const key of ["BETTER_AUTH_SECRET", "XENDIT_SECRET_API_KEY", "XENDIT_WEBHOOK_TOKEN"]) {
-  const value = process.env[key];
-  if (value) text = text.split(value).join("[REDACTED]");
-}
-text = text
-  .replace(/(authorization\s*[:=]\s*)([^\s,;]+)/gi, "$1[REDACTED]")
-  .replace(/(x-callback-token\s*[:=]\s*)([^\s,;]+)/gi, "$1[REDACTED]")
-  .replace(/(set-cookie\s*:\s*)([^\r\n]+)/gi, "$1[REDACTED]")
-  .replace(/(cookie\s*:\s*)([^\r\n]+)/gi, "$1[REDACTED]")
-  .replace(/("(?:token|secret|password|cookie)"\s*:\s*")[^"]*(")/gi, "$1[REDACTED]$2");
-process.stdout.write(text);
-NODE
+  node -e '
+    const fs = require("node:fs");
+    let text = fs.readFileSync(0, "utf8");
+    for (const key of ["BETTER_AUTH_SECRET", "XENDIT_SECRET_API_KEY", "XENDIT_WEBHOOK_TOKEN"]) {
+      const value = process.env[key];
+      if (value) text = text.split(value).join("[REDACTED]");
+    }
+    text = text
+      .replace(/(authorization\\s*[:=]\\s*)([^\\s,;]+)/gi, "$1[REDACTED]")
+      .replace(/(x-callback-token\\s*[:=]\\s*)([^\\s,;]+)/gi, "$1[REDACTED]")
+      .replace(/(set-cookie\\s*:\\s*)([^\\r\\n]+)/gi, "$1[REDACTED]")
+      .replace(/(cookie\\s*:\\s*)([^\\r\\n]+)/gi, "$1[REDACTED]")
+      .replace(/("(?:token|secret|password|cookie)"\\s*:\\s*")[^"]*(")/gi, "$1[REDACTED]$2");
+    process.stdout.write(text);
+  '
 }
 
 one_line_file() {
