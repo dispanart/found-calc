@@ -16,7 +16,10 @@ const plan: BillingPlanDefinition = {
 };
 const session = { user: { id: "user-1", name: "Dina", email: "dina@example.test" } };
 const baseRepo = (): BillingHttpRepository => ({
-  getStatusForUser: async () => ({ subscription: null, checkoutPending: false }), createCheckoutCorrelation: async () => undefined,
+  getStatusForUser: async () => ({ subscription: null, checkoutPending: false }),
+  getTrialForUser: async () => null,
+  hasHistoricalPaidSubscription: async () => false,
+  createCheckoutCorrelation: async () => undefined,
   attachProviderSession: async () => true, expireCheckout: async () => true, getSubscriptionForCancellation: async () => null,
   markCancellationRequested: async () => true, stagePlanChange: async () => true, clearPlanChange: async () => true, getEventOwner: async () => null, applyWebhookTransition: async () => ({ duplicate: false, applied: true, matched: true }),
 });
