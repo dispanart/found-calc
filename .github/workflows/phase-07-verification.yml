@@ -1,0 +1,119 @@
+name: Phase 07 Verification
+
+on:
+  push:
+    branches:
+      - phase-07-billing-entitlements-xendit
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-07-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify Phase 07 billing, entitlements and Xendit boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    env:
+      BETTER_AUTH_SECRET: phase-07-ci-test-secret-not-for-production-000000000000000000000000
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+      BETTER_AUTH_ADMIN_USER_IDS: phase-07-ci-admin-bootstrap
+      BILLING_PLANS_JSON: '[{"id":"ci-fixture","displayName":{"id":"Fixture CI","en":"CI Fixture"},"description":{"id":"Hanya untuk verifikasi CI","en":"CI verification only"},"amount":10000,"currency":"IDR","country":"ID","interval":"MONTH","intervalCount":1,"billingDay":15,"totalRecurrence":null,"failedCycleAction":"RESUME","entitlements":["fixture.ci"]}]'
+      PUBLIC_APP_ORIGIN: https://found.example
+      XENDIT_SECRET_API_KEY: phase-07-provider-secret-test-only
+      XENDIT_WEBHOOK_TOKEN: phase-07-webhook-token-test-only-000000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Confirm pnpm
+        run: pnpm --version
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
+      - name: Reset and apply local D1 migrations
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .wrangler/state
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0001_phase04_auth_and_calculator_state.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0002_phase05_rule_platform_admin.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0003_phase06_workspace.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0004_phase07_billing.sql --yes
+      - name: Run Phase 07 verification gate
+        run: pnpm verify:phase07
+      - name: Smoke-test built vinext Worker billing boundaries
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          smoke_state="$RUNNER_TEMP/found-calc-phase07-smoke-state"
+          rm -rf "$smoke_state"
+          pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file migrations/0001_phase04_auth_and_calculator_state.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file migrations/0002_phase05_rule_platform_admin.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file migrations/0003_phase06_workspace.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file migrations/0004_phase07_billing.sql --yes
+          pnpm exec wrangler dev --config dist/server/wrangler.json --port 8787 --persist-to "$smoke_state" \
+            --var BETTER_AUTH_SECRET:"$BETTER_AUTH_SECRET" \
+            --var BETTER_AUTH_URL:http://127.0.0.1:8787 \
+            --var BETTER_AUTH_ADMIN_USER_IDS:"$BETTER_AUTH_ADMIN_USER_IDS" \
+            --var BILLING_PLANS_JSON:"$BILLING_PLANS_JSON" \
+            --var PUBLIC_APP_ORIGIN:"$PUBLIC_APP_ORIGIN" \
+            --var XENDIT_SECRET_API_KEY:"$XENDIT_SECRET_API_KEY" \
+            --var XENDIT_WEBHOOK_TOKEN:"$XENDIT_WEBHOOK_TOKEN" \
+            > "$RUNNER_TEMP/found-calc-phase07-wrangler.log" 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:8787/id > /dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat "$RUNNER_TEMP/found-calc-phase07-wrangler.log"; exit 1; fi
+
+          signed_out_billing="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8787/api/billing/status)"
+          test "$signed_out_billing" = "401"
+          bad_webhook="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --header 'content-type: application/json' \
+            --header 'x-callback-token: definitely-wrong-token' \
+            --data '{}' \
+            http://127.0.0.1:8787/api/billing/webhooks/xendit)"
+          test "$bad_webhook" = "401"
+
+          cookie_jar="$RUNNER_TEMP/found-calc-phase07-cookies.txt"
+          rm -f "$cookie_jar"
+          curl --fail --silent --show-error \
+            --cookie-jar "$cookie_jar" \
+            --header 'content-type: application/json' \
+            --header 'origin: http://127.0.0.1:8787' \
+            --data '{"name":"Phase Seven Worker Smoke","email":"phase07-worker-smoke@example.test","password":"phase-seven-worker-password-123"}' \
+            http://127.0.0.1:8787/api/auth/sign-up/email \
+            | grep -Fq '"user"'
+          test -s "$cookie_jar"
+
+          billing_json="$(curl --fail --silent --show-error --cookie "$cookie_jar" http://127.0.0.1:8787/api/billing/status)"
+          BILLING_JSON="$billing_json" node -e '
+            const body = JSON.parse(process.env.BILLING_JSON ?? "null");
+            if (
+              body?.billing?.available !== true ||
+              !Array.isArray(body.billing.plans) || body.billing.plans.length !== 1 ||
+              body.billing.plans[0]?.id !== "ci-fixture" ||
+              body.billing.subscription !== null ||
+              !Array.isArray(body.billing.entitlements) || body.billing.entitlements.length !== 0
+            ) process.exit(1);
+          '
