@@ -1,6 +1,13 @@
+"use client";
+
+import type { Route } from "next";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import type { Locale } from "@/i18n/locales";
+import { authClient } from "@/lib/auth/client";
+import { startBestiesTrial } from "@/lib/billing/client";
 import { commercialLimitsFor, publicPlanName } from "@/lib/billing/commercial";
 import type { CommercialLimits } from "@/lib/billing/contracts";
 
@@ -38,6 +45,8 @@ const copy = {
     trial: "Coba Besties gratis 14 hari",
     familyCta: "Kelola Family",
     trialNote: "Tanpa kartu. Aktivasi manual setelah masuk; trial tidak dimulai otomatis saat membuat akun.",
+    trialStarting: "Mengaktifkan trial Besties…",
+    trialError: "Trial Besties tidak dapat diaktifkan dari akun ini. Buka billing untuk melihat status akses Anda.",
     futureTitle: "Entitlement sekarang, runtime berikutnya",
     futureBody: "Entitlement widget sudah ditetapkan; runtime Widget Platform belum tersedia di Phase 07A. Portfolio Family juga merupakan entitlement/availability contract sampai runtime Portfolio diimplementasikan.",
     trustTitle: "Upgrade tidak mengambil kepemilikan data Anda",
@@ -77,6 +86,8 @@ const copy = {
     trial: "Try Besties free for 14 days",
     familyCta: "Manage Family",
     trialNote: "No card. Activate manually after sign-in; the trial never starts automatically at account creation.",
+    trialStarting: "Activating Besties trial…",
+    trialError: "The Besties trial cannot be activated for this account. Open billing to review your access status.",
     futureTitle: "Entitlement now, runtime later",
     futureBody: "Widget entitlements are defined, but the Widget Platform runtime is not yet available in Phase 07A. Family Portfolio is also an entitlement/availability contract until the Portfolio runtime is implemented.",
     trustTitle: "Upgrading never takes ownership of your data",
@@ -124,9 +135,28 @@ const planCards = (locale: Locale) => {
   ] as const;
 };
 
+const ctaClass = (emphasis: boolean) => `mt-7 inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-control)] px-4 text-center text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60 ${emphasis ? "bg-primary text-primary-foreground" : "border border-border bg-background hover:bg-muted"}`;
+
 export function PricingPanel({ locale }: { locale: Locale }) {
   const text = copy[locale];
   const plans = planCards(locale);
+  const router = useRouter();
+  const { data: session } = authClient.useSession();
+  const [trialBusy, setTrialBusy] = useState(false);
+  const [trialStatus, setTrialStatus] = useState("");
+
+  const activateBestiesTrial = async () => {
+    if (!session?.user || trialBusy) return;
+    setTrialBusy(true);
+    setTrialStatus(text.trialStarting);
+    try {
+      await startBestiesTrial();
+      router.push(`/${locale}/workspace/billing` as Route);
+    } catch {
+      setTrialStatus(text.trialError);
+      setTrialBusy(false);
+    }
+  };
 
   return (
     <div className="min-w-0">
@@ -137,31 +167,41 @@ export function PricingPanel({ locale }: { locale: Locale }) {
       </header>
 
       <section className="mt-12 grid min-w-0 gap-5 lg:grid-cols-3" aria-label={locale === "id" ? "Pilihan plan" : "Plan choices"}>
-        {plans.map((plan) => (
-          <article key={plan.name} className={`min-w-0 rounded-[var(--radius-card)] border p-6 sm:p-7 ${plan.emphasis ? "border-primary bg-card shadow-sm" : "border-border bg-card"}`}>
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">{plan.role}</p>
-                <h2 className="mt-2 break-words text-2xl font-bold tracking-[-0.04em]">{plan.name}</h2>
+        {plans.map((plan) => {
+          const isBesties = plan.name === publicPlanName("besties");
+          return (
+            <article key={plan.name} className={`min-w-0 rounded-[var(--radius-card)] border p-6 sm:p-7 ${plan.emphasis ? "border-primary bg-card shadow-sm" : "border-border bg-card"}`}>
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">{plan.role}</p>
+                  <h2 className="mt-2 break-words text-2xl font-bold tracking-[-0.04em]">{plan.name}</h2>
+                </div>
+                {plan.emphasis ? <span className="shrink-0 rounded-full border border-primary/40 px-2.5 py-1 text-[0.68rem] font-semibold text-primary">{locale === "id" ? "Paling populer" : "Most popular"}</span> : null}
               </div>
-              {plan.emphasis ? <span className="shrink-0 rounded-full border border-primary/40 px-2.5 py-1 text-[0.68rem] font-semibold text-primary">{locale === "id" ? "Paling populer" : "Most popular"}</span> : null}
-            </div>
-            <p className="mt-6 break-words text-3xl font-bold tracking-[-0.045em]">
-              {plan.price}
-              {plan.cadence ? <span className="ml-1 text-sm font-medium tracking-normal text-muted-foreground">{plan.cadence}</span> : null}
-            </p>
-            <ul className="mt-6 space-y-3 text-sm leading-6">
-              {plan.features.map((feature) => <li key={feature} className="border-t border-border/70 pt-3 first:border-t-0 first:pt-0">{feature}</li>)}
-            </ul>
-            <Link href={plan.href} className={`mt-7 inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-control)] px-4 text-center text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring ${plan.emphasis ? "bg-primary text-primary-foreground" : "border border-border bg-background hover:bg-muted"}`}>
-              {plan.cta}
-            </Link>
-            {plan.name === publicPlanName("besties") ? <p className="mt-3 text-xs leading-5 text-muted-foreground">{text.trialNote}</p> : null}
-          </article>
-        ))}
+              <p className="mt-6 break-words text-3xl font-bold tracking-[-0.045em]">
+                {plan.price}
+                {plan.cadence ? <span className="ml-1 text-sm font-medium tracking-normal text-muted-foreground">{plan.cadence}</span> : null}
+              </p>
+              <ul className="mt-6 space-y-3 text-sm leading-6">
+                {plan.features.map((feature) => <li key={feature} className="border-t border-border/70 pt-3 first:border-t-0 first:pt-0">{feature}</li>)}
+              </ul>
+              {isBesties && session?.user ? (
+                <button type="button" className={ctaClass(plan.emphasis)} disabled={trialBusy} onClick={activateBestiesTrial}>
+                  {trialBusy ? text.trialStarting : plan.cta}
+                </button>
+              ) : (
+                <Link href={plan.href} className={ctaClass(plan.emphasis)}>
+                  {plan.cta}
+                </Link>
+              )}
+              {isBesties ? <p className="mt-3 text-xs leading-5 text-muted-foreground">{text.trialNote}</p> : null}
+            </article>
+          );
+        })}
       </section>
 
-      <p className="mt-5 text-sm text-muted-foreground">{text.annualHint}</p>
+      <p className="mt-4 min-h-5 text-sm text-muted-foreground" role="status" aria-live="polite">{trialStatus}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{text.annualHint}</p>
 
       <section className="mt-12 grid gap-6 border-y border-border py-8 md:grid-cols-2">
         <div className="min-w-0">
