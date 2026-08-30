@@ -56,6 +56,8 @@ describe("billing plan-change provider ambiguity", () => {
             pendingPlanChangeRequestedAt: null,
           },
         }),
+        getTrialForUser: async () => null,
+        hasHistoricalPaidSubscription: async () => false,
         createCheckoutCorrelation: async () => undefined,
         attachProviderSession: async () => true,
         expireCheckout: async () => true,
