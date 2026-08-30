@@ -35,6 +35,7 @@ export interface BillingHttpRepository {
   expireCheckout(userId: string, checkoutId: string, now?: number): Promise<boolean>;
   getSubscriptionForCancellation(userId: string): Promise<BillingSubscriptionRecord | null>;
   markCancellationRequested(userId: string, providerPlanId: string, now?: number): Promise<boolean>;
+  clearCancellationRequest(userId: string, providerPlanId: string, stagedAt: number, now?: number): Promise<boolean>;
   stagePlanChange(userId: string, providerPlanId: string, targetPlanId: string, now?: number): Promise<boolean>;
   clearPlanChange(userId: string, providerPlanId: string, targetPlanId: string, now?: number): Promise<boolean>;
   getEventOwner(referenceId: string, providerPlanId: string): Promise<BillingEventOwner | null>;
@@ -294,6 +295,7 @@ export const handleBillingChangeRequest = async (request: Request, services: Bil
 };
 
 export const handleBillingCancelRequest = async (request: Request, services: BillingCancelServices): Promise<Response> => {
+  let staged: { userId: string; providerPlanId: string; stagedAt: number } | null = null;
   try {
     const auth = await authenticate(request, services);
     if (!auth.ok) return auth.response;
@@ -310,10 +312,27 @@ export const handleBillingCancelRequest = async (request: Request, services: Bil
     if (typeof boundary !== "number" || !Number.isSafeInteger(boundary) || boundary <= now) {
       return error("billing-period-unavailable", 409);
     }
+    if (!await services.repository.markCancellationRequested(auth.user.id, subscription.providerPlanId, now)) {
+      const concurrent = await services.repository.getSubscriptionForCancellation(auth.user.id);
+      if (concurrent?.providerPlanId === subscription.providerPlanId && concurrent.cancellationRequestedAt !== null) {
+        return json({ subscription: { planId: concurrent.planId, status: concurrent.status, cancellationPending: true, paidThroughAt: concurrent.paidThroughAt ?? boundary } });
+      }
+      throw new Error("billing-cancellation-state-conflict");
+    }
+    staged = { userId: auth.user.id, providerPlanId: subscription.providerPlanId, stagedAt: now };
     await services.xendit.deactivateSubscription(subscription.providerPlanId);
-    if (!await services.repository.markCancellationRequested(auth.user.id, subscription.providerPlanId, now)) throw new Error("billing-cancellation-state-conflict");
     return json({ subscription: { planId: subscription.planId, status: subscription.status, cancellationPending: true, paidThroughAt: boundary } });
-  } catch (caught) { return handleFailure(caught); }
+  } catch (caught) {
+    // A transport/timeout/5xx response cannot prove that Xendit rejected the
+    // deactivation. Keep the frozen paid-through boundary so an authoritative
+    // inactivation webhook cannot race away already-paid access. Roll back only
+    // when the provider definitively rejected the mutation.
+    const definitelyRejected = caught instanceof XenditClientError && !caught.requestMayHaveSucceeded;
+    if (staged && definitelyRejected) {
+      try { await services.repository.clearCancellationRequest(staged.userId, staged.providerPlanId, staged.stagedAt, (services.now?.() ?? new Date()).valueOf()); } catch { /* provider failure remains primary */ }
+    }
+    return handleFailure(caught);
+  }
 };
 
 const tokenMatches = (provided: string | null, expected: string | undefined): boolean => {
