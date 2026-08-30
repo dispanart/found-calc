@@ -5,6 +5,7 @@ import {
   type BillingHttpServices,
 } from "./http";
 import type { BillingSubscriptionRecord } from "./repository";
+import { XenditClientError } from "../xendit/client";
 
 const nowMs = new Date("2026-08-14T10:00:00.000Z").valueOf();
 const request = () => new Request("https://found.example/api/billing/subscription/cancel", {
@@ -56,6 +57,40 @@ const services = (sub: BillingSubscriptionRecord, onDeactivate: () => void): Bil
   now: () => new Date(nowMs),
 });
 
+type CancellationRollbackRepository = BillingHttpRepository & {
+  clearCancellationRequest(userId: string, providerPlanId: string, stagedAt: number, now?: number): Promise<boolean>;
+};
+
+const cancellationFailureServices = (
+  providerError: XenditClientError,
+  calls: string[],
+): BillingHttpServices => {
+  const sub = subscription();
+  const repo = {
+    ...repository(sub),
+    markCancellationRequested: async () => {
+      calls.push("stage");
+      return true;
+    },
+    clearCancellationRequest: async () => {
+      calls.push("clear");
+      return true;
+    },
+  } as CancellationRollbackRepository;
+  return {
+    ...services(sub, () => undefined),
+    repository: repo,
+    xendit: {
+      createSubscriptionSession: async () => { throw new Error("not used"); },
+      updateSubscriptionPlan: async () => { throw new Error("not used"); },
+      deactivateSubscription: async () => {
+        calls.push("provider");
+        throw providerError;
+      },
+    },
+  };
+};
+
 describe("Phase 07A cancellation paid-through HTTP contract", () => {
   it.each([
     ["missing", null],
@@ -90,5 +125,25 @@ describe("Phase 07A cancellation paid-through HTTP contract", () => {
     );
     expect(response.status).toBe(200);
     expect(providerCalls).toBe(0);
+  });
+
+  it("stages the paid-through boundary before provider mutation and rolls it back on definite rejection", async () => {
+    const calls: string[] = [];
+    const response = await handleBillingCancelRequest(
+      request(),
+      cancellationFailureServices(new XenditClientError(false), calls),
+    );
+    expect(response.status).toBe(503);
+    expect(calls).toEqual(["stage", "provider", "clear"]);
+  });
+
+  it("keeps staged cancellation state when provider mutation may have succeeded", async () => {
+    const calls: string[] = [];
+    const response = await handleBillingCancelRequest(
+      request(),
+      cancellationFailureServices(new XenditClientError(true), calls),
+    );
+    expect(response.status).toBe(503);
+    expect(calls).toEqual(["stage", "provider"]);
   });
 });
