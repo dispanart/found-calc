@@ -74,7 +74,7 @@ describe("billing HTTP boundary", () => {
   });
 
   it("does not let cancellation input select provider identity", async () => {
-    const sub = { id: "sub-1", userId: "user-1", planId: "fixture-pro", providerPlanId: "rp-secret", referenceId: "ref", status: "active" as const, latestCycleStatus: null, latestEventAt: 1, nextCycleAt: null, cancellationRequestedAt: null, pendingPlanId: null, pendingPlanChangeRequestedAt: null };
+    const sub = { id: "sub-1", userId: "user-1", planId: "fixture-pro", providerPlanId: "rp-secret", referenceId: "ref", status: "active" as const, latestCycleStatus: null, latestEventAt: 1, nextCycleAt: 1_800_000_100_000, cancellationRequestedAt: null, pendingPlanId: null, pendingPlanChangeRequestedAt: null };
     let deactivated = "";
     const svc = services({ repository: { ...baseRepo(), getSubscriptionForCancellation: async () => sub }, xendit: { createSubscriptionSession: async () => { throw new Error(); }, updateSubscriptionPlan: async () => undefined, deactivateSubscription: async (id) => { deactivated = id; } } });
     expect((await handleBillingCancelRequest(request("/api/billing/subscription/cancel", { providerPlanId: "attacker" }), svc)).status).toBe(400); expect(deactivated).toBe("");
