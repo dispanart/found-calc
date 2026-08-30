@@ -63,6 +63,7 @@ describe("billing plan-change provider ambiguity", () => {
         expireCheckout: async () => true,
         getSubscriptionForCancellation: async () => null,
         markCancellationRequested: async () => true,
+        clearCancellationRequest: async () => true,
         stagePlanChange: async () => true,
         clearPlanChange: async () => { clearCalls += 1; return true; },
         getEventOwner: async () => null,
