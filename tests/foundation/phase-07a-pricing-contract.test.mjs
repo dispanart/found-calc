@@ -30,3 +30,13 @@ test("Phase 07A pricing exposes the approved Friends, Besties, and Family promis
   assert.match(billingClient, /trial/);
   assert.match(billingClient, /paidThroughAt/);
 });
+
+test("Phase 07A pricing starts Besties trial directly for an authenticated account and preserves auth return for anonymous users", () => {
+  const panel = read("apps/web/src/components/billing/pricing-panel.tsx");
+  assert.match(panel, /^"use client";/m);
+  assert.match(panel, /authClient\.useSession\(\)/);
+  assert.match(panel, /startBestiesTrial\(\)/);
+  assert.match(panel, /session\?\.user/);
+  assert.match(panel, /\/workspace\/billing/);
+  assert.match(panel, /\/auth\?returnTo=/);
+});
