@@ -50,6 +50,7 @@ const repository = (overrides: Partial<BillingHttpRepository> = {}): BillingHttp
   expireCheckout: async () => true,
   getSubscriptionForCancellation: async () => null,
   markCancellationRequested: async () => true,
+  clearCancellationRequest: async () => true,
   stagePlanChange: async () => true,
   clearPlanChange: async () => true,
   getEventOwner: async () => null,
