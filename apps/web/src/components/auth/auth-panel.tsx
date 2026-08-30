@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/locales";
@@ -12,6 +12,8 @@ const copy = {
     signIn: "Masuk",
     signUp: "Buat akun",
     signOut: "Keluar",
+    google: "Lanjutkan dengan Google",
+    or: "atau gunakan email",
     name: "Nama",
     email: "Email",
     password: "Kata sandi",
@@ -28,6 +30,8 @@ const copy = {
     signIn: "Sign in",
     signUp: "Create account",
     signOut: "Sign out",
+    google: "Continue with Google",
+    or: "or use email",
     name: "Name",
     email: "Email",
     password: "Password",
@@ -42,7 +46,13 @@ const copy = {
   },
 } as const;
 
-export function AuthPanel({ locale }: { locale: Locale }) {
+type AuthPanelProps = {
+  readonly locale: Locale;
+  readonly returnTo: string;
+  readonly socialCallback?: boolean;
+};
+
+export function AuthPanel({ locale, returnTo, socialCallback = false }: AuthPanelProps) {
   const text = copy[locale];
   const router = useRouter();
   const { data: session, isPending, refetch } = authClient.useSession();
@@ -53,23 +63,35 @@ export function AuthPanel({ locale }: { locale: Locale }) {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [claimNeedsRetry, setClaimNeedsRetry] = useState(false);
+  const socialTransitionStarted = useRef(false);
 
-  const claimGuestDrafts = async (): Promise<boolean> => {
+  const claimGuestDrafts = useCallback(async (): Promise<boolean> => {
     try {
       const response = await fetch("/api/guest/claim", { method: "POST" });
       return response.ok;
     } catch {
       return false;
     }
-  };
+  }, []);
 
-  const finishAuthenticatedTransition = async () => {
+  const finishAuthenticatedTransition = useCallback(async (): Promise<boolean> => {
     const claimed = await claimGuestDrafts();
     setClaimNeedsRetry(!claimed);
     setStatus(claimed ? text.claimSuccess : text.claimFailure);
     await refetch();
-    router.refresh();
-  };
+    if (claimed) {
+      router.replace(returnTo);
+      router.refresh();
+    }
+    return claimed;
+  }, [claimGuestDrafts, refetch, returnTo, router, text.claimFailure, text.claimSuccess]);
+
+  useEffect(() => {
+    if (!socialCallback || !session?.user || socialTransitionStarted.current) return;
+    socialTransitionStarted.current = true;
+    setBusy(true);
+    void finishAuthenticatedTransition().finally(() => setBusy(false));
+  }, [finishAuthenticatedTransition, session?.user, socialCallback]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -89,12 +111,24 @@ export function AuthPanel({ locale }: { locale: Locale }) {
     setBusy(false);
   };
 
+  const signInWithGoogle = async () => {
+    setBusy(true);
+    setStatus("");
+    setClaimNeedsRetry(false);
+    const callback = new URLSearchParams({ social: "google", returnTo });
+    const result = await authClient.signIn.social({
+      provider: "google",
+      callbackURL: `/${locale}/auth?${callback.toString()}`,
+    });
+    if (result.error) {
+      setBusy(false);
+      setStatus(text.genericError);
+    }
+  };
+
   const retryClaim = async () => {
     setBusy(true);
-    const claimed = await claimGuestDrafts();
-    setClaimNeedsRetry(!claimed);
-    setStatus(claimed ? text.claimSuccess : text.claimFailure);
-    if (claimed) router.refresh();
+    await finishAuthenticatedTransition();
     setBusy(false);
   };
 
@@ -142,11 +176,15 @@ export function AuthPanel({ locale }: { locale: Locale }) {
   return (
     <section className="rounded-[var(--radius-card)] border border-border bg-card p-6 sm:p-8">
       <p className="text-sm text-muted-foreground">{text.signedOut}</p>
-      <div className="mt-5 flex flex-wrap gap-2" aria-label={locale === "id" ? "Pilihan autentikasi" : "Authentication options"}>
-        <Button type="button" variant={mode === "sign-in" ? "default" : "outline"} onClick={() => setMode("sign-in")}>
+      <Button className="mt-5 w-full" type="button" variant="outline" onClick={signInWithGoogle} disabled={busy}>
+        {busy ? text.working : text.google}
+      </Button>
+      <p className="my-5 text-center text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">{text.or}</p>
+      <div className="flex flex-wrap gap-2" aria-label={locale === "id" ? "Pilihan autentikasi" : "Authentication options"}>
+        <Button type="button" variant={mode === "sign-in" ? "default" : "outline"} onClick={() => setMode("sign-in")} disabled={busy}>
           {text.signIn}
         </Button>
-        <Button type="button" variant={mode === "sign-up" ? "default" : "outline"} onClick={() => setMode("sign-up")}>
+        <Button type="button" variant={mode === "sign-up" ? "default" : "outline"} onClick={() => setMode("sign-up")} disabled={busy}>
           {text.signUp}
         </Button>
       </div>
