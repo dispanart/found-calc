@@ -20,10 +20,20 @@ test("Google entry stays keyboard-usable and a controlled social callback preser
   await google.focus();
   await expect(google).toBeFocused();
 
-  const signUp = await page.request.post("/api/auth/sign-up/email", {
-    data: { name: "Phase 07A Google", email, password },
-  });
-  expect(signUp.status()).toBe(200);
+  const signUpStatus = await page.evaluate(async ({ accountEmail, accountPassword }) => {
+    const response = await fetch("/api/auth/sign-up/email", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        name: "Phase 07A Google",
+        email: accountEmail,
+        password: accountPassword,
+      }),
+    });
+    return response.status;
+  }, { accountEmail: email, accountPassword: password });
+  expect(signUpStatus).toBe(200);
 
   await page.goto(`/en/auth?social=google&returnTo=${encodeURIComponent(returnTo)}`);
   await expect(page).toHaveURL(/\/en\/calculators\/discount\?scenario=oauth#results$/);
