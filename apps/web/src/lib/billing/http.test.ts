@@ -21,7 +21,7 @@ const baseRepo = (): BillingHttpRepository => ({
   hasHistoricalPaidSubscription: async () => false,
   createCheckoutCorrelation: async () => undefined,
   attachProviderSession: async () => true, expireCheckout: async () => true, getSubscriptionForCancellation: async () => null,
-  markCancellationRequested: async () => true, stagePlanChange: async () => true, clearPlanChange: async () => true, getEventOwner: async () => null, applyWebhookTransition: async () => ({ duplicate: false, applied: true, matched: true }),
+  markCancellationRequested: async () => true, clearCancellationRequest: async () => true, stagePlanChange: async () => true, clearPlanChange: async () => true, getEventOwner: async () => null, applyWebhookTransition: async () => ({ duplicate: false, applied: true, matched: true }),
 });
 const services = (overrides: Partial<BillingHttpServices> = {}): BillingHttpServices => ({
   auth: { api: { getSession: async () => session } } as BillingHttpServices["auth"], repository: baseRepo(), plans: { ok: true, plans: [plan] },
