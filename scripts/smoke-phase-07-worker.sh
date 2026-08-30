@@ -183,7 +183,8 @@ for migration in \
   migrations/0001_phase04_auth_and_calculator_state.sql \
   migrations/0002_phase05_rule_platform_admin.sql \
   migrations/0003_phase06_workspace.sql \
-  migrations/0004_phase07_billing.sql; do
+  migrations/0004_phase07_billing.sql \
+  migrations/0005_phase07a_commercial_auth_amendment.sql; do
   if ! pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file "$migration" --yes; then
     fail_checkpoint "worker-startup" "failed to apply local D1 migration $migration"
   fi

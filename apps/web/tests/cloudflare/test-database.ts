@@ -4,6 +4,7 @@ import phase04MigrationSql from "../../migrations/0001_phase04_auth_and_calculat
 import phase05MigrationSql from "../../migrations/0002_phase05_rule_platform_admin.sql?raw";
 import phase06MigrationSql from "../../migrations/0003_phase06_workspace.sql?raw";
 import phase07MigrationSql from "../../migrations/0004_phase07_billing.sql?raw";
+import phase07aMigrationSql from "../../migrations/0005_phase07a_commercial_auth_amendment.sql?raw";
 
 const phase04TablesInDropOrder = [
   "calculator_state",
@@ -21,6 +22,7 @@ const currentTriggersInDropOrder = [
 ] as const;
 
 const currentTablesInDropOrder = [
+  "billing_trial",
   "billing_webhook_inbox",
   "billing_subscription",
   "billing_checkout",
@@ -56,6 +58,7 @@ export const resetCurrentDatabase = async () => {
   await applySql(env.DB, phase05MigrationSql);
   await applySql(env.DB, phase06MigrationSql);
   await applySql(env.DB, phase07MigrationSql);
+  await applySql(env.DB, phase07aMigrationSql);
 };
 
 export const resetPhase04Database = async (db: D1Database, migrationSql: string) => {
