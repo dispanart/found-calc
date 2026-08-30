@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
+// RED execution marker: production verification files are intentionally absent here.
 const url = (path) => new URL(`../../${path}`, import.meta.url);
 const read = (path) => readFileSync(url(path), "utf8");
 
