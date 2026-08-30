@@ -11,6 +11,7 @@ export type BillingSubscriptionRecord = {
   readonly latestCycleStatus: string | null;
   readonly latestEventAt: number;
   readonly nextCycleAt: number | null;
+  readonly paidThroughAt?: number | null;
   readonly cancellationRequestedAt: number | null;
   readonly pendingPlanId: string | null;
   readonly pendingPlanChangeRequestedAt: number | null;
@@ -20,6 +21,39 @@ export type BillingStatusRecord = {
   readonly subscription: BillingSubscriptionRecord | null;
   readonly checkoutPending: boolean;
 };
+
+export const BESTIES_TRIAL_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
+
+export type BillingTrialRecord = {
+  readonly userId: string;
+  readonly trialTier: "besties";
+  readonly startedAt: number;
+  readonly endsAt: number;
+  readonly convertedAt: number | null;
+};
+
+export class BillingTrialNotEligibleError extends Error {
+  constructor() {
+    super("Besties introductory trial is not eligible for this account");
+    this.name = "BillingTrialNotEligibleError";
+  }
+}
+
+type BillingTrialRow = {
+  userId: string;
+  trialTier: "besties";
+  startedAt: number;
+  endsAt: number;
+  convertedAt: number | null;
+};
+
+const trialFromRow = (row: BillingTrialRow): BillingTrialRecord => ({
+  userId: row.userId,
+  trialTier: row.trialTier,
+  startedAt: row.startedAt,
+  endsAt: row.endsAt,
+  convertedAt: row.convertedAt,
+});
 
 export type BillingWebhookTransition = {
   readonly dedupeKey: string;
@@ -48,6 +82,7 @@ type SubscriptionRow = {
   latestEventAt: number;
   latestEventRank: number;
   nextCycleAt: number | null;
+  paidThroughAt: number | null;
   cancellationRequestedAt: number | null;
   pendingPlanId: string | null;
   pendingPlanChangeRequestedAt: number | null;
@@ -67,6 +102,7 @@ const subscriptionFromRow = (row: SubscriptionRow): BillingSubscriptionRecord =>
   latestCycleStatus: row.latestCycleStatus,
   latestEventAt: row.latestEventAt,
   nextCycleAt: row.nextCycleAt,
+  paidThroughAt: row.paidThroughAt,
   cancellationRequestedAt: row.cancellationRequestedAt,
   pendingPlanId: row.pendingPlanId,
   pendingPlanChangeRequestedAt: row.pendingPlanChangeRequestedAt,
@@ -78,6 +114,55 @@ export const createBillingRepository = (binding: D1Database) => {
       INSERT OR IGNORE INTO billing_customer (user_id, created_at, updated_at)
       VALUES (?, ?, ?)
     `).bind(userId, now, now).run();
+  };
+
+  const getTrialForUser = async (userId: string): Promise<BillingTrialRecord | null> => {
+    const row = await binding.prepare(`
+      SELECT user_id AS userId, trial_tier AS trialTier, started_at AS startedAt,
+             ends_at AS endsAt, converted_at AS convertedAt
+      FROM billing_trial
+      WHERE user_id = ?
+      LIMIT 1
+    `).bind(userId).first<BillingTrialRow>();
+    return row ? trialFromRow(row) : null;
+  };
+
+  const hasHistoricalPaidSubscription = async (userId: string): Promise<boolean> => {
+    const row = await binding.prepare(
+      "SELECT id FROM billing_subscription WHERE user_id = ? LIMIT 1",
+    ).bind(userId).first<{ id: string }>();
+    return Boolean(row);
+  };
+
+  const startBestiesTrial = async (
+    userId: string,
+    nowMs: number,
+  ): Promise<{ readonly started: boolean; readonly trial: BillingTrialRecord }> => {
+    if (!Number.isSafeInteger(nowMs)) throw new RangeError("nowMs must be an integer timestamp in milliseconds");
+    const endsAt = nowMs + BESTIES_TRIAL_DURATION_MS;
+    if (!Number.isSafeInteger(endsAt)) throw new RangeError("trial end timestamp is outside the safe integer range");
+
+    const inserted = await binding.prepare(`
+      INSERT OR IGNORE INTO billing_trial
+        (user_id, trial_tier, started_at, ends_at, converted_at, created_at, updated_at)
+      SELECT ?, 'besties', ?, ?, NULL, ?, ?
+      WHERE NOT EXISTS (
+        SELECT 1 FROM billing_subscription WHERE user_id = ? LIMIT 1
+      )
+    `).bind(userId, nowMs, endsAt, nowMs, nowMs, userId).run();
+
+    const trial = await getTrialForUser(userId);
+    if (!trial) throw new BillingTrialNotEligibleError();
+    return { started: Boolean(inserted.meta.changes), trial };
+  };
+
+  const markTrialConverted = async (userId: string, nowMs: number): Promise<void> => {
+    if (!Number.isSafeInteger(nowMs)) throw new RangeError("nowMs must be an integer timestamp in milliseconds");
+    await binding.prepare(`
+      UPDATE billing_trial
+      SET converted_at = COALESCE(converted_at, ?), updated_at = ?
+      WHERE user_id = ?
+    `).bind(nowMs, nowMs, userId).run();
   };
 
   const createCheckoutCorrelation = async (input: {
@@ -148,7 +233,8 @@ export const createBillingRepository = (binding: D1Database) => {
       SELECT id, user_id AS userId, plan_id AS planId, provider_plan_id AS providerPlanId,
              reference_id AS referenceId, status, latest_cycle_status AS latestCycleStatus,
              latest_event_at AS latestEventAt, latest_event_rank AS latestEventRank,
-             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt,
+             next_cycle_at AS nextCycleAt, paid_through_at AS paidThroughAt,
+             cancellation_requested_at AS cancellationRequestedAt,
              pending_plan_id AS pendingPlanId, pending_plan_change_requested_at AS pendingPlanChangeRequestedAt
       FROM billing_subscription
       WHERE user_id = ?
@@ -168,7 +254,8 @@ export const createBillingRepository = (binding: D1Database) => {
       SELECT id, user_id AS userId, plan_id AS planId, provider_plan_id AS providerPlanId,
              reference_id AS referenceId, status, latest_cycle_status AS latestCycleStatus,
              latest_event_at AS latestEventAt, latest_event_rank AS latestEventRank,
-             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt,
+             next_cycle_at AS nextCycleAt, paid_through_at AS paidThroughAt,
+             cancellation_requested_at AS cancellationRequestedAt,
              pending_plan_id AS pendingPlanId, pending_plan_change_requested_at AS pendingPlanChangeRequestedAt
       FROM billing_subscription
       WHERE user_id = ? AND status <> 'inactive'
@@ -184,9 +271,30 @@ export const createBillingRepository = (binding: D1Database) => {
   ): Promise<boolean> => {
     const result = await binding.prepare(`
       UPDATE billing_subscription
-      SET cancellation_requested_at = COALESCE(cancellation_requested_at, ?), updated_at = ?
+      SET cancellation_requested_at = ?,
+          paid_through_at = next_cycle_at,
+          updated_at = ?
       WHERE user_id = ? AND provider_plan_id = ? AND status <> 'inactive'
-    `).bind(now, now, userId, providerPlanId).run();
+        AND cancellation_requested_at IS NULL
+        AND next_cycle_at IS NOT NULL AND next_cycle_at > ?
+    `).bind(now, now, userId, providerPlanId, now).run();
+    return Boolean(result.meta.changes);
+  };
+
+  const clearCancellationRequest = async (
+    userId: string,
+    providerPlanId: string,
+    stagedAt: number,
+    now = Date.now(),
+  ): Promise<boolean> => {
+    const result = await binding.prepare(`
+      UPDATE billing_subscription
+      SET cancellation_requested_at = NULL,
+          paid_through_at = NULL,
+          updated_at = ?
+      WHERE user_id = ? AND provider_plan_id = ? AND status <> 'inactive'
+        AND cancellation_requested_at = ?
+    `).bind(now, userId, providerPlanId, stagedAt).run();
     return Boolean(result.meta.changes);
   };
 
@@ -232,7 +340,8 @@ export const createBillingRepository = (binding: D1Database) => {
       SELECT id, user_id AS userId, plan_id AS planId, provider_plan_id AS providerPlanId,
              reference_id AS referenceId, status, latest_cycle_status AS latestCycleStatus,
              latest_event_at AS latestEventAt, latest_event_rank AS latestEventRank,
-             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt,
+             next_cycle_at AS nextCycleAt, paid_through_at AS paidThroughAt,
+             cancellation_requested_at AS cancellationRequestedAt,
              pending_plan_id AS pendingPlanId, pending_plan_change_requested_at AS pendingPlanChangeRequestedAt
       FROM billing_subscription
       WHERE provider_plan_id = ? OR reference_id = ?
@@ -352,6 +461,10 @@ export const createBillingRepository = (binding: D1Database) => {
 
   return {
     ensureCustomer,
+    getTrialForUser,
+    hasHistoricalPaidSubscription,
+    startBestiesTrial,
+    markTrialConverted,
     createCheckoutCorrelation,
     attachProviderSession,
     expireCheckout,
@@ -359,6 +472,7 @@ export const createBillingRepository = (binding: D1Database) => {
     getStatusForUser,
     getSubscriptionForCancellation,
     markCancellationRequested,
+    clearCancellationRequest,
     stagePlanChange,
     clearPlanChange,
     applyWebhookTransition,

@@ -92,12 +92,16 @@ test("Phase 07 package and local env examples declare only placeholder billing c
   assert.doesNotMatch(vars, /xnd_[A-Za-z0-9]{8,}/i);
 });
 
-test("Phase 07 closure declares an exact canonical archive and Phase 08 handoff", () => {
+test("Phase 07 historical closure remains reproducible without repackaging successor source", () => {
   const artifactPath = ".github/workflows/phase-07-baseline-artifact.yml";
   assert.equal(existsSync(url(artifactPath)), true, `${artifactPath} must exist`);
   const artifact = read(artifactPath);
   assert.match(artifact, /found-calc-phase-07-billing-entitlements-xendit\.zip/);
+  assert.match(artifact, /workflow_dispatch\s*:/);
+  assert.doesNotMatch(artifact, /^\s*push\s*:/m);
+  assert.match(artifact, /8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4/);
   assert.match(artifact, /git archive/);
+  assert.match(artifact, /PHASE07_CANONICAL_SHA/);
   assert.match(artifact, /SHA256SUMS/);
   assert.match(artifact, /ARTIFACT_VERIFICATION\.txt/);
   for (const required of [
@@ -111,12 +115,6 @@ test("Phase 07 closure declares an exact canonical archive and Phase 08 handoff"
   ]) assert.match(artifact, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 
   const baseline = read("BASELINE.md");
-  assert.match(baseline, /Last canonical completed phase:\*\* Phase 07/);
+  assert.match(baseline, /8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4/);
   assert.match(baseline, /found-calc-phase-07-billing-entitlements-xendit\.zip/);
-  const handoff = read("PHASE_HANDOFF.md");
-  assert.match(handoff, /Phase 08 — Frozen V1 Catalog Production/);
-  assert.match(handoff, /found-calc-phase-07-billing-entitlements-xendit\.zip/);
-  const template = read("PHASE_CHAT_TEMPLATE.md");
-  assert.match(template, /Phase 08 — Frozen V1 Catalog Production/);
-  assert.match(template, /found-calc-phase-07-billing-entitlements-xendit\.zip/);
 });

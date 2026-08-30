@@ -192,8 +192,8 @@ describe("Phase 07 billing API with D1", () => {
     await repository.createCheckoutCorrelation({ id: "checkout-1", userId: user.id, planId: "fixture-pro", referenceId: "ref-cancel" });
     await repository.applyWebhookTransition({
       dedupeKey: "activate", eventName: "recurring.plan.activated", providerPlanId: "rp-cancel", providerCycleId: null,
-      referenceId: "ref-cancel", providerEventAt: 1_800_000_000_000, nextStatus: "active", latestCycleStatus: null,
-      currentCycleStartedAt: null, nextCycleAt: null, providerCreatedAt: null, providerUpdatedAt: 1_800_000_000_000, rank: 20,
+      referenceId: "ref-cancel", providerEventAt: Date.parse("2026-08-14T10:01:00.000Z"), nextStatus: "active", latestCycleStatus: null,
+      currentCycleStartedAt: null, nextCycleAt: Date.parse("2026-09-14T10:00:00.000Z"), providerCreatedAt: null, providerUpdatedAt: Date.parse("2026-08-14T10:01:00.000Z"), rank: 20,
     });
     const deactivateSubscription = vi.fn(async () => undefined);
     const services: BillingHttpServices = {

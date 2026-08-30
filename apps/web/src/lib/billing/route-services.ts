@@ -6,6 +6,7 @@ import { createBillingRepository } from "./repository";
 import { parseBillingPlansJson } from "./plans";
 import { createXenditClient, XenditClientError } from "../xendit/client";
 import type { BillingHttpServices, BillingXenditClient } from "./http";
+import type { BillingTrialHttpServices } from "./trial-http";
 
 type BillingWorkerEnv = {
   readonly DB: D1Database;
@@ -33,6 +34,11 @@ export const getBillingStatusRouteServices = () => ({
   repository: repository(),
   plans: plans(),
 }) satisfies Pick<BillingHttpServices, "auth" | "repository" | "plans">;
+
+export const getBillingTrialRouteServices = () => ({
+  auth: getFoundCalcAuth(),
+  repository: repository(),
+}) satisfies BillingTrialHttpServices;
 
 export const getBillingCheckoutRouteServices = () => ({
   ...getBillingStatusRouteServices(),

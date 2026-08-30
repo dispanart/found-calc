@@ -1,97 +1,148 @@
-# Found Calc Phase 07 — Billing, Entitlements & Xendit
+# Found Calc Phase 07A — Commercial, Trial & Google Auth Amendment
 
 **Project:** Found Calc  
-**Phase state:** COMPLETE  
-**Last canonical completed phase:** Phase 07 — Billing, Entitlements & Xendit  
-**Next phase:** Phase 08 — Frozen V1 Catalog Production  
-**Completion date:** 2026-08-29
+**Phase state:** COMPLETE after merge + artifact verification  
+**Last canonical completed phase:** Phase 07A — Commercial, Trial & Google Auth Amendment  
+**Next phase:** Phase 07B — Widget Platform Foundation  
+**Phase 07 canonical predecessor SHA:** `8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4`  
+**Completion date:** 2026-08-30
 
 ## Canonical artifact
 
-`found-calc-phase-07-billing-entitlements-xendit.zip`
+`found-calc-phase-07a-commercial-auth-amendment.zip`
 
-GitHub `main` remains the collaborative canonical repository. After merge, `.github/workflows/phase-07-baseline-artifact.yml` archives the exact merged `GITHUB_SHA` with `git archive`, writes `SHA256SUMS`, verifies ZIP integrity, extraction, and required files, and records exact source commit/tree provenance in `ARTIFACT_VERIFICATION.txt`. The resulting ZIP is the portable recovery/handoff source for Phase 08.
+GitHub `main` remains the collaborative canonical repository. After Phase 07A merges, `.github/workflows/phase-07a-baseline-artifact.yml` archives the exact merged `GITHUB_SHA` with `git archive`, writes `SHA256SUMS`, verifies ZIP integrity/extraction/required files, rejects generated or local secret-bearing state, and records source commit/tree/checksum provenance in `ARTIFACT_VERIFICATION.txt`.
 
-Historical predecessor provenance: Phase 07 started from `found-calc-phase-06-goals-projects-profiles-workspace.zip`.
+Historical Phase 07 provenance is preserved rather than rewritten. Phase 07 remains canonical at `8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4` with portable artifact `found-calc-phase-07-billing-entitlements-xendit.zip`. Its artifact workflow is historical/manual-only and pinned to that SHA so later phases cannot accidentally publish newer source under the Phase 07 artifact name.
 
-## Canonical implementation evidence
+## Phase 07A amendment boundary
 
-Final production/runtime candidate before closure-metadata-only changes:
+Phase 07A is additive. It does not reopen or replace Phase 01–07 deterministic engine, catalog, rules, auth/persistence, workspace, or Xendit authority boundaries. Migration `0005_phase07a_commercial_auth_amendment.sql` is additive; migrations 0001–0004 remain immutable.
 
-- source SHA: `602d214add0424b0466d0452c8a9b8220e193faa`;
-- PR synthetic-merge GitHub Actions run: `33265992747`;
-- full verification job: `99136070192` — **SUCCESS**;
-- built Worker smoke job: `99136070354` — **SUCCESS**.
+Phase 07A adds:
 
-That exact source includes the regression-proven hardening for ambiguous Xendit provider plan updates, cross-wired webhook identity, deterministic Worker diagnostics, and recovery from the known local Wrangler/Miniflare fatal `Network connection lost.` proxy signature. Only closure metadata/provenance may change after this milestone; merge remains conditional on a fresh exact closure-head Phase 07 run passing both the full verifier and built-Worker smoke. The canonical artifact workflow records the exact merged identity dynamically.
+- public plan names Friends / Besties / Family while preserving legacy provider/internal identities;
+- current checkout offers and prices without breaking reconciliation of historical Phase 07 offers;
+- one-time manual 14-day Besties trial with server-authoritative time and no Xendit/card requirement;
+- paid-through entitlement preservation after cancellation;
+- Google sign-in through Better Auth with safe same-origin return targets and guest draft claim continuity;
+- Friends persistence limits for Saved Calculations, active Goals, and active Projects with no destructive downgrade;
+- localized public pricing and commercial billing UX;
+- Phase 07A verification + built Worker smoke as a complete Phase 07 regression superset.
 
-## Completed deliverables
+## Commercial contract
 
-- First-party D1 billing customer, checkout, subscription, webhook-inbox, pending-plan-change, cancellation, and ordered reconciliation state.
-- Approved V1 commercial coordinates: Free Rp0; Pro Rp25.000/month or Rp250.000/year; Business Rp75.000/month or Rp750.000/year.
-- Monthly and annual Xendit subscription checkout with annual represented as a 12-month recurring interval.
-- Capability-based entitlement resolution from validated first-party state; ordinary entitlement reads do not call Xendit.
-- Webhook-authoritative activation/change semantics with duplicate, stale, delayed, retry, failure, and terminal-state protection.
-- Authenticated checkout, status, cancellation, and plan-change APIs that never trust provider identity from browser input.
-- Upgrade/downgrade staging with entitlement promotion only after matching authoritative successful-cycle reconciliation.
-- Ambiguous provider plan-update outcomes preserve staged first-party target state until authoritative reconciliation; definite provider rejection may clear it.
-- Localized ID/EN billing workspace UI, monthly/annual offers, lifecycle messaging, keyboard/focus/accessibility coverage, and 390px no-overflow coverage.
-- Free public calculators remain usable; Phase 01–06 calculator/rule/persistence/workspace truth is not retroactively paywalled or reinterpreted.
-- `verify:phase07` as a fail-fast Phase 06→01 regression superset plus Phase 07 foundation/unit/D1/browser/build checks.
-- Deterministic built vinext Worker smoke with named checkpoints, sanitized diagnostics, and bounded recovery only for the exact known local Miniflare connection-loss proxy signature.
+### Friends — Calculate — Rp0
 
-Detailed evidence: `docs/verification/phase-07-verification.md`.
+- all public calculators and primary results remain free;
+- maximum 5 Saved Calculations;
+- 30-day History;
+- maximum 1 active Goal;
+- maximum 1 active Project;
+- widget entitlement contract: 1 verified domain with mandatory `Powered by Found Calc` attribution;
+- data above Friends limits remains readable after downgrade/expiry; only new creation/reactivation above the limit is blocked.
 
-## Stable architecture boundaries
+### Besties — Plan
 
-### Deterministic truth
+- Rp24.900/month;
+- Rp199.000/year;
+- unlimited plan access for Saved Calculations, History, Goals, and personal Projects;
+- advanced scenario/comparison/sensitivity/deterministic recommendation capabilities where implemented;
+- exports where supported by the relevant workflow;
+- widget entitlement contract up to 3 verified domains with branding removal/customization/standard analytics;
+- one manual 14-day introductory trial, once per account, no card, no Xendit subscription creation.
 
-`@found-calc/engine` remains the only owner of calculator arithmetic. Billing, entitlements, checkout, Xendit, workspace storage, routes, and UI must not duplicate formulas.
+### Family — Operate
 
-### Rule truth
+- Rp59.000/month;
+- Rp499.000/year;
+- Family/Portfolio entitlement and operating-scale capabilities;
+- bulk SKU, CSV import, multi-marketplace/store/business and campaign portfolio entitlements;
+- 2 seats in the current commercial contract;
+- widget entitlement contract for 10+ domains, white-label, and advanced analytics/events.
 
-`@found-calc/rules` continues to own immutable version/effective-date/publication semantics. Billing does not reinterpret rule truth.
+Widget Platform and Portfolio runtime availability are distinct from entitlement. Phase 07A UI explicitly says those runtimes are not yet available rather than falsely advertising them as implemented.
 
-### Billing and entitlement truth
+## Stable internal/provider identities
 
-First-party D1 state is the application authorization/entitlement truth. Xendit is the payment/subscription processor. Checkout return URLs are informational and never grant paid capability. Valid authenticated provider reconciliation is authoritative for subscription transitions.
+Historical Xendit/provider IDs remain unchanged and reconcilable:
 
-### Provider trust boundary
+- `pro-monthly`
+- `pro-annual`
+- `business-monthly`
+- `business-annual`
 
-`XENDIT_SECRET_API_KEY` and `XENDIT_WEBHOOK_TOKEN` are server-only. Browser requests never supply trusted provider IDs. Billing status and entitlement reads never require provider network calls. Webhook authentication happens before body mutation and provider payloads are normalized rather than retained raw.
+Current checkout offers are versioned additively:
 
-### Persistence and ordering
+- `pro-monthly-2026a` → Besties Rp24.900/month
+- `pro-annual-2026a` → Besties Rp199.000/year
+- `business-monthly-2026a` → Family Rp59.000/month
+- `business-annual-2026a` → Family Rp499.000/year
 
-Phase 07 uses the separate `0004_phase07_billing.sql` domain. Webhook inbox idempotency and event timestamp/rank ordering prevent duplicates, stale events, or older activation from reviving newer terminal state. Pending plan changes do not grant target capabilities before authoritative success. Provider mutation ambiguity is fail-safe: transport/timeout/408/5xx uncertainty preserves the pending target instead of pretending the provider definitely rejected it.
+Public tier names never become provider identity or scattered authorization checks.
 
-## Deployment-like verification note
+## Trial and effective-access truth
 
-An earlier Phase 07 Worker smoke produced a false-negative because a `curl ... | grep -q` assertion ran under `set -euo pipefail`: after `grep -q` found the match and closed the pipe, `curl` could exit with code 23 even though the request succeeded. The smoke now stores responses first, checks HTTP status/body separately, runs as a dedicated parallel job, and emits named sanitized checkpoints.
+The Besties trial is manually activated, lasts exactly `14 × 24h` from a server-authoritative timestamp, is available once per account, requires no card/Xendit call, cannot be restarted, and is unavailable to historical paid users. Pending checkout does not extend trial access.
 
-Later GitHub-hosted Node 22 runs exposed the local Wrangler/Miniflare regression whose exact proxy response is HTTP 500 with body `Error: Network connection lost.` and which can terminate `wrangler dev`, causing subsequent requests to receive connection refused. The final harness tolerates only that exact tooling signature: it stops/restarts the local Wrangler process with the same supported `--persist-to` D1 directory, re-probes readiness, and retries at most three attempts. Arbitrary Found Calc/application 500s still fail immediately. Because signup mutates state, each retry attempt uses an isolated smoke identity so an ambiguous first POST is never replayed against the same email.
+Effective access precedence is:
 
-Current Context7 `/cloudflare/workers-sdk` documentation confirms `wrangler dev --persist-to <dir>` is the supported custom local persistence mechanism and D1 local migration tooling supports `--local --persist-to`; the recovery therefore preserves the same local D1 state across a tooling-process restart rather than introducing a deployment-specific data workaround.
+```text
+Family paid
+→ Besties paid
+→ active Besties trial
+→ Friends
+```
 
-## Preserved security and interaction contracts
+First-party D1 remains application entitlement truth. Ordinary access/capability reads do not query Xendit.
 
-- Public calculators remain usable without authentication.
-- Checkout success/cancel return state cannot activate entitlement.
-- Cancellation keeps access until authoritative inactivation confirmation.
-- Failed/retrying payment does not silently grant new capabilities.
-- Duplicate/out-of-order webhooks are idempotent and order-safe.
-- Cross-user billing state is scoped by authenticated first-party identity.
-- No raw calculator inputs, payment credentials, auth cookies, callback tokens, provider API secrets, or production database identity are logged or included in portable artifacts.
-- ID/EN, keyboard accessibility, visible focus, semantic status messaging, and mobile no-overflow requirements remain enforced.
-- Fixed infrastructure target remains Rp0 excluding domain and payment transaction fees.
+## Cancellation contract
 
-## Explicitly deferred beyond Phase 07
+Cancellation stops renewal; it is not an automatic refund and never deletes user data. Before provider deactivation is requested, the application requires an authoritative future billing-period boundary and freezes it into `paid_through_at`. Provider `inactive` therefore does not imply immediate loss of paid entitlement when `paid_through_at` is still in the future. Access returns to the next effective source at/after that boundary.
 
-- Frozen V1 calculator catalog production batches (Phase 08).
-- Production analytics/SEO/security/cost hardening beyond inherited requirements.
-- AI product features.
-- TestSprite launch certification.
-- Remote Cloudflare production deployment, DNS, real D1 provisioning/migration, or production secret mutation.
+## Google / authentication contract
 
-## Continuity rule
+Google is configured only through Better Auth `socialProviders.google` using server-only `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Email/password, D1/Drizzle and admin behavior remain enabled. Cross-email account-linking weakening such as `allowDifferentEmails: true` is not enabled.
 
-Start **Phase 08 — Frozen V1 Catalog Production** in a **new chat inside the same Found Calc project** using the exact post-merge `found-calc-phase-07-billing-entitlements-xendit.zip`. Read `PHASE_HANDOFF.md`, this baseline, the Phase 07 verification record/spec/plan, and the canonical Phase Workflow before planning. Treat Phase 01–07 architecture/regression/security boundaries as approved baseline unless a verified implementation blocker requires change control.
+Auth return targets are validated as locale-scoped same-origin relative paths and reject protocol-relative, traversal, encoded path separators, control characters, backslashes, malformed encoding, and wrong-locale paths. The preserved flow is:
+
+```text
+guest calculator state
+→ auth
+→ Google/Better Auth callback
+→ /api/guest/claim
+→ validated originating context
+```
+
+Claim failure keeps the user at auth with an explicit retry rather than silently losing pre-auth state.
+
+## Friends persistence enforcement
+
+Commercial capability resolution reads first-party billing/trial state only. Friends limits are enforced at the mutation boundary with guarded single-statement D1 writes for Saved Calculations and active Goal/Project creation/reactivation. Existing records remain readable/updatable. Guest claim continues through the unrestricted claim path so authentication does not discard pre-auth drafts.
+
+The current Phase 04 `calculator_state` schema has only the three canonical calculator IDs, so the production Friends limit of 5 Saved Calculations is presently non-binding for the current three calculators. Integration tests use a smaller injected cap across real calculator IDs to prove enforcement mechanics without mutating historical schema merely to fabricate extra calculators.
+
+## Verification
+
+Authoritative Phase 07A evidence is recorded in `docs/verification/phase-07a-verification.md`.
+
+`pnpm verify:phase07a` first runs the complete `pnpm verify:phase07` regression gate, then Phase 07A foundation/unit/D1/lint/typecheck/Playwright/Next/vinext checks. The CI workflow also independently builds and smoke-tests the vinext Worker with synthetic non-production billing and Google configuration.
+
+The verifier clears inherited `.next` generated state before the Phase 07A typecheck so nested predecessor builds cannot contaminate current generated route types. It does not exclude `.next/types` from TypeScript validation; the subsequent Next production build still validates generated route contracts.
+
+## Preserved security and trust boundaries
+
+- deterministic calculator arithmetic remains owned by `@found-calc/engine`;
+- rule/version truth remains owned by `@found-calc/rules`;
+- first-party D1 remains entitlement/authorization truth;
+- Xendit remains payment/subscription processor, not ordinary entitlement-read authority;
+- checkout return URLs never grant paid capability;
+- provider credentials, Google secret, auth cookies, raw payment data, and production database identity are never committed or included in portable artifacts;
+- downgrade/trial expiry/cancellation never deletes user-owned calculator/workspace data;
+- ID/EN, keyboard/focus, mobile no-overflow, privacy/trust, and Rp0 fixed-infrastructure target excluding domain/payment transaction fees remain preserved.
+
+## Next phase
+
+The next implementation phase is **Phase 07B — Widget Platform Foundation**. It must start in a new chat from the exact post-merge `found-calc-phase-07a-commercial-auth-amendment.zip`.
+
+Phase 07B must not silently pull Phase 08 Frozen V1 Catalog Production forward. Phase 08 remains deferred until the bounded Phase 07B work is completed or explicitly reprioritized under change control.

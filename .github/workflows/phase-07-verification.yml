@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - phase-07-billing-entitlements-xendit
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -55,6 +52,7 @@ jobs:
           pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0002_phase05_rule_platform_admin.sql --yes
           pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0003_phase06_workspace.sql --yes
           pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0004_phase07_billing.sql --yes
+          pnpm exec wrangler d1 execute found-calc-local --local --file migrations/0005_phase07a_commercial_auth_amendment.sql --yes
       - name: Run Phase 07 verification gate
         run: pnpm verify:phase07
 

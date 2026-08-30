@@ -1,11 +1,18 @@
 import type { FoundCalcAuth } from "../auth/server";
 import type { BillingPlanDefinition } from "./contracts";
-import { resolveBillingEntitlements } from "./entitlements";
-import { getBillingPlan, nextBillingAnchorIso, type BillingPlansResult } from "./plans";
+import { resolveBillingEntitlements, resolveEffectiveCommercialAccess } from "./entitlements";
+import {
+  getBillingPlan,
+  getCurrentCheckoutPlans,
+  nextBillingAnchorIso,
+  offerInternalTier,
+  type BillingPlansResult,
+} from "./plans";
 import type {
   BillingEventOwner,
   BillingStatusRecord,
   BillingSubscriptionRecord,
+  BillingTrialRecord,
   BillingWebhookTransition,
 } from "./repository";
 import { XenditClientError, type XenditSubscriptionPlanUpdateInput, type XenditSubscriptionSessionInput } from "../xendit/client";
@@ -21,11 +28,14 @@ type CheckoutCorrelationInput = { readonly id: string; readonly userId: string; 
 
 export interface BillingHttpRepository {
   getStatusForUser(userId: string): Promise<BillingStatusRecord>;
+  getTrialForUser(userId: string): Promise<BillingTrialRecord | null>;
+  hasHistoricalPaidSubscription(userId: string): Promise<boolean>;
   createCheckoutCorrelation(input: CheckoutCorrelationInput): Promise<void>;
   attachProviderSession(userId: string, checkoutId: string, providerSessionId: string, now?: number): Promise<boolean>;
   expireCheckout(userId: string, checkoutId: string, now?: number): Promise<boolean>;
   getSubscriptionForCancellation(userId: string): Promise<BillingSubscriptionRecord | null>;
   markCancellationRequested(userId: string, providerPlanId: string, now?: number): Promise<boolean>;
+  clearCancellationRequest(userId: string, providerPlanId: string, stagedAt: number, now?: number): Promise<boolean>;
   stagePlanChange(userId: string, providerPlanId: string, targetPlanId: string, now?: number): Promise<boolean>;
   clearPlanChange(userId: string, providerPlanId: string, targetPlanId: string, now?: number): Promise<boolean>;
   getEventOwner(referenceId: string, providerPlanId: string): Promise<BillingEventOwner | null>;
@@ -49,7 +59,7 @@ export interface BillingHttpServices {
   readonly randomUUID?: () => string;
 }
 
-type BillingStatusServices = Pick<BillingHttpServices, "auth" | "repository" | "plans">;
+type BillingStatusServices = Pick<BillingHttpServices, "auth" | "repository" | "plans" | "now">;
 type BillingCheckoutServices = Pick<BillingHttpServices, "auth" | "repository" | "plans" | "xendit" | "publicAppOrigin" | "now" | "randomUUID">;
 type BillingCancelServices = Pick<BillingHttpServices, "auth" | "repository" | "xendit" | "now">;
 type BillingChangeServices = Pick<BillingHttpServices, "auth" | "repository" | "plans" | "xendit" | "now">;
@@ -115,20 +125,54 @@ const subscriptionResponse = (subscription: BillingSubscriptionRecord | null) =>
   status: subscription.status,
   latestCycleStatus: subscription.latestCycleStatus,
   nextCycleAt: subscription.nextCycleAt,
+  paidThroughAt: subscription.paidThroughAt ?? null,
   cancellationPending: subscription.cancellationRequestedAt !== null,
   pendingPlanId: subscription.pendingPlanId,
 } : null;
 
-const statusPayload = (plans: BillingPlansResult, state: BillingStatusRecord) => {
+const checkoutPlansFor = (configuredPlans: readonly BillingPlanDefinition[]): readonly BillingPlanDefinition[] => {
+  const current = getCurrentCheckoutPlans(configuredPlans);
+  return current.length > 0 ? current : configuredPlans;
+};
+
+const trialResponse = (trial: BillingTrialRecord | null, eligible: boolean) => ({
+  startedAt: trial?.startedAt ?? null,
+  endsAt: trial?.endsAt ?? null,
+  convertedAt: trial?.convertedAt ?? null,
+  eligible,
+});
+
+const statusPayload = (
+  plans: BillingPlansResult,
+  state: BillingStatusRecord,
+  trial: BillingTrialRecord | null,
+  trialEligible: boolean,
+  now: number,
+) => {
   const configuredPlans = plans.ok ? plans.plans : [];
+  const visiblePlans = checkoutPlansFor(configuredPlans);
   const activePlan = state.subscription ? getBillingPlan(configuredPlans, state.subscription.planId) : null;
+  const legacyEntitlements = resolveBillingEntitlements(activePlan, state.subscription?.status ?? null).keys;
+  const bestiesPlan = configuredPlans.find((plan) => offerInternalTier(plan.id) === "pro") ?? null;
+  const commercial = resolveEffectiveCommercialAccess({
+    paidTier: activePlan ? offerInternalTier(activePlan.id) : null,
+    subscriptionStatus: state.subscription?.status ?? null,
+    paidThroughAt: state.subscription?.paidThroughAt ?? null,
+    paidKeys: activePlan?.entitlements ?? [],
+    trial,
+    trialKeys: bestiesPlan?.entitlements ?? [],
+    now,
+    checkoutPending: state.checkoutPending,
+  });
   return {
     billing: {
       available: plans.ok,
-      plans: configuredPlans.map(planResponse),
+      plans: visiblePlans.map(planResponse),
       subscription: subscriptionResponse(state.subscription),
       checkoutPending: state.checkoutPending,
-      entitlements: resolveBillingEntitlements(activePlan, state.subscription?.status ?? null).keys,
+      entitlements: legacyEntitlements,
+      commercial,
+      trial: trialResponse(trial, trialEligible),
     },
   };
 };
@@ -141,7 +185,14 @@ export const handleBillingStatusRequest = async (request: Request, services: Bil
   try {
     const auth = await authenticate(request, services);
     if (!auth.ok) return auth.response;
-    return json(statusPayload(services.plans, await services.repository.getStatusForUser(auth.user.id)));
+    const [state, trial, historicalPaid] = await Promise.all([
+      services.repository.getStatusForUser(auth.user.id),
+      services.repository.getTrialForUser(auth.user.id),
+      services.repository.hasHistoricalPaidSubscription(auth.user.id),
+    ]);
+    const now = (services.now?.() ?? new Date()).valueOf();
+    const eligible = auth.user.emailVerified === true && trial === null && !historicalPaid;
+    return json(statusPayload(services.plans, state, trial, eligible, now));
   } catch (caught) { return handleFailure(caught); }
 };
 
@@ -158,7 +209,7 @@ export const handleBillingCheckoutRequest = async (request: Request, services: B
     if (!checkout) return error("invalid-billing-input", 400);
     const { planId, locale } = checkout;
     if (!services.plans.ok) return error("billing-unavailable", 503);
-    const plan = getBillingPlan(services.plans.plans, planId);
+    const plan = getBillingPlan(checkoutPlansFor(services.plans.plans), planId);
     if (!plan) return error("billing-plan-not-found", 404);
     const origin = publicOrigin(services.publicAppOrigin);
     if (!origin) return error("billing-unavailable", 503);
@@ -211,7 +262,7 @@ export const handleBillingChangeRequest = async (request: Request, services: Bil
     const change = parsePlanChangeBody(body.value);
     if (!change) return error("invalid-billing-input", 400);
     if (!services.plans.ok) return error("billing-unavailable", 503);
-    const target = getBillingPlan(services.plans.plans, change.planId);
+    const target = getBillingPlan(checkoutPlansFor(services.plans.plans), change.planId);
     if (!target) return error("billing-plan-not-found", 404);
     const state = await services.repository.getStatusForUser(auth.user.id);
     const subscription = state.subscription;
@@ -244,6 +295,7 @@ export const handleBillingChangeRequest = async (request: Request, services: Bil
 };
 
 export const handleBillingCancelRequest = async (request: Request, services: BillingCancelServices): Promise<Response> => {
+  let staged: { userId: string; providerPlanId: string; stagedAt: number } | null = null;
   try {
     const auth = await authenticate(request, services);
     if (!auth.ok) return auth.response;
@@ -252,12 +304,35 @@ export const handleBillingCancelRequest = async (request: Request, services: Bil
     if (!isEmptyObject(body.value)) return error("invalid-billing-input", 400);
     const subscription = await services.repository.getSubscriptionForCancellation(auth.user.id);
     if (!subscription) return error("billing-subscription-not-found", 409);
-    if (subscription.cancellationRequestedAt === null) {
-      await services.xendit.deactivateSubscription(subscription.providerPlanId);
-      await services.repository.markCancellationRequested(auth.user.id, subscription.providerPlanId, (services.now?.() ?? new Date()).valueOf());
+    if (subscription.cancellationRequestedAt !== null) {
+      return json({ subscription: { planId: subscription.planId, status: subscription.status, cancellationPending: true, paidThroughAt: subscription.paidThroughAt ?? null } });
     }
-    return json({ subscription: { planId: subscription.planId, status: subscription.status, cancellationPending: true } });
-  } catch (caught) { return handleFailure(caught); }
+    const now = (services.now?.() ?? new Date()).valueOf();
+    const boundary = subscription.nextCycleAt;
+    if (typeof boundary !== "number" || !Number.isSafeInteger(boundary) || boundary <= now) {
+      return error("billing-period-unavailable", 409);
+    }
+    if (!await services.repository.markCancellationRequested(auth.user.id, subscription.providerPlanId, now)) {
+      const concurrent = await services.repository.getSubscriptionForCancellation(auth.user.id);
+      if (concurrent?.providerPlanId === subscription.providerPlanId && concurrent.cancellationRequestedAt !== null) {
+        return json({ subscription: { planId: concurrent.planId, status: concurrent.status, cancellationPending: true, paidThroughAt: concurrent.paidThroughAt ?? boundary } });
+      }
+      throw new Error("billing-cancellation-state-conflict");
+    }
+    staged = { userId: auth.user.id, providerPlanId: subscription.providerPlanId, stagedAt: now };
+    await services.xendit.deactivateSubscription(subscription.providerPlanId);
+    return json({ subscription: { planId: subscription.planId, status: subscription.status, cancellationPending: true, paidThroughAt: boundary } });
+  } catch (caught) {
+    // A transport/timeout/5xx response cannot prove that Xendit rejected the
+    // deactivation. Keep the frozen paid-through boundary so an authoritative
+    // inactivation webhook cannot race away already-paid access. Roll back only
+    // when the provider definitively rejected the mutation.
+    const definitelyRejected = caught instanceof XenditClientError && !caught.requestMayHaveSucceeded;
+    if (staged && definitelyRejected) {
+      try { await services.repository.clearCancellationRequest(staged.userId, staged.providerPlanId, staged.stagedAt, (services.now?.() ?? new Date()).valueOf()); } catch { /* provider failure remains primary */ }
+    }
+    return handleFailure(caught);
+  }
 };
 
 const tokenMatches = (provided: string | null, expected: string | undefined): boolean => {

@@ -2,6 +2,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { env } from "cloudflare:workers";
 
 import { getFoundCalcAuth } from "@/lib/auth/server";
+import { createCommercialCapabilityAuthorizer } from "@/lib/billing/capabilities";
 import { handleCalculatorStateRequest } from "@/lib/persistence/http";
 
 type RouteContext = { params: Promise<{ calculatorId: string }> };
@@ -10,9 +11,11 @@ const workerEnv = () => env as unknown as { DB: D1Database };
 const handle = async (method: "GET" | "PUT" | "DELETE", request: Request, context: RouteContext) => {
   try {
     const { calculatorId } = await context.params;
+    const DB = workerEnv().DB;
     return await handleCalculatorStateRequest(method, request, calculatorId, {
-      DB: workerEnv().DB,
+      DB,
       auth: getFoundCalcAuth(),
+      capabilities: createCommercialCapabilityAuthorizer(DB),
     });
   } catch {
     return Response.json({ error: { code: "service-unavailable" } }, { status: 503 });

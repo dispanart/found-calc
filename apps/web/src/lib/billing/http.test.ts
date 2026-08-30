@@ -16,9 +16,12 @@ const plan: BillingPlanDefinition = {
 };
 const session = { user: { id: "user-1", name: "Dina", email: "dina@example.test" } };
 const baseRepo = (): BillingHttpRepository => ({
-  getStatusForUser: async () => ({ subscription: null, checkoutPending: false }), createCheckoutCorrelation: async () => undefined,
+  getStatusForUser: async () => ({ subscription: null, checkoutPending: false }),
+  getTrialForUser: async () => null,
+  hasHistoricalPaidSubscription: async () => false,
+  createCheckoutCorrelation: async () => undefined,
   attachProviderSession: async () => true, expireCheckout: async () => true, getSubscriptionForCancellation: async () => null,
-  markCancellationRequested: async () => true, stagePlanChange: async () => true, clearPlanChange: async () => true, getEventOwner: async () => null, applyWebhookTransition: async () => ({ duplicate: false, applied: true, matched: true }),
+  markCancellationRequested: async () => true, clearCancellationRequest: async () => true, stagePlanChange: async () => true, clearPlanChange: async () => true, getEventOwner: async () => null, applyWebhookTransition: async () => ({ duplicate: false, applied: true, matched: true }),
 });
 const services = (overrides: Partial<BillingHttpServices> = {}): BillingHttpServices => ({
   auth: { api: { getSession: async () => session } } as BillingHttpServices["auth"], repository: baseRepo(), plans: { ok: true, plans: [plan] },
@@ -71,7 +74,7 @@ describe("billing HTTP boundary", () => {
   });
 
   it("does not let cancellation input select provider identity", async () => {
-    const sub = { id: "sub-1", userId: "user-1", planId: "fixture-pro", providerPlanId: "rp-secret", referenceId: "ref", status: "active" as const, latestCycleStatus: null, latestEventAt: 1, nextCycleAt: null, cancellationRequestedAt: null, pendingPlanId: null, pendingPlanChangeRequestedAt: null };
+    const sub = { id: "sub-1", userId: "user-1", planId: "fixture-pro", providerPlanId: "rp-secret", referenceId: "ref", status: "active" as const, latestCycleStatus: null, latestEventAt: 1, nextCycleAt: 1_800_000_100_000, cancellationRequestedAt: null, pendingPlanId: null, pendingPlanChangeRequestedAt: null };
     let deactivated = "";
     const svc = services({ repository: { ...baseRepo(), getSubscriptionForCancellation: async () => sub }, xendit: { createSubscriptionSession: async () => { throw new Error(); }, updateSubscriptionPlan: async () => undefined, deactivateSubscription: async (id) => { deactivated = id; } } });
     expect((await handleBillingCancelRequest(request("/api/billing/subscription/cancel", { providerPlanId: "attacker" }), svc)).status).toBe(400); expect(deactivated).toBe("");

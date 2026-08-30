@@ -98,7 +98,7 @@ describe("billing repository", () => {
   it("records cancellation once without changing the local status", async () => {
     const repo = createBillingRepository(env.DB);
     await repo.createCheckoutCorrelation({ id: "checkout-1", userId: ownerId, planId: "fixture-pro", referenceId: "billing-ref-1" });
-    await repo.applyWebhookTransition(event(), 1_800_000_000_100);
+    await repo.applyWebhookTransition(event({ nextCycleAt: 1_800_000_100_000 }), 1_800_000_000_100);
     expect(await repo.markCancellationRequested(ownerId, "provider-plan-1", 1_800_000_010_000)).toBe(true);
     expect(await repo.markCancellationRequested(otherId, "provider-plan-1", 1_800_000_020_000)).toBe(false);
     expect((await repo.getStatusForUser(ownerId)).subscription).toMatchObject({ status: "active", cancellationRequestedAt: 1_800_000_010_000 });

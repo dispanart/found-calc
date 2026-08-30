@@ -57,7 +57,7 @@ const copy = {
     titlePlaceholder: "Example: August offer",
     save: "Save calculation",
     saving: "Saving…",
-    calculateFirst: "Complete a successful calculation before saving it to a Project.",
+    calculateFirst: "Complete a successful calculation before saving it to Project.",
     saved: "Named calculation saved to the Project.",
     saveFailure: "The calculation could not be saved. Your form and local draft were not changed.",
     privacy: "Save only when you intend Project members to see this calculation's canonical inputs.",
@@ -204,7 +204,15 @@ export function WorkspaceCalculationControls({
       <section className="mt-7 border-t border-border pt-6">
         <h2 id={`workspace-save-${calculatorId}`} className="text-sm font-bold">{text.heading}</h2>
         <p className="mt-2 text-xs leading-5 text-muted-foreground">{text.signedOut}</p>
-        <Link href={`/${locale}/auth`} className="mt-4 inline-flex min-h-11 items-center rounded-[var(--radius-control)] border border-border px-4 text-sm font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Link
+          href={`/${locale}/auth`}
+          onClick={(event) => {
+            event.preventDefault();
+            const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+            window.location.assign(`/${locale}/auth?returnTo=${encodeURIComponent(returnTo)}`);
+          }}
+          className="mt-4 inline-flex min-h-11 items-center rounded-[var(--radius-control)] border border-border px-4 text-sm font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           {text.signIn}
         </Link>
       </section>

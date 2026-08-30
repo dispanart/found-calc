@@ -4,7 +4,7 @@ import { test } from "node:test";
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 
-test("Phase 04 auth is D1-backed Better Auth with email/password only", () => {
+test("Phase 04 D1-backed Better Auth email/password baseline remains enabled", () => {
   const server = read("apps/web/src/lib/auth/server.ts");
   const route = read("apps/web/src/app/api/auth/[...all]/route.ts");
   const client = read("apps/web/src/lib/auth/client.ts");
@@ -15,7 +15,7 @@ test("Phase 04 auth is D1-backed Better Auth with email/password only", () => {
   assert.match(server, /drizzleAdapter/);
   assert.match(server, /emailAndPassword\s*:\s*\{[\s\S]*enabled\s*:\s*true/);
   assert.match(server, /BETTER_AUTH_SECRET/);
-  assert.doesNotMatch(server, /socialProviders|twoFactor|organization\(/);
+  assert.doesNotMatch(server, /twoFactor|organization\(/);
   assert.match(route, /toNextJsHandler/);
   assert.match(client, /createAuthClient/);
   assert.match(config, /cloudflare:workers/);

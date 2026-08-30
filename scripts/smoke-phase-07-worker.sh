@@ -18,7 +18,7 @@ sanitize_stream() {
   node -e '
     const fs = require("node:fs");
     let text = fs.readFileSync(0, "utf8");
-    for (const key of ["BETTER_AUTH_SECRET", "XENDIT_SECRET_API_KEY", "XENDIT_WEBHOOK_TOKEN"]) {
+    for (const key of ["BETTER_AUTH_SECRET", "XENDIT_SECRET_API_KEY", "XENDIT_WEBHOOK_TOKEN", "GOOGLE_CLIENT_SECRET"]) {
       const value = process.env[key];
       if (value) text = text.split(value).join("[REDACTED]");
     }
@@ -183,7 +183,8 @@ for migration in \
   migrations/0001_phase04_auth_and_calculator_state.sql \
   migrations/0002_phase05_rule_platform_admin.sql \
   migrations/0003_phase06_workspace.sql \
-  migrations/0004_phase07_billing.sql; do
+  migrations/0004_phase07_billing.sql \
+  migrations/0005_phase07a_commercial_auth_amendment.sql; do
   if ! pnpm exec wrangler d1 execute found-calc-local --local --persist-to "$smoke_state" --file "$migration" --yes; then
     fail_checkpoint "worker-startup" "failed to apply local D1 migration $migration"
   fi
@@ -229,7 +230,10 @@ fi
 if ! BILLING_RESPONSE_FILE="$response_body" node <<'NODE'
 const fs = require("node:fs");
 const body = JSON.parse(fs.readFileSync(process.env.BILLING_RESPONSE_FILE, "utf8"));
-const expectedPlanIds = ["pro-monthly", "pro-annual", "business-monthly", "business-annual"];
+const configuredPlanIds = JSON.parse(process.env.BILLING_PLANS_JSON ?? "[]").map((plan) => plan?.id);
+const legacyPlanIds = ["pro-monthly", "pro-annual", "business-monthly", "business-annual"];
+const currentPlanIds = ["pro-monthly-2026a", "pro-annual-2026a", "business-monthly-2026a", "business-annual-2026a"];
+const expectedPlanIds = currentPlanIds.every((id) => configuredPlanIds.includes(id)) ? currentPlanIds : legacyPlanIds;
 const actualPlanIds = Array.isArray(body?.billing?.plans) ? body.billing.plans.map((plan) => plan?.id) : null;
 const valid =
   body?.billing?.available === true &&

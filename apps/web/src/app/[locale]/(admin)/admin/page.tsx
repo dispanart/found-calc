@@ -15,7 +15,7 @@ export default async function AdminShellPage({ params }: { params: Promise<{ loc
       <p className="text-sm font-semibold text-primary">{messages.phaseLabel}</p>
       <h1 className="mt-4 text-4xl font-bold tracking-[-0.045em] sm:text-5xl">{messages.adminTitle}</h1>
       <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground">{messages.adminBody}</p>
-      <div className="mt-8"><AuthPanel locale={locale} /></div>
+      <div className="mt-8"><AuthPanel locale={locale} returnTo={`/${locale}/admin`} /></div>
       <RuleAdminPanel locale={locale} />
     </main>
   );

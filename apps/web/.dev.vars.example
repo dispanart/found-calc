@@ -4,6 +4,11 @@ BETTER_AUTH_URL=http://127.0.0.1:3000
 # Optional comma-separated Better Auth user IDs for the Phase 05 admin bootstrap.
 BETTER_AUTH_ADMIN_USER_IDS=
 
+# Optional Phase 07A Google sign-in. Keep both values server-only.
+# Configure the Google OAuth redirect URI as: <BETTER_AUTH_URL>/api/auth/callback/google
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
 # Phase 07 billing. Keep provider secrets in .dev.vars / Cloudflare secrets only.
 # Production plan names, prices, and entitlement keys must come from approved server configuration.
 BILLING_PLANS_JSON=

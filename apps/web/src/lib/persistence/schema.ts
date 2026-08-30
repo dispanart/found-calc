@@ -274,6 +274,7 @@ export const billingSubscriptions = sqliteTable(
     currentCycleStartedAt: integer("current_cycle_started_at"),
     nextCycleAt: integer("next_cycle_at"),
     cancellationRequestedAt: integer("cancellation_requested_at"),
+    paidThroughAt: integer("paid_through_at"),
     pendingPlanId: text("pending_plan_id"),
     pendingPlanChangeRequestedAt: integer("pending_plan_change_requested_at"),
     providerCreatedAt: integer("provider_created_at"),
@@ -286,6 +287,20 @@ export const billingSubscriptions = sqliteTable(
     index("billing_subscription_user_idx").on(table.userId, table.updatedAt),
     index("billing_subscription_reference_idx").on(table.referenceId),
   ],
+);
+
+export const billingTrials = sqliteTable(
+  "billing_trial",
+  {
+    userId: text("user_id").primaryKey().references(() => authUsers.id, { onDelete: "cascade" }),
+    trialTier: text("trial_tier", { enum: ["besties"] }).notNull(),
+    startedAt: integer("started_at").notNull(),
+    endsAt: integer("ends_at").notNull(),
+    convertedAt: integer("converted_at"),
+    createdAt: timestampMs("created_at"),
+    updatedAt: timestampMs("updated_at"),
+  },
+  (table) => [index("billing_trial_ends_idx").on(table.endsAt)],
 );
 
 export const billingWebhookInbox = sqliteTable(

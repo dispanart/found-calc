@@ -4,6 +4,7 @@ import phase04MigrationSql from "../../migrations/0001_phase04_auth_and_calculat
 import phase05MigrationSql from "../../migrations/0002_phase05_rule_platform_admin.sql?raw";
 import phase06MigrationSql from "../../migrations/0003_phase06_workspace.sql?raw";
 import phase07MigrationSql from "../../migrations/0004_phase07_billing.sql?raw";
+import phase07aMigrationSql from "../../migrations/0005_phase07a_commercial_auth_amendment.sql?raw";
 
 const phase04TablesInDropOrder = [
   "calculator_state",
@@ -21,6 +22,7 @@ const currentTriggersInDropOrder = [
 ] as const;
 
 const currentTablesInDropOrder = [
+  "billing_trial",
   "billing_webhook_inbox",
   "billing_subscription",
   "billing_checkout",
@@ -43,7 +45,7 @@ const applySql = async (db: D1Database, sql: string) => {
   if (statements.length > 0) await db.batch(statements);
 };
 
-export const resetCurrentDatabase = async () => {
+const resetSharedDatabase = async () => {
   const dropTriggers = currentTriggersInDropOrder.map((trigger) =>
     env.DB.prepare(`DROP TRIGGER IF EXISTS ${trigger}`),
   );
@@ -56,6 +58,17 @@ export const resetCurrentDatabase = async () => {
   await applySql(env.DB, phase05MigrationSql);
   await applySql(env.DB, phase06MigrationSql);
   await applySql(env.DB, phase07MigrationSql);
+};
+
+/** Reset to the exact predecessor schema used to verify the additive 0005 migration. */
+export const resetPhase07Database = async () => {
+  await resetSharedDatabase();
+};
+
+/** Reset to the current Phase 07A schema for ordinary repository/API tests. */
+export const resetCurrentDatabase = async () => {
+  await resetSharedDatabase();
+  await applySql(env.DB, phase07aMigrationSql);
 };
 
 export const resetPhase04Database = async (db: D1Database, migrationSql: string) => {

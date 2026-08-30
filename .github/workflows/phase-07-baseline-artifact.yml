@@ -1,29 +1,24 @@
 name: Phase 07 Canonical Baseline
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - docs/verification/phase-07-verification.md
-      - .github/workflows/phase-07-baseline-artifact.yml
-      - tests/foundation/phase-07-verification-contract.test.mjs
-      - docs/superpowers/specs/2026-08-29-found-calc-phase-07-billing-entitlements-xendit-design.md
-      - docs/superpowers/plans/2026-08-29-found-calc-phase-07-billing-entitlements-xendit.md
   workflow_dispatch:
 
 permissions:
   contents: read
 
+env:
+  PHASE07_CANONICAL_SHA: 8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4
+
 jobs:
   package:
-    name: Package exact Phase 07 merge baseline
+    name: Package canonical Phase 07 historical baseline
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout exact source commit
+      - name: Checkout canonical Phase 07 source commit
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.PHASE07_CANONICAL_SHA }}
           fetch-depth: 0
 
       - name: Create canonical archive and checksum
@@ -31,7 +26,7 @@ jobs:
         run: |
           set -euo pipefail
           ARTIFACT="found-calc-phase-07-billing-entitlements-xendit.zip"
-          git archive --format=zip --output="$ARTIFACT" "$GITHUB_SHA"
+          git archive --format=zip --output="$ARTIFACT" "$PHASE07_CANONICAL_SHA"
           sha256sum "$ARTIFACT" > SHA256SUMS
 
       - name: Extract and verify portable baseline
@@ -103,14 +98,14 @@ jobs:
             exit 1
           fi
 
-          source_tree="$(git rev-parse "$GITHUB_SHA^{tree}")"
+          source_tree="$(git rev-parse "$PHASE07_CANONICAL_SHA^{tree}")"
           archive_sha256="$(cut -d' ' -f1 SHA256SUMS)"
 
           {
             echo "artifact=$ARTIFACT"
-            echo "source_commit=$GITHUB_SHA"
+            echo "source_commit=$PHASE07_CANONICAL_SHA"
             echo "source_tree=$source_tree"
-            echo "archive_provenance=git-archive-exact-github-sha"
+            echo "archive_provenance=git-archive-canonical-phase07-sha"
             echo "archive_sha256=$archive_sha256"
             echo "zip_integrity=PASS"
             echo "required_files=${#required[@]}"
