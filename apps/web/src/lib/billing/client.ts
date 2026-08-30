@@ -192,19 +192,33 @@ export const parseBillingStatusPayload = (value: unknown): BillingStatusClient |
     if (!nonEmpty(key, 128) || !/^[a-z0-9][a-z0-9._:-]{1,127}$/.test(key)) return null;
     if (!entitlements.includes(key)) entitlements.push(key);
   }
-  const commercial = billing.commercial === undefined ? undefined : parseCommercial(billing.commercial);
-  if (billing.commercial !== undefined && commercial === null) return null;
-  const trial = billing.trial === undefined ? undefined : parseTrial(billing.trial);
-  if (billing.trial !== undefined && trial === null) return null;
-  return {
+
+  const base: BillingStatusClient = {
     available: billing.available,
     plans,
     subscription,
     checkoutPending: billing.checkoutPending,
     entitlements,
-    ...(commercial === undefined ? {} : { commercial }),
-    ...(trial === undefined ? {} : { trial }),
   };
+
+  if (billing.commercial !== undefined) {
+    const commercial = parseCommercial(billing.commercial);
+    if (!commercial) return null;
+    if (billing.trial !== undefined) {
+      const trial = parseTrial(billing.trial);
+      if (!trial) return null;
+      return { ...base, commercial, trial };
+    }
+    return { ...base, commercial };
+  }
+
+  if (billing.trial !== undefined) {
+    const trial = parseTrial(billing.trial);
+    if (!trial) return null;
+    return { ...base, trial };
+  }
+
+  return base;
 };
 
 const errorCode = async (response: Response): Promise<string> => {
