@@ -66,3 +66,44 @@ test("Phase 07 Worker smoke remains compatible with legacy and current Phase 07A
   assert.match(smoke, /currentPlanIds\.every/);
   assert.match(smoke, /GOOGLE_CLIENT_SECRET/);
 });
+
+test("Phase 07A closure packages the exact merge baseline and hands off to Phase 07B without rewriting Phase 07 provenance", () => {
+  for (const path of [
+    "docs/verification/phase-07a-verification.md",
+    ".github/workflows/phase-07a-baseline-artifact.yml",
+  ]) assert.equal(existsSync(url(path)), true, `${path} must exist`);
+
+  const artifact = read(".github/workflows/phase-07a-baseline-artifact.yml");
+  assert.match(artifact, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
+  assert.match(artifact, /branches:\s*\n\s*- main/);
+  assert.match(artifact, /git archive/);
+  assert.match(artifact, /\$GITHUB_SHA/);
+  assert.match(artifact, /SHA256SUMS/);
+  assert.match(artifact, /ARTIFACT_VERIFICATION\.txt/);
+  for (const required of [
+    "scripts/verify-phase-07a.mjs",
+    "apps/web/migrations/0005_phase07a_commercial_auth_amendment.sql",
+    "apps/web/src/lib/billing/trial-http.ts",
+    "apps/web/src/lib/billing/capabilities.ts",
+    "apps/web/src/lib/auth/redirect.ts",
+    "apps/web/src/components/billing/pricing-panel.tsx",
+    "apps/web/tests/e2e/phase-07a-pricing.spec.ts",
+    "tests/foundation/phase-07a-verification-contract.test.mjs",
+  ]) assert.match(artifact, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+
+  const baseline = read("BASELINE.md");
+  assert.match(baseline, /Last canonical completed phase:\*\* Phase 07A/);
+  assert.match(baseline, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
+  assert.match(baseline, /8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4/);
+
+  const handoff = read("PHASE_HANDOFF.md");
+  assert.match(handoff, /Phase 07B — Widget Platform Foundation/);
+  assert.match(handoff, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
+  const template = read("PHASE_CHAT_TEMPLATE.md");
+  assert.match(template, /Phase 07B — Widget Platform Foundation/);
+  assert.match(template, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
+
+  const historicalArtifact = read(".github/workflows/phase-07-baseline-artifact.yml");
+  assert.doesNotMatch(historicalArtifact, /^\s*push\s*:/m);
+  assert.match(historicalArtifact, /8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4/);
+});
