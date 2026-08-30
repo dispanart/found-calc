@@ -2,6 +2,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { handleBillingCancelRequest, type BillingHttpServices } from "../../src/lib/billing/http";
 import { createBillingRepository, type BillingWebhookTransition } from "../../src/lib/billing/repository";
 import { resetCurrentDatabase } from "./test-database";
 
@@ -70,5 +71,62 @@ describe("Phase 07A cancellation persistence", () => {
       "SELECT status, paid_through_at AS paidThroughAt FROM billing_subscription WHERE user_id = ? LIMIT 1",
     ).bind(ownerId).first<{ status: string; paidThroughAt: number | null }>();
     expect(afterInactivation).toEqual({ status: "inactive", paidThroughAt });
+  });
+
+  it("freezes paid-through before a provider inactivation webhook can race the cancellation marker", async () => {
+    const planId = "pro-monthly";
+    const repo = createBillingRepository(env.DB);
+    await repo.createCheckoutCorrelation({
+      id: `checkout-${planId}`,
+      userId: ownerId,
+      planId,
+      referenceId: `ref-${planId}`,
+      now: nowMs - 4_000_000,
+    });
+    await repo.applyWebhookTransition(event(planId), nowMs - 9_000);
+
+    let providerCalls = 0;
+    const services: BillingHttpServices = {
+      auth: {
+        api: {
+          getSession: async () => ({
+            user: { id: ownerId, name: "Cancellation owner", email: `${ownerId}@example.test`, emailVerified: true },
+          }),
+        },
+      } as BillingHttpServices["auth"],
+      repository: repo,
+      plans: { ok: true, plans: [] },
+      xendit: {
+        createSubscriptionSession: async () => { throw new Error("not used"); },
+        updateSubscriptionPlan: async () => { throw new Error("not used"); },
+        deactivateSubscription: async () => {
+          providerCalls += 1;
+          await repo.applyWebhookTransition(event(planId, {
+            dedupeKey: `${planId}:inactivated-race`,
+            eventName: "recurring.plan.inactivated",
+            providerEventAt: nowMs + 10_000,
+            nextStatus: "inactive",
+            latestCycleStatus: null,
+            nextCycleAt: null,
+            providerUpdatedAt: nowMs + 10_000,
+            rank: 40,
+          }), nowMs + 11_000);
+        },
+      },
+      now: () => new Date(nowMs),
+    };
+
+    const response = await handleBillingCancelRequest(new Request("https://found.example/api/billing/subscription/cancel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    }), services);
+
+    expect(response.status).toBe(200);
+    expect(providerCalls).toBe(1);
+    const afterRace = await env.DB.prepare(
+      "SELECT status, cancellation_requested_at AS cancellationRequestedAt, paid_through_at AS paidThroughAt FROM billing_subscription WHERE user_id = ? LIMIT 1",
+    ).bind(ownerId).first<{ status: string; cancellationRequestedAt: number | null; paidThroughAt: number | null }>();
+    expect(afterRace).toEqual({ status: "inactive", cancellationRequestedAt: nowMs, paidThroughAt });
   });
 });
