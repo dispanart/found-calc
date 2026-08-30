@@ -39,6 +39,7 @@ const repository = (sub: BillingSubscriptionRecord): BillingHttpRepository => ({
   expireCheckout: async () => true,
   getSubscriptionForCancellation: async () => sub,
   markCancellationRequested: async () => true,
+  clearCancellationRequest: async () => true,
   stagePlanChange: async () => true,
   clearPlanChange: async () => true,
   getEventOwner: async () => null,
