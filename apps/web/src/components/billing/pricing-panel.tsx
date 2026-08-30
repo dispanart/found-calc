@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import type { Locale } from "@/i18n/locales";
+import { commercialLimitsFor, publicPlanName } from "@/lib/billing/commercial";
+import type { CommercialLimits } from "@/lib/billing/contracts";
 
 const copy = {
   id: {
@@ -13,24 +15,24 @@ const copy = {
     free: "Rp0",
     monthly: "bulan",
     yearly: "tahun",
-    friendsFeatures: [
+    friendsFeatures: (limits: CommercialLimits) => [
       "Semua kalkulator publik dan hasil utama",
-      "Maksimal 5 Saved Calculations",
-      "History 30 hari",
-      "1 Goal aktif dan 1 Project aktif",
-      "Entitlement widget untuk 1 domain terverifikasi dengan Powered by Found Calc",
+      `Maksimal ${limits.savedCalculations} Saved Calculations`,
+      `History ${limits.historyDays} hari`,
+      `${limits.activeGoals} Goal aktif dan ${limits.activeProjects} Project aktif`,
+      `Entitlement widget untuk ${limits.widgetDomains} domain terverifikasi dengan Powered by Found Calc`,
     ],
-    bestiesFeatures: [
+    bestiesFeatures: (limits: CommercialLimits) => [
       "Saved Calculations, History, Goals, dan personal Projects tanpa batas plan",
       "Perbandingan skenario, sensitivity, dan deterministic recommendations lanjutan",
       "Export PDF/CSV ketika tersedia pada workflow terkait",
-      "Entitlement widget hingga 3 domain, theme customization, dan standard analytics",
+      `Entitlement widget hingga ${limits.widgetDomains} domain, theme customization, dan standard analytics`,
     ],
-    familyFeatures: [
+    familyFeatures: (limits: CommercialLimits) => [
       "Portfolio entitlement untuk operating view lintas banyak entitas",
       "Bulk SKU, CSV import, multi-marketplace/store, dan campaign portfolio entitlement",
-      "2 seats untuk team capability awal",
-      "Entitlement widget 10+ domain, white-label, dan advanced analytics/events",
+      `${limits.teamSeats} seats untuk team capability awal`,
+      `Entitlement widget ${limits.widgetDomains}+ domain, white-label, dan advanced analytics/events`,
     ],
     startFree: "Mulai menghitung",
     trial: "Coba Besties gratis 14 hari",
@@ -52,24 +54,24 @@ const copy = {
     free: "Rp0",
     monthly: "month",
     yearly: "year",
-    friendsFeatures: [
+    friendsFeatures: (limits: CommercialLimits) => [
       "All public calculators and primary results",
-      "Up to 5 Saved Calculations",
-      "30-day History",
-      "1 active Goal and 1 active Project",
-      "Widget entitlement for 1 verified domain with Powered by Found Calc",
+      `Up to ${limits.savedCalculations} Saved Calculations`,
+      `${limits.historyDays}-day History`,
+      `${limits.activeGoals} active Goal and ${limits.activeProjects} active Project`,
+      `Widget entitlement for ${limits.widgetDomains} verified domain with Powered by Found Calc`,
     ],
-    bestiesFeatures: [
+    bestiesFeatures: (limits: CommercialLimits) => [
       "Unlimited plan access for Saved Calculations, History, Goals, and personal Projects",
       "Advanced scenario comparison, sensitivity, and deterministic recommendations",
       "PDF/CSV export where supported by the relevant workflow",
-      "Widget entitlement for up to 3 domains, theme customization, and standard analytics",
+      `Widget entitlement for up to ${limits.widgetDomains} domains, theme customization, and standard analytics`,
     ],
-    familyFeatures: [
+    familyFeatures: (limits: CommercialLimits) => [
       "Portfolio entitlement for operating views across many entities",
       "Bulk SKU, CSV import, multi-marketplace/store, and campaign portfolio entitlements",
-      "2 seats for the initial team capability",
-      "Widget entitlement for 10+ domains, white-label, and advanced analytics/events",
+      `${limits.teamSeats} seats for the initial team capability`,
+      `Widget entitlement for ${limits.widgetDomains}+ domains, white-label, and advanced analytics/events`,
     ],
     startFree: "Start calculating",
     trial: "Try Besties free for 14 days",
@@ -85,33 +87,36 @@ const copy = {
 
 const planCards = (locale: Locale) => {
   const text = copy[locale];
+  const friendsLimits = commercialLimitsFor("friends");
+  const bestiesLimits = commercialLimitsFor("besties");
+  const familyLimits = commercialLimitsFor("family");
   return [
     {
-      name: "Friends",
+      name: publicPlanName("friends"),
       role: text.friendsRole,
       price: text.free,
       cadence: null,
-      features: text.friendsFeatures,
+      features: text.friendsFeatures(friendsLimits),
       cta: text.startFree,
       href: `/${locale}/calculators`,
       emphasis: false,
     },
     {
-      name: "Besties",
+      name: publicPlanName("besties"),
       role: text.bestiesRole,
       price: "Rp24.900",
       cadence: `/${text.monthly} · Rp199.000/${text.yearly}`,
-      features: text.bestiesFeatures,
+      features: text.bestiesFeatures(bestiesLimits),
       cta: text.trial,
       href: `/${locale}/auth?returnTo=${encodeURIComponent(`/${locale}/workspace/billing`)}`,
       emphasis: true,
     },
     {
-      name: "Family",
+      name: publicPlanName("family"),
       role: text.familyRole,
       price: "Rp59.000",
       cadence: `/${text.monthly} · Rp499.000/${text.yearly}`,
-      features: text.familyFeatures,
+      features: text.familyFeatures(familyLimits),
       cta: text.familyCta,
       href: `/${locale}/auth?returnTo=${encodeURIComponent(`/${locale}/workspace/billing`)}`,
       emphasis: false,
@@ -133,10 +138,7 @@ export function PricingPanel({ locale }: { locale: Locale }) {
 
       <section className="mt-12 grid min-w-0 gap-5 lg:grid-cols-3" aria-label={locale === "id" ? "Pilihan plan" : "Plan choices"}>
         {plans.map((plan) => (
-          <article
-            key={plan.name}
-            className={`min-w-0 rounded-[var(--radius-card)] border p-6 sm:p-7 ${plan.emphasis ? "border-primary bg-card shadow-sm" : "border-border bg-card"}`}
-          >
+          <article key={plan.name} className={`min-w-0 rounded-[var(--radius-card)] border p-6 sm:p-7 ${plan.emphasis ? "border-primary bg-card shadow-sm" : "border-border bg-card"}`}>
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">{plan.role}</p>
@@ -151,13 +153,10 @@ export function PricingPanel({ locale }: { locale: Locale }) {
             <ul className="mt-6 space-y-3 text-sm leading-6">
               {plan.features.map((feature) => <li key={feature} className="border-t border-border/70 pt-3 first:border-t-0 first:pt-0">{feature}</li>)}
             </ul>
-            <Link
-              href={plan.href}
-              className={`mt-7 inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-control)] px-4 text-center text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring ${plan.emphasis ? "bg-primary text-primary-foreground" : "border border-border bg-background hover:bg-muted"}`}
-            >
+            <Link href={plan.href} className={`mt-7 inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-control)] px-4 text-center text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring ${plan.emphasis ? "bg-primary text-primary-foreground" : "border border-border bg-background hover:bg-muted"}`}>
               {plan.cta}
             </Link>
-            {plan.name === "Besties" ? <p className="mt-3 text-xs leading-5 text-muted-foreground">{text.trialNote}</p> : null}
+            {plan.name === publicPlanName("besties") ? <p className="mt-3 text-xs leading-5 text-muted-foreground">{text.trialNote}</p> : null}
           </article>
         ))}
       </section>

@@ -14,9 +14,11 @@ test("Phase 07A pricing exposes the approved Friends, Besties, and Family promis
   assert.match(page, /<PricingPanel/);
   assert.match(panel, /Semua kalkulator tetap gratis\. Upgrade ketika Anda membutuhkan lebih\./);
   assert.match(panel, /Calculate for free\. Upgrade when you need more\./);
-  for (const value of ["Friends", "Besties", "Family", "Rp24.900", "Rp199.000", "Rp59.000", "Rp499.000", "5 Saved Calculations", "14 hari", "14 days", "Portfolio"]) {
+  for (const value of ["Friends", "Besties", "Family", "Rp24.900", "Rp199.000", "Rp59.000", "Rp499.000", "Saved Calculations", "14 hari", "14 days", "Portfolio"]) {
     assert.match(panel, new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  assert.match(panel, /publicPlanName/);
+  assert.match(panel, /commercialLimitsFor/);
   assert.match(panel, /Widget Platform/);
   assert.match(panel, /belum tersedia|not yet available/i);
   assert.match(panel, /data.*tetap|data.*remain/i);
