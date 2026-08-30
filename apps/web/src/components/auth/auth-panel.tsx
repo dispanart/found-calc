@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
@@ -80,7 +81,7 @@ export function AuthPanel({ locale, returnTo, socialCallback = false }: AuthPane
     setStatus(claimed ? text.claimSuccess : text.claimFailure);
     await refetch();
     if (claimed) {
-      router.replace(returnTo);
+      router.replace(returnTo as Route);
       router.refresh();
     }
     return claimed;
