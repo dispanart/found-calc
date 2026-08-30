@@ -271,12 +271,30 @@ export const createBillingRepository = (binding: D1Database) => {
   ): Promise<boolean> => {
     const result = await binding.prepare(`
       UPDATE billing_subscription
-      SET cancellation_requested_at = COALESCE(cancellation_requested_at, ?),
-          paid_through_at = COALESCE(paid_through_at, next_cycle_at),
+      SET cancellation_requested_at = ?,
+          paid_through_at = next_cycle_at,
           updated_at = ?
       WHERE user_id = ? AND provider_plan_id = ? AND status <> 'inactive'
+        AND cancellation_requested_at IS NULL
         AND next_cycle_at IS NOT NULL AND next_cycle_at > ?
     `).bind(now, now, userId, providerPlanId, now).run();
+    return Boolean(result.meta.changes);
+  };
+
+  const clearCancellationRequest = async (
+    userId: string,
+    providerPlanId: string,
+    stagedAt: number,
+    now = Date.now(),
+  ): Promise<boolean> => {
+    const result = await binding.prepare(`
+      UPDATE billing_subscription
+      SET cancellation_requested_at = NULL,
+          paid_through_at = NULL,
+          updated_at = ?
+      WHERE user_id = ? AND provider_plan_id = ? AND status <> 'inactive'
+        AND cancellation_requested_at = ?
+    `).bind(now, userId, providerPlanId, stagedAt).run();
     return Boolean(result.meta.changes);
   };
 
@@ -454,6 +472,7 @@ export const createBillingRepository = (binding: D1Database) => {
     getStatusForUser,
     getSubscriptionForCancellation,
     markCancellationRequested,
+    clearCancellationRequest,
     stagePlanChange,
     clearPlanChange,
     applyWebhookTransition,
