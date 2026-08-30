@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
-// GREEN execution marker: the production verification gate is now present.
 const url = (path) => new URL(`../../${path}`, import.meta.url);
 const read = (path) => readFileSync(url(path), "utf8");
 
@@ -53,4 +52,15 @@ test("Phase 07A verification keeps Google credentials non-secret placeholders an
   const migration = read("apps/web/migrations/0005_phase07a_commercial_auth_amendment.sql");
   assert.match(migration, /billing_trial/);
   assert.match(migration, /paid_through_at/);
+});
+
+test("Phase 07 Worker smoke remains compatible with legacy and current Phase 07A offers", () => {
+  const smoke = read("scripts/smoke-phase-07-worker.sh");
+  for (const offer of [
+    "pro-monthly", "pro-annual", "business-monthly", "business-annual",
+    "pro-monthly-2026a", "pro-annual-2026a", "business-monthly-2026a", "business-annual-2026a",
+  ]) assert.match(smoke, new RegExp(offer));
+  assert.match(smoke, /configuredPlanIds/);
+  assert.match(smoke, /currentPlanIds\.every/);
+  assert.match(smoke, /GOOGLE_CLIENT_SECRET/);
 });
