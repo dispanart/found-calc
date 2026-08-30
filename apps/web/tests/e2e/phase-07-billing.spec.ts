@@ -10,7 +10,7 @@ async function createAccount(page: Page) {
   await page.getByLabel("Email").fill(uniqueEmail());
   await page.getByLabel("Password").fill(password);
   await page.locator("form").getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page).toHaveURL(/\/en\/workspace$/);
 }
 
 const activeBilling = (cancellationPending = false) => ({
