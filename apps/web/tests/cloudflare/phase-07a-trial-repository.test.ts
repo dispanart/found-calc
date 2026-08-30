@@ -8,7 +8,7 @@ import {
   createBillingRepository,
 } from "../../src/lib/billing/repository";
 import phase07aMigrationSql from "../../migrations/0005_phase07a_commercial_auth_amendment.sql?raw";
-import { resetCurrentDatabase, splitD1MigrationStatements } from "./test-database";
+import { resetPhase07Database, splitD1MigrationStatements } from "./test-database";
 
 declare module "cloudflare:workers" { interface ProvidedEnv { DB: D1Database; } }
 
@@ -24,7 +24,7 @@ const applyPhase07a = async () => {
 };
 
 beforeEach(async () => {
-  await resetCurrentDatabase();
+  await resetPhase07Database();
   await applyPhase07a();
   await insertUser(userId);
   await insertUser(otherUserId);

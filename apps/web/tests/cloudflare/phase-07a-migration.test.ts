@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import phase07aMigrationSql from "../../migrations/0005_phase07a_commercial_auth_amendment.sql?raw";
-import { resetCurrentDatabase, splitD1MigrationStatements } from "./test-database";
+import { resetPhase07Database, splitD1MigrationStatements } from "./test-database";
 
 declare module "cloudflare:workers" { interface ProvidedEnv { DB: D1Database; } }
 
@@ -13,7 +13,7 @@ const applySql = async (sql: string) => {
 };
 
 beforeEach(async () => {
-  await resetCurrentDatabase();
+  await resetPhase07Database();
 });
 
 describe("Phase 07A additive migration", () => {
