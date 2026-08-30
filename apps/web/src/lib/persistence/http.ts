@@ -1,6 +1,8 @@
 import type { D1Database } from "@cloudflare/workers-types";
 
 import type { FoundCalcAuth } from "@/lib/auth/server";
+import type { CommercialCapabilityAuthorizer } from "@/lib/billing/capabilities";
+import { CalculatorStateLimitError, upsertUserStateWithinLimit } from "./limited-repository";
 import { createCalculatorStateRepository, type CalculatorStateOwnerType } from "./repository";
 import {
   isSupportedCalculatorId,
@@ -15,6 +17,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 interface Services {
   readonly DB: D1Database;
   readonly auth: FoundCalcAuth;
+  readonly capabilities?: CommercialCapabilityAuthorizer;
 }
 
 interface RequestOwner {
@@ -115,10 +118,18 @@ export const handleCalculatorStateRequest = async (
     const owner: RequestOwner = userId
       ? { ownerType: "user", ownerId: userId }
       : { ownerType: "guest", ownerId: mintedGuestId! };
-    const stored = await repo.upsertState({ ownerType: owner.ownerType, ownerId: owner.ownerId, state: parsed.value });
+    const stored = userId && services.capabilities
+      ? await upsertUserStateWithinLimit(
+        services.DB,
+        userId,
+        parsed.value,
+        (await services.capabilities.getLimits(userId)).savedCalculations,
+      )
+      : await repo.upsertState({ ownerType: owner.ownerType, ownerId: owner.ownerId, state: parsed.value });
     const headers = mintedGuestId && !existingGuestId ? { "Set-Cookie": guestCookieHeader(request, mintedGuestId) } : undefined;
     return json(stateResponse(stored), 200, headers);
-  } catch {
+  } catch (caught) {
+    if (caught instanceof CalculatorStateLimitError) return error("commercial-limit-reached", 409);
     return error("storage-unavailable", 503);
   }
 };

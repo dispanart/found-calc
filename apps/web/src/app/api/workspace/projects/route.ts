@@ -1,8 +1,8 @@
-import { handleWorkspaceProjectsRequest } from "@/lib/workspace/http";
+import { handleCommercialWorkspaceProjectsRequest } from "@/lib/workspace/commercial-http";
 import { getWorkspaceRouteServices, workspaceRouteFailure } from "@/lib/workspace/route-services";
 
 const handle = async (method: "GET" | "POST", request: Request) => {
-  try { return await handleWorkspaceProjectsRequest(method, request, getWorkspaceRouteServices()); }
+  try { return await handleCommercialWorkspaceProjectsRequest(method, request, getWorkspaceRouteServices()); }
   catch { return workspaceRouteFailure(); }
 };
 export async function GET(request: Request) { return handle("GET", request); }
