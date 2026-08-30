@@ -124,6 +124,7 @@ const subscriptionResponse = (subscription: BillingSubscriptionRecord | null) =>
   status: subscription.status,
   latestCycleStatus: subscription.latestCycleStatus,
   nextCycleAt: subscription.nextCycleAt,
+  paidThroughAt: subscription.paidThroughAt ?? null,
   cancellationPending: subscription.cancellationRequestedAt !== null,
   pendingPlanId: subscription.pendingPlanId,
 } : null;
@@ -155,7 +156,7 @@ const statusPayload = (
   const commercial = resolveEffectiveCommercialAccess({
     paidTier: activePlan ? offerInternalTier(activePlan.id) : null,
     subscriptionStatus: state.subscription?.status ?? null,
-    paidThroughAt: null,
+    paidThroughAt: state.subscription?.paidThroughAt ?? null,
     paidKeys: activePlan?.entitlements ?? [],
     trial,
     trialKeys: bestiesPlan?.entitlements ?? [],
@@ -301,11 +302,17 @@ export const handleBillingCancelRequest = async (request: Request, services: Bil
     if (!isEmptyObject(body.value)) return error("invalid-billing-input", 400);
     const subscription = await services.repository.getSubscriptionForCancellation(auth.user.id);
     if (!subscription) return error("billing-subscription-not-found", 409);
-    if (subscription.cancellationRequestedAt === null) {
-      await services.xendit.deactivateSubscription(subscription.providerPlanId);
-      await services.repository.markCancellationRequested(auth.user.id, subscription.providerPlanId, (services.now?.() ?? new Date()).valueOf());
+    if (subscription.cancellationRequestedAt !== null) {
+      return json({ subscription: { planId: subscription.planId, status: subscription.status, cancellationPending: true, paidThroughAt: subscription.paidThroughAt ?? null } });
     }
-    return json({ subscription: { planId: subscription.planId, status: subscription.status, cancellationPending: true } });
+    const now = (services.now?.() ?? new Date()).valueOf();
+    const boundary = subscription.nextCycleAt;
+    if (typeof boundary !== "number" || !Number.isSafeInteger(boundary) || boundary <= now) {
+      return error("billing-period-unavailable", 409);
+    }
+    await services.xendit.deactivateSubscription(subscription.providerPlanId);
+    if (!await services.repository.markCancellationRequested(auth.user.id, subscription.providerPlanId, now)) throw new Error("billing-cancellation-state-conflict");
+    return json({ subscription: { planId: subscription.planId, status: subscription.status, cancellationPending: true, paidThroughAt: boundary } });
   } catch (caught) { return handleFailure(caught); }
 };
 

@@ -11,6 +11,7 @@ export type BillingSubscriptionRecord = {
   readonly latestCycleStatus: string | null;
   readonly latestEventAt: number;
   readonly nextCycleAt: number | null;
+  readonly paidThroughAt?: number | null;
   readonly cancellationRequestedAt: number | null;
   readonly pendingPlanId: string | null;
   readonly pendingPlanChangeRequestedAt: number | null;
@@ -81,6 +82,7 @@ type SubscriptionRow = {
   latestEventAt: number;
   latestEventRank: number;
   nextCycleAt: number | null;
+  paidThroughAt: number | null;
   cancellationRequestedAt: number | null;
   pendingPlanId: string | null;
   pendingPlanChangeRequestedAt: number | null;
@@ -100,6 +102,7 @@ const subscriptionFromRow = (row: SubscriptionRow): BillingSubscriptionRecord =>
   latestCycleStatus: row.latestCycleStatus,
   latestEventAt: row.latestEventAt,
   nextCycleAt: row.nextCycleAt,
+  paidThroughAt: row.paidThroughAt,
   cancellationRequestedAt: row.cancellationRequestedAt,
   pendingPlanId: row.pendingPlanId,
   pendingPlanChangeRequestedAt: row.pendingPlanChangeRequestedAt,
@@ -230,7 +233,8 @@ export const createBillingRepository = (binding: D1Database) => {
       SELECT id, user_id AS userId, plan_id AS planId, provider_plan_id AS providerPlanId,
              reference_id AS referenceId, status, latest_cycle_status AS latestCycleStatus,
              latest_event_at AS latestEventAt, latest_event_rank AS latestEventRank,
-             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt,
+             next_cycle_at AS nextCycleAt, paid_through_at AS paidThroughAt,
+             cancellation_requested_at AS cancellationRequestedAt,
              pending_plan_id AS pendingPlanId, pending_plan_change_requested_at AS pendingPlanChangeRequestedAt
       FROM billing_subscription
       WHERE user_id = ?
@@ -250,7 +254,8 @@ export const createBillingRepository = (binding: D1Database) => {
       SELECT id, user_id AS userId, plan_id AS planId, provider_plan_id AS providerPlanId,
              reference_id AS referenceId, status, latest_cycle_status AS latestCycleStatus,
              latest_event_at AS latestEventAt, latest_event_rank AS latestEventRank,
-             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt,
+             next_cycle_at AS nextCycleAt, paid_through_at AS paidThroughAt,
+             cancellation_requested_at AS cancellationRequestedAt,
              pending_plan_id AS pendingPlanId, pending_plan_change_requested_at AS pendingPlanChangeRequestedAt
       FROM billing_subscription
       WHERE user_id = ? AND status <> 'inactive'
@@ -266,9 +271,12 @@ export const createBillingRepository = (binding: D1Database) => {
   ): Promise<boolean> => {
     const result = await binding.prepare(`
       UPDATE billing_subscription
-      SET cancellation_requested_at = COALESCE(cancellation_requested_at, ?), updated_at = ?
+      SET cancellation_requested_at = COALESCE(cancellation_requested_at, ?),
+          paid_through_at = COALESCE(paid_through_at, next_cycle_at),
+          updated_at = ?
       WHERE user_id = ? AND provider_plan_id = ? AND status <> 'inactive'
-    `).bind(now, now, userId, providerPlanId).run();
+        AND next_cycle_at IS NOT NULL AND next_cycle_at > ?
+    `).bind(now, now, userId, providerPlanId, now).run();
     return Boolean(result.meta.changes);
   };
 
@@ -314,7 +322,8 @@ export const createBillingRepository = (binding: D1Database) => {
       SELECT id, user_id AS userId, plan_id AS planId, provider_plan_id AS providerPlanId,
              reference_id AS referenceId, status, latest_cycle_status AS latestCycleStatus,
              latest_event_at AS latestEventAt, latest_event_rank AS latestEventRank,
-             next_cycle_at AS nextCycleAt, cancellation_requested_at AS cancellationRequestedAt,
+             next_cycle_at AS nextCycleAt, paid_through_at AS paidThroughAt,
+             cancellation_requested_at AS cancellationRequestedAt,
              pending_plan_id AS pendingPlanId, pending_plan_change_requested_at AS pendingPlanChangeRequestedAt
       FROM billing_subscription
       WHERE provider_plan_id = ? OR reference_id = ?
