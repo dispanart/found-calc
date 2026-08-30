@@ -24,6 +24,7 @@ test("Phase 07A owns a fail-fast verification superset and main PR CI", () => {
   assert.match(verify, /GOOGLE_CLIENT_ID/);
   assert.match(verify, /GOOGLE_CLIENT_SECRET/);
   assert.doesNotMatch(verify, /AIza[0-9A-Za-z_-]{20,}/);
+  assert.match(verify, /Phase 07A web typecheck[^\n]*before:\s*cleanNext/);
 
   const workflow = read(".github/workflows/phase-07a-verification.yml");
   assert.match(workflow, /pull_request\s*:/);

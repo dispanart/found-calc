@@ -30,7 +30,7 @@ const steps = [
   { label: "Phase 07A commercial/billing/auth/workspace unit tests", command: "pnpm", args: ["--filter", "@found-calc/web", "test:unit"] },
   { label: "Phase 07A Cloudflare D1 integration tests", command: "pnpm", args: ["--filter", "@found-calc/web", "test:cloudflare"] },
   { label: "Phase 07A web lint", command: "pnpm", args: ["--filter", "@found-calc/web", "lint"] },
-  { label: "Phase 07A web typecheck", command: "pnpm", args: ["--filter", "@found-calc/web", "typecheck"] },
+  { label: "Phase 07A web typecheck", command: "pnpm", args: ["--filter", "@found-calc/web", "typecheck"], before: cleanNext },
   { label: "Phase 07A Playwright", command: "pnpm", args: ["--filter", "@found-calc/web", "test:e2e"] },
   { label: "Phase 07A Next production build", command: "pnpm", args: ["--filter", "@found-calc/web", "build"] },
   { label: "Phase 07A vinext compatibility check", command: "pnpm", args: ["--filter", "@found-calc/web", "vinext:check"], before: cleanNext },
