@@ -9,7 +9,7 @@ test("Phase 07A Google transition preserves a validated return target and reuses
   const panel = read("apps/web/src/components/auth/auth-panel.tsx");
 
   assert.match(page, /searchParams\s*:\s*Promise/);
-  assert.match(page, /await\s+searchParams/);
+  assert.match(page, /await\s+Promise\.all\(\[params,\s*searchParams\]\)/);
   assert.match(page, /safeAuthReturnTo/);
   assert.match(page, /<AuthPanel[\s\S]*returnTo=/);
 
