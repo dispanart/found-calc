@@ -13,12 +13,13 @@ test("Phase 07A Google transition preserves a validated return target and reuses
   assert.match(page, /safeAuthReturnTo/);
   assert.match(page, /<AuthPanel[\s\S]*returnTo=/);
 
+  assert.match(panel, /import\s+type\s+\{\s*Route\s*\}\s+from\s+["']next["']/);
   assert.match(panel, /signIn\.social/);
   assert.match(panel, /provider\s*:\s*["']google["']/);
   assert.match(panel, /callbackURL/);
   assert.match(panel, /\/api\/guest\/claim/);
   assert.match(panel, /finishAuthenticatedTransition/);
-  assert.match(panel, /router\.replace\(returnTo\)/);
+  assert.match(panel, /router\.replace\(returnTo\s+as\s+Route\)/);
   assert.match(panel, /useEffect/);
   assert.match(panel, /retryClaim/);
 });
