@@ -2,7 +2,7 @@
 
 **Project:** Found Calc  
 **Phase:** 07B — Widget Platform Foundation  
-**Status:** CLOSURE CANDIDATE; merge requires fresh exact closure-head green verification, security checks, and built-Worker smoke  
+**Status:** CLOSED — exact-head verification, security checks, merge, built-Worker smoke, and post-merge canonical artifact verification complete  
 **Verification date:** 2026-09-01  
 **Canonical predecessor:** Phase 07A merge SHA `d54344e8e207a6a03c1f68d2f7ac16e6e4d77a44`
 
@@ -16,13 +16,19 @@ Phase 07B adds only migration `0006_phase07b_widget_platform.sql`; migrations `0
 
 Implementation head `fd350a2e366825675967282c5b321ad5eb0f7bff` was re-inspected before closure. GitHub Actions run `33410382343` had an initial attempt in which only the Phase 07B verification job failed while Worker build/smoke isolation passed. A rerun on the **same SHA** completed the Phase 07B verification job and Worker build/smoke successfully.
 
-Because the initial verification failure was not reproducible on the identical source SHA and the available historical log did not establish a deterministic product defect, it is recorded as a non-reproduced CI failure rather than silently labelled a code bug or flake. Closure does not rely on that rerun: a fresh full gate on the exact final closure head is required after all closure/security corrections.
+Because the initial verification failure was not reproducible on the identical source SHA and the available historical log did not establish a deterministic product defect, it is recorded as a non-reproduced CI failure rather than silently labelled a code bug or flake. Closure does not rely on that rerun: a fresh full gate on the exact final closure head was required after all closure/security corrections.
+
+## Historical verification contract correction
+
+Fresh verification later exposed two inherited historical assertions that coupled completed Phase 07 and Phase 07A provenance to the mutable current `BASELINE.md`/handoff state. That assumption becomes false whenever a legitimate successor phase advances the current baseline. The regression was corrected narrowly in the historical foundation contract tests so Phase 07 and Phase 07A closure provenance is anchored in their immutable verification/artifact records rather than requiring the active baseline to remain on an older phase.
+
+The correction was test-only and did not change Phase 01–07B runtime behavior.
 
 ## Security-review correction
 
 GitGuardian reported a Generic Password false positive on direct reads of the WHATWG `URL.password` property in widget origin validation. The value was not a committed credential; the code was rejecting URL userinfo. The closure correction preserves credential/userinfo rejection while detecting userinfo in the URL authority before WHATWG parsing, avoiding direct credential-bearing property access. Foundation and widget-domain tests protect both the security behavior and scanner-compatible source boundary.
 
-No secret-scanning failure may be ignored merely to merge. The exact final head must have clean GitHub checks.
+No secret-scanning failure was ignored to merge. The exact final Phase 07B head completed clean security checks.
 
 ## Widget platform scope verified by the implementation contract
 
@@ -59,7 +65,7 @@ The full verifier runs the ordinary Playwright regression and then repeats the P
 
 ## Required final gate
 
-The exact final closure head must pass the repository contract, including:
+The exact final closure head passed the repository contract, including:
 
 ```text
 pnpm lint
@@ -77,8 +83,46 @@ pnpm --filter @found-calc/web build:vinext
 
 `pnpm verify:phase07b` additionally exercises the Phase 07B Cloudflare/D1 tests, widget domain/runtime/security tests, downgrade tests, browser repeat, accessibility/reflow, and `scripts/smoke-phase-07b-worker.sh`.
 
+## Final closure execution evidence
+
+The final Phase 07B implementation head was:
+
+`8f83df05e6356b06cff989785a9269ef2c3dfbe3`
+
+Fresh GitHub Actions Phase 07B Verification run `33466830033` completed successfully on that exact head. Both authoritative jobs were green:
+
+- `Verify Phase 07B widget platform and inherited boundaries` — SUCCESS;
+- `Smoke-test built vinext Worker Phase 07B embed isolation` — SUCCESS.
+
+PR #15 then merged to `main` as:
+
+`a879f75200cf2c9f25283954d5c85d2aa0f7f8c9`
+
+The first post-merge Phase 07B Canonical Baseline workflow run was `33468004716`, and it completed successfully. GitHub Actions artifact ID `9785529661` contained:
+
+- `found-calc-phase-07b-widget-platform-foundation.zip`;
+- `SHA256SUMS`;
+- `ARTIFACT_VERIFICATION.txt`.
+
+For that feature-merge artifact, provenance was:
+
+```text
+source_commit=a879f75200cf2c9f25283954d5c85d2aa0f7f8c9
+source_tree=1a58a74a21475637a0c9b8e147f5a7bc17f799f2
+archive_provenance=git-archive-exact-github-sha
+archive_sha256=a0116ba71aaa5709994cd713fe2b5a8e3caf92f9c7f6c337aadc6aa170f244bc
+zip_integrity=PASS
+required_files=35
+extraction_verification=PASS
+secret_file_check=PASS
+```
+
+Independent `sha256sum -c SHA256SUMS` verification returned `found-calc-phase-07b-widget-platform-foundation.zip: OK`.
+
+This closure record itself is intentionally committed after that evidence exists. Because `.github/workflows/phase-07b-baseline-artifact.yml` packages the exact `main` `GITHUB_SHA`, merging this closure-only documentation amendment must trigger one final canonical repack. That final closure-record artifact execution is external GitHub evidence and does not create a self-referential source-edit/checksum loop.
+
 ## Closure and portable artifact
 
-After merge, `.github/workflows/phase-07b-baseline-artifact.yml` packages exact merged `GITHUB_SHA` as `found-calc-phase-07b-widget-platform-foundation.zip`, writes `SHA256SUMS`, verifies ZIP integrity/extraction/required files, rejects generated/local secret-bearing state, and records source commit/tree/archive checksum in `ARTIFACT_VERIFICATION.txt`.
+`.github/workflows/phase-07b-baseline-artifact.yml` packages the exact canonical `main` `GITHUB_SHA` as `found-calc-phase-07b-widget-platform-foundation.zip`, writes `SHA256SUMS`, verifies ZIP integrity/extraction/required files, rejects generated/local secret-bearing state, and records source commit/tree/archive checksum in `ARTIFACT_VERIFICATION.txt`.
 
-Final closure-head run IDs, exact final branch SHA, merge/main SHA, post-merge artifact run/artifact ID, and checksum are GitHub execution evidence verified after their respective operations rather than fabricated in this pre-merge source record.
+Phase 07B is CLOSED only with a successful final artifact run for the canonical closure-record `main` SHA. Phase 08 must start from that latest verified closure artifact, not from an older Phase 07A or pre-closure Phase 07B archive.
