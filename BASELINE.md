@@ -1,17 +1,18 @@
 # Found Calc Phase 07B — Widget Platform Foundation
 
 **Project:** Found Calc  
-**Phase state:** CLOSURE CANDIDATE; COMPLETE only after exact-head verification, merge, and artifact verification  
+**Phase state:** CLOSED — exact-head verification, merge, and post-merge artifact verification complete  
 **Last canonical completed phase:** Phase 07B — Widget Platform Foundation  
 **Canonical predecessor:** Phase 07A merge SHA `d54344e8e207a6a03c1f68d2f7ac16e6e4d77a44`  
-**Next phase after closure:** Phase 08 — Frozen V1 Catalog Production  
+**Phase 07B feature merge SHA:** `a879f75200cf2c9f25283954d5c85d2aa0f7f8c9`  
+**Next phase:** Phase 08 — Frozen V1 Catalog Production  
 **Closure date:** 2026-09-01
 
 ## Canonical artifact
 
 `found-calc-phase-07b-widget-platform-foundation.zip`
 
-GitHub `main` remains the collaborative canonical repository. After Phase 07B merges, `.github/workflows/phase-07b-baseline-artifact.yml` archives the exact merged `GITHUB_SHA` with `git archive`, writes `SHA256SUMS`, verifies ZIP integrity/extraction/required files, rejects generated or local secret-bearing state, and records source commit/tree/checksum provenance in `ARTIFACT_VERIFICATION.txt`.
+GitHub `main` remains the collaborative canonical repository. `.github/workflows/phase-07b-baseline-artifact.yml` archives the exact closure-record `GITHUB_SHA` with `git archive`, writes `SHA256SUMS`, verifies ZIP integrity/extraction/required files, rejects generated or local secret-bearing state, and records source commit/tree/checksum provenance in `ARTIFACT_VERIFICATION.txt`.
 
 Phase 07A provenance remains canonical at predecessor merge SHA `d54344e8e207a6a03c1f68d2f7ac16e6e4d77a44` with `found-calc-phase-07a-commercial-auth-amendment.zip`. Historical Phase 01–07A architecture, migrations, provider identities, deterministic truth, auth/persistence, workspace, billing, trial, cancellation paid-through, and Google guest-claim behavior remain preserved.
 
@@ -100,9 +101,9 @@ Widget analytics are first-party aggregate operational/product events only. They
 
 Authoritative Phase 07B evidence is recorded in `docs/verification/phase-07b-verification.md`.
 
-`pnpm verify:phase07b` starts with the complete `pnpm verify:phase07a` regression chain, then runs Phase 07B foundation/unit/Cloudflare gates, lint, typecheck, browser regression, deterministic repeated widget runtime/accessibility browser tests, Next build, vinext compatibility/build, and Worker smoke.
+The final Phase 07B PR head `8f83df05e6356b06cff989785a9269ef2c3dfbe3` passed fresh full verification in GitHub Actions run `33466830033`, including inherited Phase 07A verification and built-Worker smoke, before merge. The feature merge landed on `main` as `a879f75200cf2c9f25283954d5c85d2aa0f7f8c9`, and the post-merge baseline artifact workflow completed successfully before this closure record was finalized.
 
-The exact final PR head must be freshly green, including security checks, before merge. A prior green rerun on an older head is not completion evidence.
+`pnpm verify:phase07b` starts with the complete `pnpm verify:phase07a` regression chain, then runs Phase 07B foundation/unit/Cloudflare gates, lint, typecheck, browser regression, deterministic repeated widget runtime/accessibility browser tests, Next build, vinext compatibility/build, and Worker smoke.
 
 ## Preserved security and trust boundaries
 
@@ -116,4 +117,4 @@ The exact final PR head must be freshly green, including security checks, before
 
 ## Next phase
 
-Only after Phase 07B is merged and its canonical ZIP/SHA256 are verified may a **new chat** begin Phase 08 — Frozen V1 Catalog Production. Phase 08 is not implemented in the Phase 07B closure chat.
+Phase 07B is CLOSED. Phase 08 — Frozen V1 Catalog Production may begin only in a **new chat** from the latest verified `found-calc-phase-07b-widget-platform-foundation.zip`. Phase 08 is not implemented in the Phase 07B closure chat.
