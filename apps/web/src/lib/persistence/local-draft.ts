@@ -29,6 +29,31 @@ export type LocalCalculatorDraft =
         readonly baseAmount: string;
         readonly effectiveDate: string;
       };
+    }
+  | {
+      readonly calculatorId: "quick.percentage";
+      readonly locale: Locale;
+      readonly fields: {
+        readonly baseValue: string;
+        readonly percentage: string;
+      };
+    }
+  | {
+      readonly calculatorId: "quick.date-difference";
+      readonly locale: Locale;
+      readonly fields: {
+        readonly startDate: string;
+        readonly endDate: string;
+      };
+    }
+  | {
+      readonly calculatorId: "quick.length-conversion";
+      readonly locale: Locale;
+      readonly fields: {
+        readonly value: string;
+        readonly fromUnit: string;
+        readonly toUnit: string;
+      };
     };
 
 export type LocalDraftCalculatorId = LocalCalculatorDraft["calculatorId"];
@@ -63,31 +88,51 @@ const parseFields = (
 ): LocalCalculatorDraft["fields"] | null => {
   if (!isRecord(fields)) return null;
 
-  if (calculatorId === "reference.discount") {
-    if (!hasOnlyKeys(fields, ["baseAmount", "discounts"])) return null;
-    if (typeof fields.baseAmount !== "string" || !allStrings(fields.discounts)) return null;
-    return { baseAmount: fields.baseAmount, discounts: [...fields.discounts] };
-  }
+  switch (calculatorId) {
+    case "reference.discount":
+      if (!hasOnlyKeys(fields, ["baseAmount", "discounts"])) return null;
+      if (typeof fields.baseAmount !== "string" || !allStrings(fields.discounts)) return null;
+      return { baseAmount: fields.baseAmount, discounts: [...fields.discounts] };
 
-  if (calculatorId === "reference.business-margin") {
-    if (!hasOnlyKeys(fields, ["sellingPrice", "productCost", "variableCost", "scenarioVariableCost"])) return null;
-    if (
-      typeof fields.sellingPrice !== "string" ||
-      typeof fields.productCost !== "string" ||
-      typeof fields.variableCost !== "string" ||
-      typeof fields.scenarioVariableCost !== "string"
-    ) return null;
-    return {
-      sellingPrice: fields.sellingPrice,
-      productCost: fields.productCost,
-      variableCost: fields.variableCost,
-      scenarioVariableCost: fields.scenarioVariableCost,
-    };
-  }
+    case "reference.business-margin":
+      if (!hasOnlyKeys(fields, ["sellingPrice", "productCost", "variableCost", "scenarioVariableCost"])) return null;
+      if (
+        typeof fields.sellingPrice !== "string" ||
+        typeof fields.productCost !== "string" ||
+        typeof fields.variableCost !== "string" ||
+        typeof fields.scenarioVariableCost !== "string"
+      ) return null;
+      return {
+        sellingPrice: fields.sellingPrice,
+        productCost: fields.productCost,
+        variableCost: fields.variableCost,
+        scenarioVariableCost: fields.scenarioVariableCost,
+      };
 
-  if (!hasOnlyKeys(fields, ["baseAmount", "effectiveDate"])) return null;
-  if (typeof fields.baseAmount !== "string" || typeof fields.effectiveDate !== "string") return null;
-  return { baseAmount: fields.baseAmount, effectiveDate: fields.effectiveDate };
+    case "reference.synthetic-rule":
+      if (!hasOnlyKeys(fields, ["baseAmount", "effectiveDate"])) return null;
+      if (typeof fields.baseAmount !== "string" || typeof fields.effectiveDate !== "string") return null;
+      return { baseAmount: fields.baseAmount, effectiveDate: fields.effectiveDate };
+
+    case "quick.percentage":
+      if (!hasOnlyKeys(fields, ["baseValue", "percentage"])) return null;
+      if (typeof fields.baseValue !== "string" || typeof fields.percentage !== "string") return null;
+      return { baseValue: fields.baseValue, percentage: fields.percentage };
+
+    case "quick.date-difference":
+      if (!hasOnlyKeys(fields, ["startDate", "endDate"])) return null;
+      if (typeof fields.startDate !== "string" || typeof fields.endDate !== "string") return null;
+      return { startDate: fields.startDate, endDate: fields.endDate };
+
+    case "quick.length-conversion":
+      if (!hasOnlyKeys(fields, ["value", "fromUnit", "toUnit"])) return null;
+      if (
+        typeof fields.value !== "string" ||
+        typeof fields.fromUnit !== "string" ||
+        typeof fields.toUnit !== "string"
+      ) return null;
+      return { value: fields.value, fromUnit: fields.fromUnit, toUnit: fields.toUnit };
+  }
 };
 
 const resolveStorage = (storage?: LocalStorageLike): LocalStorageLike | null => {
