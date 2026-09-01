@@ -2,19 +2,20 @@
 
 **Project:** Found Calc  
 **Last canonical completed phase:** Phase 07B — Widget Platform Foundation  
-**Current status:** CLOSURE CANDIDATE; canonical only after exact-head green merge + artifact verification  
+**Current status:** CLOSED — exact-head green verification, merge, and canonical artifact verification complete  
 **Canonical predecessor:** Phase 07A merge SHA `d54344e8e207a6a03c1f68d2f7ac16e6e4d77a44`  
-**Next phase after closure:** Phase 08 — Frozen V1 Catalog Production
+**Phase 07B feature merge SHA:** `a879f75200cf2c9f25283954d5c85d2aa0f7f8c9`  
+**Next phase:** Phase 08 — Frozen V1 Catalog Production
 
 ## Canonical starting artifact
 
-After Phase 07B closure, start the next phase from:
+Start the next phase from the latest verified closure artifact:
 
 `found-calc-phase-07b-widget-platform-foundation.zip`
 
-The artifact is produced from the exact merged `main` SHA by `.github/workflows/phase-07b-baseline-artifact.yml`, with `SHA256SUMS` and `ARTIFACT_VERIFICATION.txt` recording integrity, extraction, source commit/tree, and archive provenance.
+The artifact is produced from the exact canonical `main` closure-record SHA by `.github/workflows/phase-07b-baseline-artifact.yml`, with `SHA256SUMS` and `ARTIFACT_VERIFICATION.txt` recording integrity, extraction, source commit/tree, and archive provenance.
 
-Do not use the old Phase 07A ZIP as the Phase 08 starting point once Phase 07B is canonical.
+Do not use the old Phase 07A ZIP as the Phase 08 starting point now that Phase 07B is canonical.
 
 ## Required reading order for the next phase
 
@@ -60,15 +61,15 @@ Phase 07B did **not** implement Phase 08 catalog production, Family Portfolio ru
 ```text
 @Superpowers @GitHub @Context7
 
-Start the next approved Found Calc phase from the attached canonical `found-calc-phase-07b-widget-platform-foundation.zip`.
+Start Phase 08 — Frozen V1 Catalog Production from the attached canonical `found-calc-phase-07b-widget-platform-foundation.zip`.
 
 Before implementation:
 1. Read BASELINE.md and PHASE_HANDOFF.md.
 2. Read docs/verification/phase-07b-verification.md and the approved Phase 07B design/implementation plan.
 3. Preserve Phase 01–07B deterministic truth, auth/persistence, workspace, billing, commercial, and Widget Platform security/runtime contracts.
-4. Confirm the exact next-phase acceptance criteria and exclusions before implementation.
+4. Confirm the exact Phase 08 acceptance criteria and exclusions before implementation.
 5. Do not reopen Phase 01–07B without a verified blocker under change control.
-6. Use current framework/provider documentation and Superpowers TDD/systematic-debugging/verification-before-completion as required.
+6. Use current framework/provider documentation and Superpowers brainstorming/writing-plans/TDD/systematic-debugging/requesting-code-review/receiving-code-review/verification-before-completion as required.
 7. Preserve ID/EN, accessibility, privacy/trust, mobile responsiveness, and the Rp0 fixed-infrastructure target excluding domain/payment transaction fees.
 ```
 
@@ -76,4 +77,4 @@ Before implementation:
 
 If a later phase conflicts with approved Phase 01–07B contracts, capture reproducible evidence, identify the smallest compatible amendment, and obtain approval before changing deterministic truth, persistence, security, authentication, billing, entitlement, widget-domain, framing, messaging, or data-retention boundaries.
 
-Phase 08 must begin in a fresh chat only after the Phase 07B merge SHA and canonical artifact checksum are verified.
+Phase 07B is CLOSED. Phase 08 must begin in a fresh chat from the latest verified Phase 07B canonical artifact.
