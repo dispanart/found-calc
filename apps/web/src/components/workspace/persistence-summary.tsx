@@ -1,6 +1,6 @@
 "use client";
 
-import { calculatorCatalog, getCalculatorById } from "@found-calc/catalog";
+import { getCalculatorById } from "@found-calc/catalog";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -9,9 +9,14 @@ import type { Locale } from "@/i18n/locales";
 import { authClient } from "@/lib/auth/client";
 import type { SupportedCalculatorId } from "@/lib/persistence/state";
 
-const calculatorIds: readonly SupportedCalculatorId[] = calculatorCatalog.map(
-  (entry) => entry.id as SupportedCalculatorId,
-);
+const calculatorIds: readonly SupportedCalculatorId[] = [
+  "reference.discount",
+  "reference.business-margin",
+  "reference.synthetic-rule",
+  "quick.percentage",
+  "quick.date-difference",
+  "quick.length-conversion",
+];
 
 type StateStatus = "checking" | "saved" | "missing" | "unavailable";
 
