@@ -1,4 +1,4 @@
-import type { ReferenceCatalogEntry } from "@found-calc/catalog";
+import type { CalculatorCatalogEntry } from "@found-calc/catalog";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -8,7 +8,7 @@ import { RelatedCalculators } from "./related-calculators";
 
 interface CalculatorPageShellProps {
   locale: Locale;
-  entry: ReferenceCatalogEntry;
+  entry: CalculatorCatalogEntry;
   children: ReactNode;
 }
 
