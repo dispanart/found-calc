@@ -182,7 +182,11 @@ function LengthConversionCalculatorStateful({ locale, entry, recordId }: LengthC
   };
 
   const loadPersisted = (state: PersistedCalculatorState) => {
-    if (state.calculatorId !== "quick.length-conversion") return;
+    if (
+      state.calculatorId !== "quick.length-conversion" ||
+      !isLengthUnit(state.input.fromUnit) ||
+      !isLengthUnit(state.input.toUnit)
+    ) return;
     setValue(formatCanonicalDecimal(state.input.value, locale));
     setFromUnit(state.input.fromUnit);
     setToUnit(state.input.toUnit);
