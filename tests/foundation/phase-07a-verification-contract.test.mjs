@@ -66,7 +66,7 @@ test("Phase 07 Worker smoke remains compatible with legacy and current Phase 07A
   assert.match(smoke, /GOOGLE_CLIENT_SECRET/);
 });
 
-test("Phase 07A closure packages the exact merge baseline and hands off to Phase 07B without rewriting Phase 07 provenance", () => {
+test("Phase 07A closure packages the exact merge baseline without rewriting Phase 07 provenance", () => {
   for (const path of [
     "docs/verification/phase-07a-verification.md",
     ".github/workflows/phase-07a-baseline-artifact.yml",
@@ -90,17 +90,11 @@ test("Phase 07A closure packages the exact merge baseline and hands off to Phase
     "tests/foundation/phase-07a-verification-contract.test.mjs",
   ]) assert.match(artifact, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 
-  const baseline = read("BASELINE.md");
-  assert.match(baseline, /Last canonical completed phase:\*\* Phase 07A/);
-  assert.match(baseline, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
-  assert.match(baseline, /8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4/);
-
-  const handoff = read("PHASE_HANDOFF.md");
-  assert.match(handoff, /Phase 07B — Widget Platform Foundation/);
-  assert.match(handoff, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
-  const template = read("PHASE_CHAT_TEMPLATE.md");
-  assert.match(template, /Phase 07B — Widget Platform Foundation/);
-  assert.match(template, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
+  // Historical closure evidence is immutable even when successor phases advance current handoff docs.
+  const verification = read("docs/verification/phase-07a-verification.md");
+  assert.match(verification, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
+  assert.match(verification, /Canonical Phase 07 predecessor:\*\* `8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4`/);
+  assert.match(verification, /Historical Phase 07 artifact provenance remains pinned to canonical SHA `8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4`/);
 
   const historicalArtifact = read(".github/workflows/phase-07-baseline-artifact.yml");
   assert.doesNotMatch(historicalArtifact, /^\s*push\s*:/m);
