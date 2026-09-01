@@ -64,6 +64,64 @@ body {
   outline-offset: 3px;
 }
 
+.foundcalc-widget {
+  --widget-page-padding: 1.25rem;
+}
+
+.foundcalc-widget__inner {
+  padding: var(--widget-page-padding);
+}
+
+.foundcalc-widget[data-widget-density="compact"] {
+  --widget-page-padding: 0.875rem;
+}
+
+.foundcalc-widget[data-widget-radius="soft"] {
+  --radius-card: 1.75rem;
+  --radius-control: 1rem;
+}
+
+.foundcalc-widget[data-widget-radius="square"] {
+  --radius-card: 0.35rem;
+  --radius-control: 0.2rem;
+}
+
+.foundcalc-widget[data-widget-accent="blue"] {
+  --primary: oklch(0.47 0.16 252);
+  --primary-foreground: oklch(0.985 0.004 95);
+}
+
+.foundcalc-widget[data-widget-accent="teal"] {
+  --primary: oklch(0.43 0.1 190);
+  --primary-foreground: oklch(0.985 0.004 95);
+}
+
+.foundcalc-widget[data-widget-appearance="dark"] {
+  --background: oklch(0.18 0.012 86);
+  --foreground: oklch(0.95 0.006 95);
+  --card: oklch(0.23 0.014 86);
+  --card-foreground: oklch(0.95 0.006 95);
+  --secondary: oklch(0.29 0.016 88);
+  --secondary-foreground: oklch(0.92 0.008 95);
+  --muted: oklch(0.27 0.014 88);
+  --muted-foreground: oklch(0.72 0.012 92);
+  --border: oklch(0.36 0.018 90);
+}
+
+@media (prefers-color-scheme: dark) {
+  .foundcalc-widget[data-widget-appearance="system"] {
+    --background: oklch(0.18 0.012 86);
+    --foreground: oklch(0.95 0.006 95);
+    --card: oklch(0.23 0.014 86);
+    --card-foreground: oklch(0.95 0.006 95);
+    --secondary: oklch(0.29 0.016 88);
+    --secondary-foreground: oklch(0.92 0.008 95);
+    --muted: oklch(0.27 0.014 88);
+    --muted-foreground: oklch(0.72 0.012 92);
+    --border: oklch(0.36 0.018 90);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -120,7 +120,6 @@ export const ruleVersions = sqliteTable(
   ],
 );
 
-
 export const userProfiles = sqliteTable("user_profile", {
   userId: text("user_id")
     .primaryKey()
@@ -233,7 +232,6 @@ export const workspaceCalculations = sqliteTable(
   ],
 );
 
-
 export const billingCustomers = sqliteTable("billing_customer", {
   userId: text("user_id").primaryKey().references(() => authUsers.id, { onDelete: "cascade" }),
   xenditCustomerId: text("xendit_customer_id").unique(),
@@ -317,6 +315,100 @@ export const billingWebhookInbox = sqliteTable(
     result: text("result", { enum: ["applied", "ignored"] }).notNull(),
   },
   (table) => [index("billing_webhook_provider_idx").on(table.providerPlanId, table.providerEventAt)],
+);
+
+export const widgetDomains = sqliteTable(
+  "widget_domain",
+  {
+    id: text("id").primaryKey(),
+    ownerUserId: text("owner_user_id").notNull().references(() => authUsers.id, { onDelete: "cascade" }),
+    normalizedHostname: text("normalized_hostname").notNull(),
+    displayHostname: text("display_hostname").notNull(),
+    pairKey: text("pair_key").notNull(),
+    status: text("status", { enum: ["pending", "active", "disabled", "revoked"] }).notNull(),
+    verifiedAt: integer("verified_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    deletedAt: integer("deleted_at"),
+  },
+  (table) => [
+    uniqueIndex("widget_domain_owner_pair_active_unique")
+      .on(table.ownerUserId, table.pairKey)
+      .where(sql`${table.deletedAt} IS NULL`),
+    index("widget_domain_owner_status_idx").on(table.ownerUserId, table.status, table.updatedAt),
+  ],
+);
+
+export const widgetVerifications = sqliteTable(
+  "widget_verification",
+  {
+    id: text("id").primaryKey(),
+    domainId: text("domain_id").notNull().references(() => widgetDomains.id, { onDelete: "cascade" }),
+    method: text("method", { enum: ["dns_txt", "local_development"] }).notNull(),
+    challengeToken: text("challenge_token"),
+    status: text("status", { enum: ["pending", "verified", "expired", "revoked"] }).notNull(),
+    expiresAt: integer("expires_at"),
+    lastCheckedAt: integer("last_checked_at"),
+    verifiedAt: integer("verified_at"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    index("widget_verification_domain_status_idx").on(table.domainId, table.status, table.createdAt),
+    uniqueIndex("widget_verification_challenge_unique").on(table.challengeToken).where(sql`${table.challengeToken} IS NOT NULL`),
+  ],
+);
+
+export const widgetConfigurations = sqliteTable(
+  "widget_configuration",
+  {
+    id: text("id").primaryKey(),
+    ownerUserId: text("owner_user_id").notNull().references(() => authUsers.id, { onDelete: "cascade" }),
+    publicWidgetKey: text("public_widget_key").notNull().unique(),
+    publicKeyVersion: integer("public_key_version").notNull(),
+    name: text("name").notNull(),
+    calculatorId: text("calculator_id").notNull(),
+    locale: text("locale", { enum: ["id", "en"] }).notNull(),
+    status: text("status", { enum: ["active", "disabled", "revoked"] }).notNull(),
+    themeJson: text("theme_json").notNull(),
+    brandingPreference: text("branding_preference", { enum: ["foundcalc", "hidden"] }).notNull(),
+    defaultInputConfigurationJson: text("default_input_configuration_json").notNull(),
+    keyRotatedAt: integer("key_rotated_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [index("widget_configuration_owner_idx").on(table.ownerUserId, table.updatedAt)],
+);
+
+export const widgetDomainBindings = sqliteTable(
+  "widget_domain_binding",
+  {
+    widgetId: text("widget_id").notNull().references(() => widgetConfigurations.id, { onDelete: "cascade" }),
+    domainId: text("domain_id").notNull().references(() => widgetDomains.id, { onDelete: "cascade" }),
+    priority: integer("priority"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.widgetId, table.domainId] }),
+    index("widget_domain_binding_domain_idx").on(table.domainId, table.widgetId),
+  ],
+);
+
+export const widgetEventDaily = sqliteTable(
+  "widget_event_daily",
+  {
+    widgetId: text("widget_id").notNull().references(() => widgetConfigurations.id, { onDelete: "cascade" }),
+    domainId: text("domain_id").notNull().references(() => widgetDomains.id, { onDelete: "cascade" }),
+    calculatorId: text("calculator_id").notNull(),
+    locale: text("locale", { enum: ["id", "en"] }).notNull(),
+    eventType: text("event_type", { enum: ["widget_viewed", "calculator_started", "calculation_completed", "cta_clicked"] }).notNull(),
+    eventDay: text("event_day").notNull(),
+    count: integer("count").notNull(),
+    lastOccurredAt: integer("last_occurred_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.widgetId, table.domainId, table.calculatorId, table.locale, table.eventType, table.eventDay] }),
+    index("widget_event_daily_widget_day_idx").on(table.widgetId, table.eventDay, table.eventType),
+  ],
 );
 
 export const authUserRelations = relations(authUsers, ({ many }) => ({

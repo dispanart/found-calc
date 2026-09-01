@@ -15,3 +15,10 @@ BILLING_PLANS_JSON=
 PUBLIC_APP_ORIGIN=
 XENDIT_SECRET_API_KEY=
 XENDIT_WEBHOOK_TOKEN=
+
+# Phase 07B widget delivery. These are non-secret host/runtime settings.
+# A loopback embed origin plus an explicit local-port allowlist enables local widget development only.
+# Example dedicated local embed origin: http://localhost:3000
+FOUNDCALC_EMBED_ORIGIN=
+# Comma-separated loopback ports, e.g. 3000,3101,3102. Leave blank outside local development.
+FOUNDCALC_WIDGET_LOCAL_PORTS=

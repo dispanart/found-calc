@@ -1,0 +1,44 @@
+name: Phase 07B Development TDD
+
+on:
+  push:
+    branches:
+      - phase-07b-widget-platform-foundation
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-07b-development-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast-feedback:
+    name: Phase 07B fast TDD feedback
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run web unit tests
+        run: pnpm --filter @found-calc/web test:unit
+      - name: Run Phase 07B Cloudflare tests
+        run: pnpm --filter @found-calc/web exec vitest run --config vitest.cloudflare.config.ts phase-07b
+      - name: Run foundation contracts
+        run: pnpm test:foundation
+      - name: Generate Cloudflare types
+        run: pnpm --filter @found-calc/web cf:typegen
+      - name: Build Next application
+        run: pnpm --filter @found-calc/web build
+      - name: Check vinext compatibility
+        run: pnpm --filter @found-calc/web vinext:check
+      - name: Build vinext Worker
+        run: pnpm --filter @found-calc/web build:vinext

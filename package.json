@@ -29,7 +29,8 @@
     "verify:phase05": "node scripts/verify-phase-05.mjs",
     "verify:phase06": "node scripts/verify-phase-06.mjs",
     "verify:phase07": "node scripts/verify-phase-07.mjs",
-    "verify:phase07a": "node scripts/verify-phase-07a.mjs"
+    "verify:phase07a": "node scripts/verify-phase-07a.mjs",
+    "verify:phase07b": "node scripts/verify-phase-07b.mjs"
   },
   "engines": {
     "node": ">=22.0.0"

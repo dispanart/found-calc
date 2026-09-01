@@ -25,6 +25,10 @@ test("calculator page normalizes a Next.js 16 async record search param", () => 
   const page = read("apps/web/src/app/[locale]/(public)/calculators/[slug]/page.tsx");
   assert.match(page, /searchParams:\s*Promise</);
   assert.match(page, /await searchParams/);
-  assert.match(page, /recordId=/);
+  assert.match(page, /const recordId = isWorkspaceId/);
+  assert.match(
+    page,
+    /CalculatorRenderer[\s\S]{0,260}policy=\{\{\s*surface:\s*["']public["'],\s*\.\.\.\(recordId === undefined \? \{\} : \{ recordId \}\)\s*\}\}/,
+  );
   assert.doesNotMatch(page, /localStorage[\s\S]{0,120}(token|session)|(token|session)[\s\S]{0,120}localStorage/i);
 });

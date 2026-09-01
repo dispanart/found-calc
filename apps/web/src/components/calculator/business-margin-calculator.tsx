@@ -2,7 +2,7 @@
 
 import type { ReferenceCatalogEntry } from "@found-calc/catalog";
 import { businessMarginCalculatorDefinition, type BusinessMarginInput, type CalculationResult } from "@found-calc/engine";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/locales";
@@ -10,6 +10,7 @@ import { runBusinessMargin, runBusinessMarginScenario } from "@/lib/calculators/
 import { readLocalDraft, writeLocalDraft, type LocalCalculatorDraft } from "@/lib/persistence/local-draft";
 import type { PersistedCalculatorState } from "@/lib/persistence/state";
 import { formatCanonicalDecimal, parseLocaleDecimal } from "@/lib/presentation/decimal";
+import { useCalculatorSurface } from "./calculator-surface";
 import { CalculatorField } from "./field";
 import { PersistenceControls } from "./persistence-controls";
 import { ResultPanel } from "./result-panel";
@@ -23,24 +24,14 @@ const textByLocale = {
   id: { summary: "Periksa input berikut.", invalid: "Masukkan angka yang valid.", required: "Kolom ini wajib diisi.", range: "Nilai berada di luar rentang yang diizinkan.", result: "Hasil margin", scenarioField: "Skenario biaya variabel per pesanan", scenarioRequired: "Masukkan biaya variabel untuk skenario." },
   en: { summary: "Check the following inputs.", invalid: "Enter a valid number.", required: "This field is required.", range: "The value is outside the allowed range.", result: "Margin result", scenarioField: "Scenario variable selling cost per order", scenarioRequired: "Enter a variable selling cost for the scenario." },
 } as const;
-
-function resultValues(result: CalculationResult) {
-  const seen = new Set<string>();
-  return [result.primaryAnswer, ...result.sections.flatMap((section) => section.values)].filter((value) => { if (seen.has(value.id)) return false; seen.add(value.id); return true; });
-}
-const localize = (value: string, from: Locale, to: Locale, scale: number) => {
-  if (from === to || value.trim().length === 0) return value;
-  const parsed = parseLocaleDecimal(value, from, scale);
-  return parsed.ok ? formatCanonicalDecimal(parsed.value, to) : value;
-};
-
+function resultValues(result: CalculationResult) { const seen = new Set<string>(); return [result.primaryAnswer, ...result.sections.flatMap((section) => section.values)].filter((value) => { if (seen.has(value.id)) return false; seen.add(value.id); return true; }); }
+const localize = (value: string, from: Locale, to: Locale, scale: number) => { if (from === to || value.trim().length === 0) return value; const parsed = parseLocaleDecimal(value, from, scale); return parsed.ok ? formatCanonicalDecimal(parsed.value, to) : value; };
+const formatWidgetDefault = (value: string | readonly string[] | undefined, locale: Locale) =>
+  typeof value === "string" ? formatCanonicalDecimal(value, locale) : "";
 const subscribeClientReady = () => () => {};
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
-
-function useClientReady() {
-  return useSyncExternalStore(subscribeClientReady, getClientSnapshot, getServerSnapshot);
-}
+function useClientReady() { return useSyncExternalStore(subscribeClientReady, getClientSnapshot, getServerSnapshot); }
 
 export function BusinessMarginCalculator({ locale, entry, recordId }: BusinessMarginCalculatorProps) {
   const clientReady = useClientReady();
@@ -49,25 +40,45 @@ export function BusinessMarginCalculator({ locale, entry, recordId }: BusinessMa
 }
 
 function BusinessMarginCalculatorStateful({ locale, entry, recordId }: BusinessMarginCalculatorProps) {
+  const surface = useCalculatorSurface();
+  const started = useRef(false);
   const copy = entry.copy[locale]; const text = textByLocale[locale];
   const [initialDraft] = useState<BusinessMarginDraft | null>(() => {
+    if (surface.surface !== "public") return null;
     const draft = readLocalDraft("reference.business-margin");
     return draft?.calculatorId === "reference.business-margin" ? draft : null;
   });
-  const [sellingPrice, setSellingPrice] = useState(() => initialDraft === null ? "" : localize(initialDraft.fields.sellingPrice, initialDraft.locale, locale, 2));
-  const [productCost, setProductCost] = useState(() => initialDraft === null ? "" : localize(initialDraft.fields.productCost, initialDraft.locale, locale, 2));
-  const [variableCost, setVariableCost] = useState(() => initialDraft === null ? "" : localize(initialDraft.fields.variableCost, initialDraft.locale, locale, 2));
-  const [scenarioVariableCost, setScenarioVariableCost] = useState(() => initialDraft === null ? "" : localize(initialDraft.fields.scenarioVariableCost, initialDraft.locale, locale, 2));
+  const widgetDefaults = surface.surface === "widget" ? surface.initialDefaults : undefined;
+  const [sellingPrice, setSellingPrice] = useState(() =>
+    initialDraft === null
+      ? formatWidgetDefault(widgetDefaults?.sellingPrice, locale)
+      : localize(initialDraft.fields.sellingPrice, initialDraft.locale, locale, 2),
+  );
+  const [productCost, setProductCost] = useState(() =>
+    initialDraft === null
+      ? formatWidgetDefault(widgetDefaults?.productCost, locale)
+      : localize(initialDraft.fields.productCost, initialDraft.locale, locale, 2),
+  );
+  const [variableCost, setVariableCost] = useState(() =>
+    initialDraft === null
+      ? formatWidgetDefault(widgetDefaults?.variableSellingCostPerOrder, locale)
+      : localize(initialDraft.fields.variableCost, initialDraft.locale, locale, 2),
+  );
+  const [scenarioVariableCost, setScenarioVariableCost] = useState(() =>
+    initialDraft === null ? "" : localize(initialDraft.fields.scenarioVariableCost, initialDraft.locale, locale, 2),
+  );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [outcome, setOutcome] = useState<ReturnType<typeof runBusinessMargin> | null>(null);
   const [scenarioOutcome, setScenarioOutcome] = useState<ReturnType<typeof runBusinessMarginScenario> | null>(null);
   const [persistableState, setPersistableState] = useState<PersistedCalculatorState | null>(null);
 
   useEffect(() => {
+    if (surface.surface !== "public") return;
     writeLocalDraft({ calculatorId: "reference.business-margin", locale, fields: { sellingPrice, productCost, variableCost, scenarioVariableCost } });
-  }, [locale, productCost, scenarioVariableCost, sellingPrice, variableCost]);
+  }, [locale, productCost, scenarioVariableCost, sellingPrice, surface.surface, variableCost]);
 
-  const dirty = () => setPersistableState(null);
+  const signalStarted = () => { if (surface.surface !== "widget" || started.current) return; started.current = true; surface.onLifecycleEvent?.("calculator_started"); };
+  const dirty = () => { signalStarted(); setPersistableState(null); };
   const buildBaselineInput = (): { input: BusinessMarginInput; errors: Record<string, string> } | { errors: Record<string, string> } => {
     const errors: Record<string, string> = {};
     const parsedSelling = parseLocaleDecimal(sellingPrice, locale, 2); const parsedProduct = parseLocaleDecimal(productCost, locale, 2);
@@ -78,22 +89,15 @@ function BusinessMarginCalculatorStateful({ locale, entry, recordId }: BusinessM
     if (!parsedSelling.ok || !parsedProduct.ok || (parsedVariable !== undefined && !parsedVariable.ok)) return { errors };
     return { errors, input: { sellingPrice: parsedSelling.value, productCost: parsedProduct.value, ...(parsedVariable === undefined ? {} : { variableSellingCostPerOrder: parsedVariable.value }) } };
   };
-  const persistedFrom = (input: BusinessMarginInput, scenario?: string): PersistedCalculatorState => ({
-    calculatorId: "reference.business-margin",
-    calculatorVersion: businessMarginCalculatorDefinition.version.version,
-    input: { sellingPrice: input.sellingPrice, productCost: input.productCost, ...(input.variableSellingCostPerOrder === undefined ? {} : { variableSellingCostPerOrder: input.variableSellingCostPerOrder }), ...(scenario === undefined ? {} : { scenarioVariableSellingCostPerOrder: scenario }) },
-  });
-  const applyEngineIssues = (issues: readonly { path: string; code: string }[]) => {
-    const errors: Record<string, string> = {};
-    for (const issue of issues) { const path = issue.path.startsWith("scenario.changes.") ? "scenarioVariableSellingCostPerOrder" : issue.path; errors[path] = issue.code === "out-of-range" ? text.range : text.invalid; }
-    setFieldErrors(errors);
-  };
+  const persistedFrom = (input: BusinessMarginInput, scenario?: string): PersistedCalculatorState => ({ calculatorId: "reference.business-margin", calculatorVersion: businessMarginCalculatorDefinition.version.version, input: { sellingPrice: input.sellingPrice, productCost: input.productCost, ...(input.variableSellingCostPerOrder === undefined ? {} : { variableSellingCostPerOrder: input.variableSellingCostPerOrder }), ...(scenario === undefined ? {} : { scenarioVariableSellingCostPerOrder: scenario }) } });
+  const applyEngineIssues = (issues: readonly { path: string; code: string }[]) => { const errors: Record<string, string> = {}; for (const issue of issues) { const path = issue.path.startsWith("scenario.changes.") ? "scenarioVariableSellingCostPerOrder" : issue.path; errors[path] = issue.code === "out-of-range" ? text.range : text.invalid; } setFieldErrors(errors); };
   const calculate = () => {
     const built = buildBaselineInput();
     if (!("input" in built)) { setFieldErrors(built.errors); setOutcome(null); setScenarioOutcome(null); setPersistableState(null); return; }
     const nextOutcome = runBusinessMargin(built.input);
     if (!nextOutcome.ok) { applyEngineIssues(nextOutcome.issues); setOutcome(null); setScenarioOutcome(null); setPersistableState(null); return; }
     setFieldErrors({}); setOutcome(nextOutcome); setScenarioOutcome(null); setPersistableState(persistedFrom(built.input));
+    if (surface.surface === "widget") surface.onLifecycleEvent?.("calculation_completed");
   };
   const runScenario = () => {
     const built = buildBaselineInput(); const parsedScenario = parseLocaleDecimal(scenarioVariableCost, locale, 2); const errors = { ...built.errors };
@@ -102,6 +106,7 @@ function BusinessMarginCalculatorStateful({ locale, entry, recordId }: BusinessM
     const nextScenario = runBusinessMarginScenario(built.input, { id: "phase-03-ui-scenario", changes: { variableSellingCostPerOrder: parsedScenario.value } });
     if (!nextScenario.ok) { applyEngineIssues(nextScenario.issues); setScenarioOutcome(null); setPersistableState(null); return; }
     setFieldErrors({}); setScenarioOutcome(nextScenario); setPersistableState(persistedFrom(built.input, parsedScenario.value));
+    if (surface.surface === "widget") surface.onLifecycleEvent?.("calculation_completed");
   };
   const loadPersisted = (state: PersistedCalculatorState) => {
     if (state.calculatorId !== "reference.business-margin") return;
@@ -120,8 +125,8 @@ function BusinessMarginCalculatorStateful({ locale, entry, recordId }: BusinessM
         <Button type="button" onClick={calculate}>{copy.ui.calculate}</Button><ValidationSummary title={text.summary} errors={errors} />
       </div>
       {outcome?.ok ? <div className="mt-8 border-t border-border pt-7"><h2 className="text-lg font-bold tracking-[-0.025em]">{copy.ui.recommendationTitle}</h2><div className="mt-4 space-y-4"><CalculatorField id="margin-scenario-variable-cost" label={text.scenarioField} value={scenarioVariableCost} onChange={(event) => { dirty(); setScenarioVariableCost(event.target.value); }} inputMode="decimal" autoComplete="off" error={fieldErrors.scenarioVariableSellingCostPerOrder} /><Button type="button" variant="outline" onClick={runScenario}>{copy.ui.runScenario}</Button></div></div> : null}
-      <PersistenceControls locale={locale} calculatorId="reference.business-margin" state={persistableState} onLoad={loadPersisted} />
-      <WorkspaceCalculationControls locale={locale} calculatorId="reference.business-margin" state={persistableState} onLoad={loadPersisted} recordId={recordId} />
+      {surface.surface === "public" ? <PersistenceControls locale={locale} calculatorId="reference.business-margin" state={persistableState} onLoad={loadPersisted} /> : null}
+      {surface.surface === "public" ? <WorkspaceCalculationControls locale={locale} calculatorId="reference.business-margin" state={persistableState} onLoad={loadPersisted} recordId={surface.recordId ?? recordId} /> : null}
     </section>
     <div className="min-w-0 space-y-5">
       {outcome?.ok ? <ResultPanel title={text.result}><dl className="grid min-w-0 gap-4 sm:grid-cols-2">{resultValues(outcome.result).map((value) => <div key={value.id} className="min-w-0"><dt className="text-xs font-semibold text-trust-foreground/70">{copy.results[value.id] ?? value.id}</dt><dd className="mt-1 break-words text-xl font-bold text-trust-foreground">{formatCanonicalDecimal(value.value, locale, { style: value.unit === "percent" ? "percent" : "decimal" })}</dd></div>)}</dl>{scenarioOutcome?.ok ? <div className="mt-7 grid min-w-0 gap-4 border-t border-primary/15 pt-5 sm:grid-cols-3"><div><p className="text-xs font-semibold text-trust-foreground/70">{copy.ui.baseline}</p><p className="mt-1 break-words text-lg font-bold">{formatCanonicalDecimal(scenarioOutcome.result.baseline.primaryAnswer.value, locale)}</p></div><div><p className="text-xs font-semibold text-trust-foreground/70">{copy.ui.scenario}</p><p className="mt-1 break-words text-lg font-bold">{formatCanonicalDecimal(scenarioOutcome.result.scenario.primaryAnswer.value, locale)}</p></div><div><p className="text-xs font-semibold text-trust-foreground/70">{copy.ui.impact}</p><p data-testid="scenario-impact" className="mt-1 break-words text-lg font-bold">{formatCanonicalDecimal(scenarioOutcome.result.impact.value, locale)}</p></div></div> : null}</ResultPanel> : <div className="rounded-[var(--radius-card)] border border-dashed border-border bg-card/50 p-6 text-sm leading-6 text-muted-foreground">{locale === "id" ? "Mulai dengan harga jual dan biaya produk. Tambahkan biaya variabel saat relevan." : "Start with selling price and product cost. Add variable selling cost when it is relevant."}</div>}

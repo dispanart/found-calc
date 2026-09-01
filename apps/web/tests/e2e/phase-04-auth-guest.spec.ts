@@ -37,7 +37,7 @@ test("guest saved state is claimed on account creation, visible in workspace, lo
   await page.getByLabel("Password").fill(password);
   await page.locator("form").getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText(email, { exact: true })).toBeVisible();
-  await expect(page.getByRole("status")).toContainText(/preserv|saved draft/i);
+  await expect(page.getByRole("status").filter({ hasText: /preserv|saved draft/i })).toBeVisible();
 
   await page.goto("/en/workspace");
   await expect(page.getByText(email, { exact: true })).toBeVisible();

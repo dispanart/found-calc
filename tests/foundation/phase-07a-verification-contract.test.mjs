@@ -6,7 +6,7 @@ import { test } from "node:test";
 const url = (path) => new URL(`../../${path}`, import.meta.url);
 const read = (path) => readFileSync(url(path), "utf8");
 
-test("Phase 07A owns a fail-fast verification superset and main PR CI", () => {
+test("Phase 07A retains its fail-fast superset with branch/manual verification after successor handoff", () => {
   for (const path of ["scripts/verify-phase-07a.mjs", ".github/workflows/phase-07a-verification.yml"]) {
     assert.equal(existsSync(url(path)), true, `${path} must exist`);
   }
@@ -27,10 +27,9 @@ test("Phase 07A owns a fail-fast verification superset and main PR CI", () => {
   assert.match(verify, /Phase 07A web typecheck[^\n]*before:\s*cleanNext/);
 
   const workflow = read(".github/workflows/phase-07a-verification.yml");
-  assert.match(workflow, /pull_request\s*:/);
-  assert.match(workflow, /branches:\s*\n\s*- main/);
+  assert.doesNotMatch(workflow, /pull_request:\s*\n\s*branches:\s*\n\s*- main/);
+  assert.match(workflow, /phase-07a-commercial-auth-amendment/);
   assert.match(workflow, /workflow_dispatch\s*:/);
-  assert.doesNotMatch(workflow, /^\s*push\s*:/m);
   for (const migration of ["0001_phase04_auth_and_calculator_state.sql", "0002_phase05_rule_platform_admin.sql", "0003_phase06_workspace.sql", "0004_phase07_billing.sql", "0005_phase07a_commercial_auth_amendment.sql"]) {
     assert.match(workflow, new RegExp(migration.replaceAll(".", "\\.")));
   }
