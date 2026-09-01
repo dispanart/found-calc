@@ -45,14 +45,14 @@ describe("calculation contracts", () => {
     const date = {
       id: "startDate",
       kind: "date",
-      required: true,
+      requirement: "required",
       min: "0001-01-01",
       max: "9999-12-31",
     } satisfies InputDefinition;
     const select = {
       id: "fromUnit",
       kind: "select",
-      required: true,
+      requirement: "required",
       options: ["m", "km"] as const,
     } satisfies InputDefinition;
 
