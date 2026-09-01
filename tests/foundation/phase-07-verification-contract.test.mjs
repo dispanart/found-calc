@@ -114,7 +114,8 @@ test("Phase 07 historical closure remains reproducible without repackaging succe
     "tests/foundation/phase-07-commercial-lifecycle.test.mts",
   ]) assert.match(artifact, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 
-  const baseline = read("BASELINE.md");
-  assert.match(baseline, /8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4/);
-  assert.match(baseline, /found-calc-phase-07-billing-entitlements-xendit\.zip/);
+  // Historical provenance belongs to immutable closure evidence, not the mutable current BASELINE.md.
+  const verification = read("docs/verification/phase-07-verification.md");
+  assert.match(verification, /Canonical closure contract/);
+  assert.match(verification, /found-calc-phase-07-billing-entitlements-xendit\.zip/);
 });
