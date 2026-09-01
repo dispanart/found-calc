@@ -1,5 +1,6 @@
 "use client";
 
+import { calculatorCatalog, getCalculatorById } from "@found-calc/catalog";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -8,11 +9,9 @@ import type { Locale } from "@/i18n/locales";
 import { authClient } from "@/lib/auth/client";
 import type { SupportedCalculatorId } from "@/lib/persistence/state";
 
-const calculatorIds: readonly SupportedCalculatorId[] = [
-  "reference.discount",
-  "reference.business-margin",
-  "reference.synthetic-rule",
-];
+const calculatorIds: readonly SupportedCalculatorId[] = calculatorCatalog.map(
+  (entry) => entry.id as SupportedCalculatorId,
+);
 
 type StateStatus = "checking" | "saved" | "missing" | "unavailable";
 
@@ -26,11 +25,6 @@ const labels = {
     missing: "Belum tersimpan",
     unavailable: "Tidak tersedia",
     retry: "Periksa lagi",
-    names: {
-      "reference.discount": "Kalkulator Diskon Bertingkat",
-      "reference.business-margin": "Kalkulator Margin Bisnis",
-      "reference.synthetic-rule": "Referensi Aturan Versi",
-    },
   },
   en: {
     heading: "Saved drafts",
@@ -41,19 +35,12 @@ const labels = {
     missing: "Not saved",
     unavailable: "Unavailable",
     retry: "Check again",
-    names: {
-      "reference.discount": "Stacked Discount Calculator",
-      "reference.business-margin": "Business Margin Calculator",
-      "reference.synthetic-rule": "Versioned Rule Reference",
-    },
   },
 } as const;
 
-const initialStatuses = (): Record<SupportedCalculatorId, StateStatus> => ({
-  "reference.discount": "checking",
-  "reference.business-margin": "checking",
-  "reference.synthetic-rule": "checking",
-});
+const initialStatuses = (): Record<SupportedCalculatorId, StateStatus> => Object.fromEntries(
+  calculatorIds.map((calculatorId) => [calculatorId, "checking"] as const),
+) as Record<SupportedCalculatorId, StateStatus>;
 
 interface SignedInPersistenceSummaryProps {
   locale: Locale;
@@ -101,14 +88,19 @@ function SignedInPersistenceSummary({ locale, userId }: SignedInPersistenceSumma
         <Button type="button" variant="outline" onClick={refresh}>{text.retry}</Button>
       </div>
       <dl className="mt-6 grid gap-3">
-        {calculatorIds.map((calculatorId) => (
-          <div key={calculatorId} className="grid min-w-0 gap-1 rounded-[var(--radius-control)] border border-border/70 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
-            <dt className="min-w-0 break-words text-sm font-semibold">{text.names[calculatorId]}</dt>
-            <dd className="text-sm text-muted-foreground" data-testid={`workspace-state-${calculatorId}`} role="status">
-              {text[statuses[calculatorId]]}
-            </dd>
-          </div>
-        ))}
+        {calculatorIds.map((calculatorId) => {
+          const calculator = getCalculatorById(calculatorId);
+          return (
+            <div key={calculatorId} className="grid min-w-0 gap-1 rounded-[var(--radius-control)] border border-border/70 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+              <dt className="min-w-0 break-words text-sm font-semibold">
+                {calculator?.copy[locale].title ?? calculatorId}
+              </dt>
+              <dd className="text-sm text-muted-foreground" data-testid={`workspace-state-${calculatorId}`} role="status">
+                {text[statuses[calculatorId]]}
+              </dd>
+            </div>
+          );
+        })}
       </dl>
     </section>
   );
