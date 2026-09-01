@@ -6,7 +6,7 @@ import { test } from "node:test";
 const url = (path) => new URL(`../../${path}`, import.meta.url);
 const read = (path) => readFileSync(url(path), "utf8");
 
-test("Phase 07A owns a fail-fast verification superset and main PR CI", () => {
+test("Phase 07A retains its fail-fast superset with branch/manual verification after successor handoff", () => {
   for (const path of ["scripts/verify-phase-07a.mjs", ".github/workflows/phase-07a-verification.yml"]) {
     assert.equal(existsSync(url(path)), true, `${path} must exist`);
   }
@@ -27,10 +27,9 @@ test("Phase 07A owns a fail-fast verification superset and main PR CI", () => {
   assert.match(verify, /Phase 07A web typecheck[^\n]*before:\s*cleanNext/);
 
   const workflow = read(".github/workflows/phase-07a-verification.yml");
-  assert.match(workflow, /pull_request\s*:/);
-  assert.match(workflow, /branches:\s*\n\s*- main/);
+  assert.doesNotMatch(workflow, /pull_request:\s*\n\s*branches:\s*\n\s*- main/);
+  assert.match(workflow, /phase-07a-commercial-auth-amendment/);
   assert.match(workflow, /workflow_dispatch\s*:/);
-  assert.doesNotMatch(workflow, /^\s*push\s*:/m);
   for (const migration of ["0001_phase04_auth_and_calculator_state.sql", "0002_phase05_rule_platform_admin.sql", "0003_phase06_workspace.sql", "0004_phase07_billing.sql", "0005_phase07a_commercial_auth_amendment.sql"]) {
     assert.match(workflow, new RegExp(migration.replaceAll(".", "\\.")));
   }
@@ -67,7 +66,7 @@ test("Phase 07 Worker smoke remains compatible with legacy and current Phase 07A
   assert.match(smoke, /GOOGLE_CLIENT_SECRET/);
 });
 
-test("Phase 07A closure packages the exact merge baseline and hands off to Phase 07B without rewriting Phase 07 provenance", () => {
+test("Phase 07A closure packages the exact merge baseline without rewriting Phase 07 provenance", () => {
   for (const path of [
     "docs/verification/phase-07a-verification.md",
     ".github/workflows/phase-07a-baseline-artifact.yml",
@@ -91,17 +90,11 @@ test("Phase 07A closure packages the exact merge baseline and hands off to Phase
     "tests/foundation/phase-07a-verification-contract.test.mjs",
   ]) assert.match(artifact, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 
-  const baseline = read("BASELINE.md");
-  assert.match(baseline, /Last canonical completed phase:\*\* Phase 07A/);
-  assert.match(baseline, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
-  assert.match(baseline, /8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4/);
-
-  const handoff = read("PHASE_HANDOFF.md");
-  assert.match(handoff, /Phase 07B — Widget Platform Foundation/);
-  assert.match(handoff, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
-  const template = read("PHASE_CHAT_TEMPLATE.md");
-  assert.match(template, /Phase 07B — Widget Platform Foundation/);
-  assert.match(template, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
+  // Historical closure evidence is immutable even when successor phases advance current handoff docs.
+  const verification = read("docs/verification/phase-07a-verification.md");
+  assert.match(verification, /found-calc-phase-07a-commercial-auth-amendment\.zip/);
+  assert.match(verification, /Canonical Phase 07 predecessor:\*\* `8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4`/);
+  assert.match(verification, /Historical Phase 07 artifact provenance remains pinned to canonical SHA `8f19b1e13d20b0d896f65ecb6b5cedaa807b98b4`/);
 
   const historicalArtifact = read(".github/workflows/phase-07-baseline-artifact.yml");
   assert.doesNotMatch(historicalArtifact, /^\s*push\s*:/m);

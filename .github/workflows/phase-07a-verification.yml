@@ -1,9 +1,9 @@
 name: Phase 07A Verification
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - phase-07a-commercial-auth-amendment
   workflow_dispatch:
 
 permissions:

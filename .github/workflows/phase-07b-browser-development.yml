@@ -1,0 +1,48 @@
+name: Phase 07B Browser Development TDD
+
+on:
+  push:
+    branches:
+      - phase-07b-widget-platform-foundation
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-07b-browser-development-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BETTER_AUTH_SECRET: phase-07b-browser-test-secret-not-for-production-000000000000000000000
+  BETTER_AUTH_URL: http://127.0.0.1:3000
+  CLOUDFLARE_INCLUDE_PROCESS_ENV: "true"
+
+jobs:
+  browser-feedback:
+    name: Phase 07B browser TDD feedback
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --filter @found-calc/web exec playwright install --with-deps chromium
+      - name: Reset and apply Phase 07B local D1 migrations
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .wrangler/state
+          for migration in migrations/000{1,2,3,4,5,6}_*.sql; do
+            pnpm exec wrangler d1 execute found-calc-local --local --file "$migration" --yes
+          done
+      - name: Run Phase 07B runtime and accessibility browser tests twice without retries
+        run: pnpm --filter @found-calc/web exec playwright test tests/e2e/phase-07b-widget-runtime.spec.ts tests/e2e/phase-07b-widget-accessibility.spec.ts --retries=0 --repeat-each=2

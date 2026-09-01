@@ -5,6 +5,7 @@ import phase05MigrationSql from "../../migrations/0002_phase05_rule_platform_adm
 import phase06MigrationSql from "../../migrations/0003_phase06_workspace.sql?raw";
 import phase07MigrationSql from "../../migrations/0004_phase07_billing.sql?raw";
 import phase07aMigrationSql from "../../migrations/0005_phase07a_commercial_auth_amendment.sql?raw";
+import phase07bMigrationSql from "../../migrations/0006_phase07b_widget_platform.sql?raw";
 
 const phase04TablesInDropOrder = [
   "calculator_state",
@@ -22,6 +23,11 @@ const currentTriggersInDropOrder = [
 ] as const;
 
 const currentTablesInDropOrder = [
+  "widget_event_daily",
+  "widget_domain_binding",
+  "widget_verification",
+  "widget_configuration",
+  "widget_domain",
   "billing_trial",
   "billing_webhook_inbox",
   "billing_subscription",
@@ -65,10 +71,16 @@ export const resetPhase07Database = async () => {
   await resetSharedDatabase();
 };
 
-/** Reset to the current Phase 07A schema for ordinary repository/API tests. */
+/** Reset to the canonical Phase 07A schema, used as the predecessor for the 0006 migration test. */
 export const resetCurrentDatabase = async () => {
   await resetSharedDatabase();
   await applySql(env.DB, phase07aMigrationSql);
+};
+
+/** Reset to the current Phase 07B schema for widget repository/API/runtime tests. */
+export const resetPhase07bDatabase = async () => {
+  await resetCurrentDatabase();
+  await applySql(env.DB, phase07bMigrationSql);
 };
 
 export const resetPhase04Database = async (db: D1Database, migrationSql: string) => {
