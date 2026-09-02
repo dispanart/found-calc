@@ -38,7 +38,14 @@ export type ResolvePublicWidgetRuntimeResult =
   | { readonly ok: false; readonly code: "unavailable" };
 
 const unavailable = (): ResolvePublicWidgetRuntimeResult => ({ ok: false, code: "unavailable" });
-const SUPPORTED_CALCULATOR_IDS = new Set<SupportedCalculatorId>(["reference.discount", "reference.business-margin", "reference.synthetic-rule"]);
+const SUPPORTED_CALCULATOR_IDS = new Set<SupportedCalculatorId>([
+  "reference.discount",
+  "reference.business-margin",
+  "reference.synthetic-rule",
+  "quick.percentage",
+  "quick.date-difference",
+  "quick.length-conversion",
+]);
 const supportedCalculatorId = (value: string): SupportedCalculatorId | null => SUPPORTED_CALCULATOR_IDS.has(value as SupportedCalculatorId) ? value as SupportedCalculatorId : null;
 
 const effectivePresentation = async (
