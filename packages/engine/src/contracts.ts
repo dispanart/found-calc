@@ -8,16 +8,46 @@ export interface CalculatorVersion {
   readonly version: string;
 }
 
-export interface InputDefinition {
+interface BaseInputDefinition {
   readonly id: string;
-  readonly kind: "decimal" | "decimal-list";
   readonly requirement: RequirementLevel;
+}
+
+export interface DecimalInputDefinition extends BaseInputDefinition {
+  readonly kind: "decimal";
   readonly scale: number;
   readonly min?: string;
   readonly max?: string;
   readonly unit?: string;
   readonly currency?: string;
 }
+
+export interface DecimalListInputDefinition extends BaseInputDefinition {
+  readonly kind: "decimal-list";
+  readonly scale: number;
+  readonly min?: string;
+  readonly max?: string;
+  readonly maxItems?: number;
+  readonly unit?: string;
+  readonly currency?: string;
+}
+
+export interface DateInputDefinition extends BaseInputDefinition {
+  readonly kind: "date";
+  readonly min?: string;
+  readonly max?: string;
+}
+
+export interface SelectInputDefinition extends BaseInputDefinition {
+  readonly kind: "select";
+  readonly options: readonly string[];
+}
+
+export type InputDefinition =
+  | DecimalInputDefinition
+  | DecimalListInputDefinition
+  | DateInputDefinition
+  | SelectInputDefinition;
 
 export interface RuleDependencyDeclaration {
   readonly ruleId: string;
@@ -92,6 +122,7 @@ export type ValidationIssueCode =
   | "invalid-combination"
   | "undefined-result"
   | "invalid-effective-date"
+  | "invalid-date-order"
   | "rule-unavailable"
   | "rule-ambiguous";
 

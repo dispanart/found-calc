@@ -1,4 +1,4 @@
-import { getReferenceCalculatorById, type ReferenceCatalogEntry } from "@found-calc/catalog";
+import { getCalculatorById, type CalculatorCatalogEntry } from "@found-calc/catalog";
 import Link from "next/link";
 
 import type { Locale } from "@/i18n/locales";
@@ -6,18 +6,16 @@ import { getMessages } from "@/i18n/messages";
 
 interface RelatedCalculatorsProps {
   locale: Locale;
-  entry: ReferenceCatalogEntry;
+  entry: CalculatorCatalogEntry;
 }
 
 export function RelatedCalculators({ locale, entry }: RelatedCalculatorsProps) {
   const messages = getMessages(locale);
   const related = entry.relatedCalculatorIds
-    .map((id) => getReferenceCalculatorById(id))
-    .filter((candidate): candidate is ReferenceCatalogEntry => candidate !== undefined);
+    .map((id) => getCalculatorById(id))
+    .filter((candidate): candidate is CalculatorCatalogEntry => candidate !== undefined);
 
-  if (related.length === 0) {
-    return null;
-  }
+  if (related.length === 0) return null;
 
   return (
     <section aria-labelledby="related-calculators-title" className="border-t border-border pt-10">

@@ -61,4 +61,31 @@ describe("parsePersistedCalculatorState", () => {
       input: { baseAmount: "10.00", discountPercentages: Array.from({ length: 21 }, () => "1.0000") },
     })).toEqual({ ok: false, code: "invalid-state" });
   });
+
+  it("accepts the three Phase 08A state shapes with exact versioned fields", () => {
+    expect(parsePersistedCalculatorState({
+      calculatorId: "quick.percentage", calculatorVersion: "1.0.0",
+      input: { baseValue: "250.000000", percentage: "12.5000" },
+    }).ok).toBe(true);
+    expect(parsePersistedCalculatorState({
+      calculatorId: "quick.date-difference", calculatorVersion: "1.0.0",
+      input: { startDate: "2024-02-28", endDate: "2024-03-01" },
+    }).ok).toBe(true);
+    expect(parsePersistedCalculatorState({
+      calculatorId: "quick.length-conversion", calculatorVersion: "1.0.0",
+      input: { value: "1.000000", fromUnit: "in", toUnit: "cm" },
+    }).ok).toBe(true);
+  });
+
+  it("rejects invalid Phase 08A state instead of trusting client payloads", () => {
+    const invalidStates = [
+      { calculatorId: "quick.percentage", calculatorVersion: "1.0.0", input: { baseValue: "10.000000", percentage: "100001.0000" } },
+      { calculatorId: "quick.date-difference", calculatorVersion: "1.0.0", input: { startDate: "2025-02-29", endDate: "2025-03-01" } },
+      { calculatorId: "quick.date-difference", calculatorVersion: "1.0.0", input: { startDate: "2026-03-02", endDate: "2026-03-01" } },
+      { calculatorId: "quick.length-conversion", calculatorVersion: "1.0.0", input: { value: "1.000000", fromUnit: "parsec", toUnit: "m" } },
+      { calculatorId: "quick.length-conversion", calculatorVersion: "2.0.0", input: { value: "1.000000", fromUnit: "m", toUnit: "cm" } },
+      { calculatorId: "quick.percentage", calculatorVersion: "1.0.0", input: { baseValue: "1.000000", percentage: "2.0000", extra: "no" } },
+    ];
+    for (const value of invalidStates) expect(parsePersistedCalculatorState(value).ok).toBe(false);
+  });
 });

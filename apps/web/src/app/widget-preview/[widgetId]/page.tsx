@@ -1,4 +1,4 @@
-import { getReferenceCalculatorById } from "@found-calc/catalog";
+import { getCalculatorById } from "@found-calc/catalog";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -13,7 +13,7 @@ export default async function WidgetPreviewPage({ params }: { params: Promise<{ 
   if (!session?.user.id) notFound();
   const runtime = await resolveWidgetPreviewRuntime({ widgetId, ownerUserId: session.user.id }, services);
   if (!runtime) notFound();
-  const entry = getReferenceCalculatorById(runtime.calculatorId);
+  const entry = getCalculatorById(runtime.calculatorId);
   if (!entry) notFound();
   return <WidgetFrame runtime={runtime} entry={entry} lifecycleEnabled={false} />;
 }

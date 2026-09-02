@@ -1,18 +1,28 @@
 import {
   businessMarginCalculatorDefinition,
   compareDecimal,
+  compareIsoCalendarDates,
+  dateDifferenceCalculatorDefinition,
   discountCalculatorDefinition,
   formatDecimal,
+  isIsoCalendarDate,
+  lengthConversionCalculatorDefinition,
   parseDecimal,
+  percentageCalculatorDefinition,
   syntheticRuleCalculatorDefinition,
   type CalculatorDefinition,
+  type DecimalInputDefinition,
+  type DecimalListInputDefinition,
   type InputDefinition,
 } from "@found-calc/engine";
 
 export type SupportedCalculatorId =
   | "reference.discount"
   | "reference.business-margin"
-  | "reference.synthetic-rule";
+  | "reference.synthetic-rule"
+  | "quick.percentage"
+  | "quick.date-difference"
+  | "quick.length-conversion";
 
 export type WidgetDefaultConfiguration = Readonly<Record<string, string | readonly string[]>>;
 
@@ -27,6 +37,9 @@ const DEFINITIONS: Readonly<Record<SupportedCalculatorId, CalculatorDefinition>>
   "reference.discount": discountCalculatorDefinition,
   "reference.business-margin": businessMarginCalculatorDefinition,
   "reference.synthetic-rule": syntheticRuleCalculatorDefinition,
+  "quick.percentage": percentageCalculatorDefinition,
+  "quick.date-difference": dateDifferenceCalculatorDefinition,
+  "quick.length-conversion": lengthConversionCalculatorDefinition,
 };
 
 const SAFE_FIELDS: Readonly<Record<SupportedCalculatorId, ReadonlySet<string>>> = {
@@ -37,6 +50,9 @@ const SAFE_FIELDS: Readonly<Record<SupportedCalculatorId, ReadonlySet<string>>> 
     "variableSellingCostPerOrder",
   ]),
   "reference.synthetic-rule": new Set(["baseAmount"]),
+  "quick.percentage": new Set(["baseValue", "percentage"]),
+  "quick.date-difference": new Set(["startDate", "endDate"]),
+  "quick.length-conversion": new Set(["value", "fromUnit", "toUnit"]),
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -45,7 +61,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const definitionFor = (calculatorId: string): CalculatorDefinition | null =>
   calculatorId in DEFINITIONS ? DEFINITIONS[calculatorId as SupportedCalculatorId] : null;
 
-const canonicalDecimal = (definition: InputDefinition, value: unknown): string | null => {
+const canonicalDecimal = (
+  definition: DecimalInputDefinition | DecimalListInputDefinition,
+  value: unknown,
+): string | null => {
   if (typeof value !== "string") return null;
   const parsed = parseDecimal(value, definition.scale);
   if (!parsed.ok) return null;
@@ -65,16 +84,28 @@ const canonicalValue = (
   definition: InputDefinition,
   value: unknown,
 ): string | readonly string[] | null => {
-  if (definition.kind === "decimal") return canonicalDecimal(definition, value);
-  if (!Array.isArray(value)) return null;
-
-  const normalized: string[] = [];
-  for (const entry of value) {
-    const canonical = canonicalDecimal(definition, entry);
-    if (canonical === null) return null;
-    normalized.push(canonical);
+  switch (definition.kind) {
+    case "decimal":
+      return canonicalDecimal(definition, value);
+    case "decimal-list": {
+      if (!Array.isArray(value)) return null;
+      if (definition.maxItems !== undefined && value.length > definition.maxItems) return null;
+      const normalized: string[] = [];
+      for (const entry of value) {
+        const canonical = canonicalDecimal(definition, entry);
+        if (canonical === null) return null;
+        normalized.push(canonical);
+      }
+      return normalized;
+    }
+    case "date":
+      if (typeof value !== "string" || !isIsoCalendarDate(value)) return null;
+      if (definition.min !== undefined && value < definition.min) return null;
+      if (definition.max !== undefined && value > definition.max) return null;
+      return value;
+    case "select":
+      return typeof value === "string" && definition.options.includes(value) ? value : null;
   }
-  return normalized;
 };
 
 export const parseWidgetDefaults = (
@@ -100,6 +131,15 @@ export const parseWidgetDefaults = (
     const canonical = canonicalValue(input, value[key]);
     if (canonical === null) return { ok: false, code: "invalid-default-value" };
     normalized[key] = canonical;
+  }
+
+  if (
+    calculatorId === "quick.date-difference" &&
+    typeof normalized.startDate === "string" &&
+    typeof normalized.endDate === "string"
+  ) {
+    const order = compareIsoCalendarDates(normalized.startDate, normalized.endDate);
+    if (order === null || order > 0) return { ok: false, code: "invalid-default-value" };
   }
 
   return { ok: true, value: normalized };

@@ -1,4 +1,4 @@
-import { getReferenceCalculatorById } from "@found-calc/catalog";
+import { getCalculatorById } from "@found-calc/catalog";
 import { notFound } from "next/navigation";
 
 import { WidgetFrame } from "@/components/widgets/widget-frame";
@@ -29,7 +29,7 @@ export default async function EmbedWidgetPage({
   });
   if (!resolved.ok) notFound();
 
-  const entry = getReferenceCalculatorById(resolved.value.calculatorId);
+  const entry = getCalculatorById(resolved.value.calculatorId);
   if (entry === undefined) notFound();
 
   return <WidgetFrame runtime={resolved.value} entry={entry} />;

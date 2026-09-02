@@ -54,4 +54,17 @@ describe("local calculator drafts", () => {
     expect(removeLocalDraft("reference.business-margin", storage)).toBe(true);
     expect(readLocalDraft("reference.business-margin", storage)).toBeNull();
   });
+
+  it("round-trips calculator-specific Phase 08A drafts without a generic fields bag", () => {
+    const storage = new MemoryStorage();
+    const drafts = [
+      { calculatorId: "quick.percentage" as const, locale: "id" as const, fields: { baseValue: "250", percentage: "12,5" } },
+      { calculatorId: "quick.date-difference" as const, locale: "en" as const, fields: { startDate: "2024-02-28", endDate: "2024-03-01" } },
+      { calculatorId: "quick.length-conversion" as const, locale: "en" as const, fields: { value: "1", fromUnit: "in", toUnit: "cm" } },
+    ];
+    for (const draft of drafts) {
+      expect(writeLocalDraft(draft, storage)).toBe(true);
+      expect(readLocalDraft(draft.calculatorId, storage)).toEqual(draft);
+    }
+  });
 });
