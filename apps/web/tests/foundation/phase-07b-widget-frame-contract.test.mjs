@@ -11,7 +11,7 @@ test("public embed route re-authorizes runtime and uses canonical catalog entry"
   const page = read(pagePath);
   assert.match(page, /resolvePublicWidgetRuntime/);
   assert.match(page, /getWidgetRouteServices/);
-  assert.match(page, /getReferenceCalculatorById/);
+  assert.match(page, /getCalculatorById/);
   assert.match(page, /parentOrigin/);
   assert.match(page, /notFound\(\)/);
   assert.doesNotMatch(page, /ownerUserId|subscription|billing|provider/i);
