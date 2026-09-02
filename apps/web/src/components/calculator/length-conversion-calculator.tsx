@@ -7,7 +7,7 @@ import {
   lengthConversionCalculatorDefinition,
   type LengthUnit,
 } from "@found-calc/engine";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/locales";
@@ -97,6 +97,9 @@ export function LengthConversionCalculator(props: LengthConversionCalculatorProp
 
 function LengthConversionCalculatorStateful({ locale, entry, recordId }: LengthConversionCalculatorProps) {
   const surface = useCalculatorSurface();
+  const valueId = useId();
+  const fromUnitId = useId();
+  const toUnitId = useId();
   const started = useRef(false);
   const copy = entry.copy[locale];
   const text = validationCopy[locale];
@@ -201,7 +204,7 @@ function LengthConversionCalculatorStateful({ locale, entry, recordId }: LengthC
     <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-start">
       <section className="min-w-0 rounded-[var(--radius-card)] border border-border bg-card p-5 sm:p-7">
         <CalculatorField
-          id="length-value"
+          id={valueId}
           label={copy.fields.value ?? ""}
           value={value}
           onChange={(event) => { dirty(); setValue(event.target.value); }}
@@ -212,11 +215,11 @@ function LengthConversionCalculatorStateful({ locale, entry, recordId }: LengthC
 
         <div className="mt-5 grid min-w-0 gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-end">
           <div className="min-w-0">
-            <label htmlFor="length-from-unit" className="block text-sm font-semibold text-foreground">
+            <label htmlFor={fromUnitId} className="block text-sm font-semibold text-foreground">
               {copy.fields.fromUnit}
             </label>
             <select
-              id="length-from-unit"
+              id={fromUnitId}
               className={selectClass}
               value={fromUnit}
               onChange={(event) => {
@@ -234,11 +237,11 @@ function LengthConversionCalculatorStateful({ locale, entry, recordId }: LengthC
           </Button>
 
           <div className="min-w-0">
-            <label htmlFor="length-to-unit" className="block text-sm font-semibold text-foreground">
+            <label htmlFor={toUnitId} className="block text-sm font-semibold text-foreground">
               {copy.fields.toUnit}
             </label>
             <select
-              id="length-to-unit"
+              id={toUnitId}
               className={selectClass}
               value={toUnit}
               onChange={(event) => {
