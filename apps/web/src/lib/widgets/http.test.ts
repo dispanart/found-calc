@@ -147,6 +147,37 @@ describe("widget management HTTP", () => {
     }));
   });
 
+  it.each([
+    ["quick.percentage", { baseValue: "250", percentage: "12.5" }, { baseValue: "250.000000", percentage: "12.5000" }],
+    ["quick.date-difference", { startDate: "2024-02-28", endDate: "2024-03-01" }, { startDate: "2024-02-28", endDate: "2024-03-01" }],
+    ["quick.length-conversion", { value: "1", fromUnit: "in", toUnit: "cm" }, { value: "1.000000", fromUnit: "in", toUnit: "cm" }],
+  ] as const)("creates a widget for %s with canonical safe defaults", async (calculatorId, defaults, expectedDefaults) => {
+    const services = baseServices("friends");
+    const response = await handleWidgetsRequest(new Request("https://foundcalc.test/api/workspace/widgets", {
+      method: "POST",
+      body: JSON.stringify({ name: "Quick widget", calculatorId, locale: "en", defaults }),
+    }), services as never);
+    expect(response.status).toBe(201);
+    expect(services.widgets.create).toHaveBeenCalledWith(expect.objectContaining({
+      calculatorId,
+      defaultInputConfiguration: expectedDefaults,
+    }));
+  });
+
+  it.each([
+    ["quick.date-difference", { startDate: "2024-03-02", endDate: "2024-03-01" }],
+    ["quick.length-conversion", { value: "1", fromUnit: "parsec", toUnit: "m" }],
+  ] as const)("rejects invalid Phase 08A defaults for %s", async (calculatorId, defaults) => {
+    const services = baseServices("friends");
+    const response = await handleWidgetsRequest(new Request("https://foundcalc.test/api/workspace/widgets", {
+      method: "POST",
+      body: JSON.stringify({ name: "Invalid quick widget", calculatorId, locale: "en", defaults }),
+    }), services as never);
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: { code: "invalid-default-value" } });
+    expect(services.widgets.create).not.toHaveBeenCalled();
+  });
+
   it("rejects malformed JSON before touching repositories", async () => {
     const services = baseServices();
     const response = await handleWidgetsRequest(new Request("https://foundcalc.test/api/workspace/widgets", {
