@@ -85,6 +85,9 @@ const CALCULATORS = new Set<SupportedCalculatorId>([
   "reference.discount",
   "reference.business-margin",
   "reference.synthetic-rule",
+  "quick.percentage",
+  "quick.date-difference",
+  "quick.length-conversion",
 ]);
 const WIDGET_KEYS = [
   "id", "publicWidgetKey", "publicKeyVersion", "name", "calculatorId", "locale", "status", "theme",
