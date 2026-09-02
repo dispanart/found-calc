@@ -1,4 +1,4 @@
-import type { ReferenceCatalogEntry } from "@found-calc/catalog";
+import type { CalculatorCatalogEntry } from "@found-calc/catalog";
 
 import { CalculatorRenderer } from "@/components/calculator/renderer-registry";
 import type { ResolvedWidgetRuntime } from "@/lib/widgets/runtime";
@@ -12,7 +12,7 @@ const publicAppOrigin = () => {
 
 export function WidgetFrame({ runtime, entry, lifecycleEnabled = true }: {
   runtime: ResolvedWidgetRuntime;
-  entry: ReferenceCatalogEntry;
+  entry: CalculatorCatalogEntry;
   lifecycleEnabled?: boolean;
 }) {
   const copy = entry.copy[runtime.locale];
