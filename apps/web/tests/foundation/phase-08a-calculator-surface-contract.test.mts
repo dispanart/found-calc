@@ -37,6 +37,17 @@ test("new Quick calculators are dedicated interaction renderers with shared surf
   }
 });
 
+test("Length Conversion uses per-instance select ids so labels remain valid across repeated surfaces", async () => {
+  const source = await read("apps/web/src/components/calculator/length-conversion-calculator.tsx");
+  assert.match(source, /useId/);
+  assert.match(source, /htmlFor=\{fromUnitId\}/);
+  assert.match(source, /htmlFor=\{toUnitId\}/);
+  assert.match(source, /id=\{fromUnitId\}/);
+  assert.match(source, /id=\{toUnitId\}/);
+  assert.doesNotMatch(source, /id="length-from-unit"/);
+  assert.doesNotMatch(source, /id="length-to-unit"/);
+});
+
 test("public calculator routing uses the aggregate production catalog", async () => {
   const source = await read("apps/web/src/app/[locale]/(public)/calculators/[slug]/page.tsx");
   assert.match(source, /calculatorCatalog/);
